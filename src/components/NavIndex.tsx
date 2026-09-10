@@ -4,6 +4,8 @@ import clsx from "clsx";
 import { MultiSelect } from "./MultiSelect";
 import { Tag } from "./Tag";
 import type { TagTone } from "./Tag";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface NavIndexItem {
   label: string;
@@ -38,6 +40,9 @@ export interface NavIndexProps extends Omit<ComponentPropsWithoutRef<"nav">, "cl
   /** Renders a link — defaults to a plain `<a href>`. Pass your framework's Link (e.g. Next.js's) for client-side routing, same convention as `NavBar`'s `renderLink` and `@rebar-ui/placement`'s. */
   renderLink?: (props: { href: string; children: ReactNode; className?: string }) => ReactNode;
   className?: string;
+  /** Force bionic reading on/off for item labels, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const defaultRenderLink = ({
@@ -93,9 +98,13 @@ export function NavIndex({
   searchPlaceholder = "Search…",
   renderLink = defaultRenderLink,
   "aria-label": ariaLabel = "Page index",
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: NavIndexProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const [query, setQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [activeStatuses, setActiveStatuses] = useState<string[]>([]);
@@ -177,7 +186,7 @@ export function NavIndex({
             {renderLink({
               href: item.href,
               className: "rebar-nav-index-link rebar-nav-index-link-overview",
-              children: item.label,
+              children: renderBionicChildren(item.label, bionicEnabled, bionicOptions),
             })}
           </li>
         ))}
@@ -192,7 +201,7 @@ export function NavIndex({
             {renderLink({
               href: item.href,
               className: "rebar-nav-index-link",
-              children: item.label,
+              children: renderBionicChildren(item.label, bionicEnabled, bionicOptions),
             })}
             {item.status ? (
               <Tag tone={item.statusTone ?? "warning"} className="rebar-nav-index-status">

@@ -210,6 +210,9 @@ export type { BubbleChartProps, BubbleChartSeries, BubbleChartPoint } from "./co
 export { Heatmap } from "./components/Heatmap";
 export type { HeatmapProps, HeatmapCell } from "./components/Heatmap";
 
+export { UMAPPlot } from "./components/UMAPPlot";
+export type { UMAPPlotProps, UMAPPlotCluster, UMAPPlotPoint } from "./components/UMAPPlot";
+
 export { RichTextEditor } from "./components/RichTextEditor";
 export type { RichTextEditorProps } from "./components/RichTextEditor";
 

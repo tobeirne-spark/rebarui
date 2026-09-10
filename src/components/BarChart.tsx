@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface BarChartBar {
   label: string;
@@ -18,6 +20,9 @@ export interface BarChartProps extends Omit<ComponentPropsWithoutRef<"figure">, 
   /** Falls back to `title` when omitted — the chart's own `role="img"` accessible name. */
   ariaLabel?: string;
   height?: number;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -37,9 +42,12 @@ export function BarChart({
   title,
   ariaLabel,
   height = 340,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: BarChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const width = 700;
   const marginLeft = 74;
   const marginRight = 16;
@@ -143,7 +151,7 @@ export function BarChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

@@ -1,5 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface SankeyDiagramNode {
   id: string;
@@ -26,6 +28,9 @@ export interface SankeyDiagramProps extends Omit<ComponentPropsWithoutRef<"figur
   ariaLabel?: string;
   width?: number;
   height?: number;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -106,9 +111,12 @@ export function SankeyDiagram({
   ariaLabel,
   width = 480,
   height = 320,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: SankeyDiagramProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const nodeIds = nodes.map((n) => n.id);
   const nodeIdSet = new Set(nodeIds);
   const validLinks = links.filter(
@@ -242,7 +250,7 @@ export function SankeyDiagram({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

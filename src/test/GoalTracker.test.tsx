@@ -78,8 +78,76 @@ describe("GoalTracker", () => {
     const { container } = render(<GoalTracker aspiration="Aspiration" focusAreas={[]} />);
     expect(screen.getByText("No focus areas yet")).toBeInTheDocument();
     expect(container.querySelector("[data-rebar-component='empty']")).toBeInTheDocument();
-    // The aspiration itself still renders above the empty state.
-    expect(screen.getByText("Aspiration")).toBeInTheDocument();
+    // The aspiration itself still renders above the empty state — as both its own visible
+    // caption ("Aspiration" the label) and its edited value ("Aspiration", coincidentally the
+    // same text in this test's fixture).
+    expect(screen.getAllByText("Aspiration")).toHaveLength(2);
+  });
+
+  it("shows a visible caption above the aspiration and each focus area, not just an aria-label", () => {
+    render(<GoalTracker aspiration="Become the top board network" focusAreas={baseFocusAreas()} />);
+    const container = screen.getByText("Become the top board network").closest(
+      "[data-rebar-component='goal-tracker']",
+    ) as HTMLElement;
+    expect(within(container).getByText("Aspiration")).toBeInTheDocument();
+    expect(within(container).getAllByText("Focus area")).toHaveLength(2);
+    // Only fa1 has goals, so only it gets a "Goals" caption.
+    expect(within(container).getAllByText("Goals")).toHaveLength(1);
+  });
+
+  it("omits the Add focus area / Add goal affordances unless their callbacks are passed", () => {
+    render(<GoalTracker aspiration="Aspiration" focusAreas={baseFocusAreas()} />);
+    expect(screen.queryByText("+ Add focus area")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("+ Add goal")).toHaveLength(0);
+  });
+
+  it("shows Add focus area / Add goal affordances when their callbacks are passed, and calls them", async () => {
+    const user = userEvent.setup();
+    const onAddFocusArea = vi.fn();
+    const onAddGoal = vi.fn();
+    render(
+      <GoalTracker
+        aspiration="Aspiration"
+        focusAreas={baseFocusAreas()}
+        onAddFocusArea={onAddFocusArea}
+        onAddGoal={onAddGoal}
+      />,
+    );
+
+    await user.click(screen.getByText("+ Add focus area"));
+    expect(onAddFocusArea).toHaveBeenCalled();
+
+    const firstAddGoal = screen.getAllByText("+ Add goal")[0]!;
+    await user.click(firstAddGoal);
+    expect(onAddGoal).toHaveBeenCalledWith("fa1");
+  });
+
+  it("supports a bigger celebration burst via the celebration prop", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <GoalTracker aspiration="Aspiration" focusAreas={baseFocusAreas()} celebration="big" />,
+    );
+
+    const goalItem = screen.getByText("Reach 500 members").closest("[data-rebar-part='goal']") as HTMLElement;
+    const toggle = within(goalItem).getByRole("checkbox");
+    await user.click(toggle);
+
+    const particles = container.querySelectorAll(".rebar-goal-tracker-burst-particle");
+    // "big" uses 12 arms vs "small"'s 8.
+    expect(particles.length).toBe(12);
+  });
+
+  it("never renders a burst when celebration is 'none', even on completing a goal", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <GoalTracker aspiration="Aspiration" focusAreas={baseFocusAreas()} celebration="none" />,
+    );
+
+    const goalItem = screen.getByText("Reach 500 members").closest("[data-rebar-part='goal']") as HTMLElement;
+    const toggle = within(goalItem).getByRole("checkbox");
+    await user.click(toggle);
+
+    expect(getBurst(container)).not.toBeInTheDocument();
   });
 
   it("editing the aspiration fires onAspirationChange with the new text", async () => {

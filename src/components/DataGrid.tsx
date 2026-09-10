@@ -4,6 +4,7 @@ import { Table } from "./Table";
 import type { TableColumn, TableProps } from "./Table";
 import { Editable } from "./Editable";
 import { Accordion, AccordionItem } from "./Accordion";
+import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
 
 export interface DataGridProps<T> extends TableProps<T> {
   /** When true, every column without its own `render` becomes click-to-edit — reuses the real
@@ -84,6 +85,8 @@ export function DataGrid<T>({
   emptyMessage,
   maxHeight,
   caption,
+  bionic,
+  bionicOptions,
   className,
   "aria-label": ariaLabel,
   editable = false,
@@ -91,6 +94,9 @@ export function DataGrid<T>({
   groupBy,
   ...rest
 }: DataGridProps<T>) {
+  const captionContent = useBionicChildren(caption, bionic, bionicOptions);
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const getRowKey = (row: T): string =>
     typeof rowKey === "string" ? String(defaultAccessor(row, rowKey)) : rowKey(row);
 
@@ -120,6 +126,8 @@ export function DataGrid<T>({
     emptyMessage,
     maxHeight,
     "aria-label": ariaLabel,
+    bionic,
+    bionicOptions,
   };
 
   if (!groupBy) {
@@ -151,7 +159,7 @@ export function DataGrid<T>({
     <div className={clsx("rebar-data-grid", className)} data-rebar-component="data-grid" {...rest}>
       {caption ? (
         <div className="rebar-table-caption" data-rebar-part="caption">
-          {caption}
+          {captionContent}
         </div>
       ) : null}
       <Accordion type="multiple" defaultValue={groups.map((g) => g.label)}>
@@ -161,7 +169,7 @@ export function DataGrid<T>({
             value={group.label}
             trigger={
               <span data-rebar-part="group-header">
-                {group.label} ({group.rows.length})
+                {renderBionicChildren(group.label, bionicEnabled, bionicOptions)} ({group.rows.length})
               </span>
             }
           >

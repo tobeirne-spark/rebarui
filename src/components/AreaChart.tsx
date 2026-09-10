@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface AreaChartSeries {
   label: string;
@@ -20,6 +23,9 @@ export interface AreaChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   ariaLabel?: string;
   height?: number;
   labelStep?: number;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -42,9 +48,13 @@ export function AreaChart({
   ariaLabel,
   height = 300,
   labelStep = 1,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: AreaChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
   const width = 700;
   const marginLeft = 62;
   const marginRight = 20;
@@ -90,7 +100,9 @@ export function AreaChart({
         style={{ width: "100%", maxWidth: width, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Area chart"}
+        {...backgroundProps}
       >
+        <rect x={0} y={0} width={width} height={height} fill="transparent" data-rebar-part="chart-background" />
         {ticks.map((t, i) => {
           const y = yScale(t);
           return (
@@ -125,9 +137,24 @@ export function AreaChart({
             <g key={s.label}>
               <polygon points={areaPoints} fill={color} fillOpacity={0.18} stroke="none" />
               <polyline points={linePoints} fill="none" stroke={color} strokeWidth={2.5} />
-              {s.values.map((v, j) => (
-                <circle key={j} cx={xScale(j)} cy={yScale(v)} r={3.5} fill={color} />
-              ))}
+              {s.values.map((v, j) => {
+                const key = `${i}:${j}`;
+                const selected = isSelected(key);
+                return (
+                  <circle
+                    key={j}
+                    cx={xScale(j)}
+                    cy={yScale(v)}
+                    r={selected ? 5.5 : 3.5}
+                    fill={color}
+                    stroke={selected ? "var(--rebar-color-bg-primary, #ffffff)" : undefined}
+                    strokeWidth={selected ? 1.5 : undefined}
+                    style={{ cursor: "pointer" }}
+                    data-rebar-part="mark"
+                    {...getMarkProps(key)}
+                  />
+                );
+              })}
             </g>
           );
         })}
@@ -143,6 +170,26 @@ export function AreaChart({
             {s.label}
           </text>
         ))}
+        {activeKey
+          ? (() => {
+              const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
+              const seriesIndex = Number(seriesIndexStr);
+              const pointIndex = Number(pointIndexStr);
+              const activeSeries = series[seriesIndex];
+              const value = activeSeries?.values[pointIndex];
+              if (!activeSeries || value === undefined) return null;
+              return (
+                <ChartValueTag
+                  x={xScale(pointIndex)}
+                  y={yScale(value)}
+                  viewBoxWidth={width}
+                  viewBoxHeight={height}
+                  accentColor={activeSeries.color ?? DEFAULT_PALETTE[seriesIndex % DEFAULT_PALETTE.length]}
+                  lines={[activeSeries.label, `${xLabels[pointIndex]}: ${Math.round(value).toLocaleString()}`]}
+                />
+              );
+            })()
+          : null}
       </svg>
       {title ? (
         <figcaption
@@ -154,7 +201,7 @@ export function AreaChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

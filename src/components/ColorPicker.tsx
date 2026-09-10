@@ -9,10 +9,21 @@ export interface ColorPickerProps {
   /** Swatches shown in the popover — a native color input is always offered alongside them for
    * anything not in this set. */
   presets?: string[];
+  /** Visual size of the swatch itself — matches `Button`'s own `size` naming. The trigger's real
+   * clickable footprint always stays a genuine ≥44×44px target regardless (padding included when
+   * the visual swatch is smaller — see ref/HEURISTICS.md #19), the same "thin visual element,
+   * padded-out real hit area" trick `ResizablePanels`' divider already uses. Default `"md"`. */
+  size?: "sm" | "md" | "lg";
   "aria-label"?: string;
   disabled?: boolean;
   className?: string;
 }
+
+const SWATCH_SIZE_PX: Record<NonNullable<ColorPickerProps["size"]>, number> = {
+  sm: 20,
+  md: 28,
+  lg: 36,
+};
 
 const DEFAULT_PRESETS = [
   "#0066cc",
@@ -35,6 +46,7 @@ export function ColorPicker({
   defaultValue = DEFAULT_PRESETS[0]!,
   onChange,
   presets = DEFAULT_PRESETS,
+  size = "md",
   "aria-label": ariaLabel = "Pick a color",
   disabled,
   className,
@@ -58,10 +70,17 @@ export function ColorPicker({
           type="button"
           className={clsx("rebar-color-picker-trigger", className)}
           data-rebar-component="color-picker"
+          data-rebar-size={size}
           aria-label={`${ariaLabel}, current color ${current}`}
           disabled={disabled}
-          style={{ backgroundColor: current }}
-        />
+        >
+          <span
+            className="rebar-color-picker-trigger-swatch"
+            data-rebar-part="swatch"
+            aria-hidden="true"
+            style={{ backgroundColor: current, width: SWATCH_SIZE_PX[size], height: SWATCH_SIZE_PX[size] }}
+          />
+        </button>
       }
     >
       <div className="rebar-color-picker-grid" data-rebar-part="presets">

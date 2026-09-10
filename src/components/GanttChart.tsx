@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface GanttChartTask {
   id: string;
@@ -33,6 +35,9 @@ export interface GanttChartProps extends Omit<ComponentPropsWithoutRef<"figure">
    * bug this project's chart components already guard against for trig-derived SVG coordinates
    * (see `PieChart.tsx`'s `round()` helper). */
   dateFormat?: (d: Date) => string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -56,9 +61,12 @@ export function GanttChart({
   rowHeight = 32,
   width = 640,
   dateFormat = defaultDateFormat,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: GanttChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const marginLeft = 140;
   const marginRight = 16;
   const marginTop = 28;
@@ -235,7 +243,7 @@ export function GanttChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

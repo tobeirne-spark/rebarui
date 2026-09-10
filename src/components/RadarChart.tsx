@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useSeriesFilter } from "../chartSeriesFilter";
+import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface RadarChartSeries {
   label: string;
@@ -27,6 +30,15 @@ export interface RadarChartProps extends Omit<ComponentPropsWithoutRef<"figure">
   /** Falls back to `title` when omitted — the chart's own `role="img"` accessible name. */
   ariaLabel?: string;
   size?: number;
+  /** Makes each legend item a real toggle button that hides/shows its own series' polygon —
+   * off by default (the legend stays plain, non-interactive labels unless this is set). Axis
+   * scale stays fixed to the full, unfiltered dataset regardless, so toggling a series doesn't
+   * make the remaining ones jump to a new scale. */
+  filterable?: boolean;
+  /** Force bionic reading on/off for the title and legend labels, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -58,9 +70,16 @@ export function RadarChart({
   title,
   ariaLabel,
   size = 280,
+  filterable,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: RadarChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
+  const { toggle, isVisible } = useSeriesFilter(series.map((s) => s.label));
   const n = axes.length;
   const margin = 34;
   const center = size / 2;
@@ -156,6 +175,7 @@ export function RadarChart({
           );
         })}
         {series.map((s, i) => {
+          if (filterable && !isVisible(s.label)) return null;
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const points = polygonPoints((axisIndex) => s.values[axisIndex] ?? 0);
           return (
@@ -181,7 +201,7 @@ export function RadarChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
       {series.length ? (
@@ -197,7 +217,37 @@ export function RadarChart({
         >
           {series.map((s, i) => {
             const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
-            return (
+            const swatch = (
+              <span
+                aria-hidden="true"
+                data-rebar-part="legend-swatch"
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: 2,
+                  backgroundColor: color,
+                }}
+              />
+            );
+            const label = renderBionicChildren(s.label, bionicEnabled, bionicOptions);
+            return filterable ? (
+              <button
+                key={s.label}
+                type="button"
+                data-rebar-part="legend-item"
+                className={clsx(
+                  "rebar-chart-filter-button",
+                  !isVisible(s.label) && "rebar-chart-filter-button-inactive",
+                )}
+                style={{ display: "inline-flex", alignItems: "center", gap: "var(--rebar-space-xs)" }}
+                aria-pressed={isVisible(s.label)}
+                onClick={() => toggle(s.label)}
+              >
+                {swatch}
+                {label}
+              </button>
+            ) : (
               <span
                 key={s.label}
                 data-rebar-part="legend-item"
@@ -209,18 +259,8 @@ export function RadarChart({
                   color: "var(--rebar-color-text-secondary, #757575)",
                 }}
               >
-                <span
-                  aria-hidden="true"
-                  data-rebar-part="legend-swatch"
-                  style={{
-                    display: "inline-block",
-                    width: 10,
-                    height: 10,
-                    borderRadius: 2,
-                    backgroundColor: color,
-                  }}
-                />
-                {s.label}
+                {swatch}
+                {label}
               </span>
             );
           })}

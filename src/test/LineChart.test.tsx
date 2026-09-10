@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LineChart } from "../components/LineChart";
+
+function getMark(container: HTMLElement, index: number) {
+  return container.querySelectorAll('[data-rebar-part="mark"]')[index] as HTMLElement;
+}
+
+function getTagLines(container: HTMLElement) {
+  const tag = container.querySelector('[data-rebar-part="value-tag"]');
+  return Array.from(tag?.querySelectorAll("text") ?? []).map((el) => el.textContent);
+}
 
 afterEach(cleanup);
 
@@ -50,5 +59,56 @@ describe("LineChart", () => {
   it("carries the expected data-rebar-component attribute", () => {
     const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
     expect(container.querySelector('[data-rebar-component="line-chart"]')).toBeInTheDocument();
+  });
+
+  it("shows no value tag until a mark is hovered or selected", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
+  });
+
+  it("hovering a mark shows its value tag, unhovering hides it again", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
+    const mark = getMark(container, 0); // series 0 ("antd"), point 0, value 10
+
+    fireEvent.pointerEnter(mark);
+    expect(getTagLines(container)).toEqual(["antd", "R0: 10"]);
+
+    fireEvent.pointerLeave(mark);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
+  });
+
+  it("clicking a mark persists its tag after the pointer leaves", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
+    const mark = getMark(container, 1); // series 0, point 1, value 20
+
+    fireEvent.pointerEnter(mark);
+    fireEvent.click(mark);
+    fireEvent.pointerLeave(mark);
+
+    expect(getTagLines(container)).toEqual(["antd", "R1: 20"]);
+  });
+
+  it("clicking a different mark swaps which tag persists", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
+    const firstMark = getMark(container, 0);
+    const secondMark = getMark(container, 3); // series 1 ("rebar-ui"), point 0, value 8
+
+    fireEvent.click(firstMark);
+    expect(getTagLines(container)).toEqual(["antd", "R0: 10"]);
+
+    fireEvent.click(secondMark);
+    expect(getTagLines(container)).toEqual(["rebar-ui", "R0: 8"]);
+  });
+
+  it("a dead click on empty chart space clears the persistent selection", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
+    const mark = getMark(container, 0);
+    const background = container.querySelector('[data-rebar-part="chart-background"]') as HTMLElement;
+
+    fireEvent.click(mark);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).toBeInTheDocument();
+
+    fireEvent.click(background);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,8 @@
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent } from "react";
 import clsx from "clsx";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface NodeLinkGraphNode {
   id: string;
@@ -36,6 +38,13 @@ export interface NodeLinkGraphProps extends Omit<ComponentPropsWithoutRef<"figur
   width?: number;
   /** Viewport height in SVG units. Default `360`. */
   height?: number;
+  /** Inset, in SVG units, kept clear between the laid-out content and the canvas's own edge at
+   * 100% zoom/fit — see ref/HEURISTICS.md's diagram-canvas-padding default: there's essentially no
+   * case where a node should start flush against the container's own border. Applies to the
+   * `"hierarchical"` and `"circular"` layouts (which this component itself spaces); `"manual"`
+   * layout uses each node's own `x`/`y` verbatim regardless, since that mode hands positioning
+   * control to the caller. Default `24`; pass `0` for a deliberate edge-to-edge layout. */
+  padding?: number;
   /** Fires while dragging a node, only when `layout="manual"` (see doc comment) — the caller's own
    * hook for persisting a drag back into whatever state supplied `nodes[].x`/`y` in the first
    * place. Not fired at all in `"hierarchical"`/`"circular"` layout. */
@@ -45,6 +54,11 @@ export interface NodeLinkGraphProps extends Omit<ComponentPropsWithoutRef<"figur
    * a custom renderer draws centered on `0,0`). Defaults to a rounded rect + centered label. */
   renderNode?: (node: Required<Pick<NodeLinkGraphNode, "id" | "label" | "x" | "y">> & NodeLinkGraphNode) => ReactNode;
   className?: string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting.
+   * Node/edge labels are rendered as SVG `<text>`, which `useBionicChildren`'s span-splitting
+   * can't target — only the (HTML) `<figcaption>` title is covered here. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 interface PositionedNode extends NodeLinkGraphNode {
@@ -83,7 +97,12 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function layoutHierarchical(nodes: NodeLinkGraphNode[], width: number, height: number): PositionedNode[] {
+function layoutHierarchical(
+  nodes: NodeLinkGraphNode[],
+  width: number,
+  height: number,
+  padding: number,
+): PositionedNode[] {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const childrenOf = new Map<string, NodeLinkGraphNode[]>();
   const roots: NodeLinkGraphNode[] = [];
@@ -135,28 +154,38 @@ function layoutHierarchical(nodes: NodeLinkGraphNode[], width: number, height: n
     levels.set(depth, list);
   }
 
+  const innerWidth = Math.max(0, width - padding * 2);
+  const innerHeight = Math.max(0, height - padding * 2);
+
   const maxDepth = Math.max(0, ...Array.from(levels.keys()));
-  const levelGap = maxDepth > 0 ? (height - NODE_HEIGHT) / maxDepth : 0;
+  const levelGap = maxDepth > 0 ? (innerHeight - NODE_HEIGHT) / maxDepth : 0;
 
   const positioned: PositionedNode[] = [];
   for (const [depth, levelNodes] of levels) {
     const count = levelNodes.length;
-    const gap = width / (count + 1);
+    const gap = innerWidth / (count + 1);
     levelNodes.forEach((node, i) => {
       positioned.push({
         ...node,
-        x: gap * (i + 1),
-        y: NODE_HEIGHT / 2 + levelGap * depth,
+        x: padding + gap * (i + 1),
+        y: padding + NODE_HEIGHT / 2 + levelGap * depth,
       });
     });
   }
   return positioned;
 }
 
-function layoutCircular(nodes: NodeLinkGraphNode[], width: number, height: number): PositionedNode[] {
+function layoutCircular(
+  nodes: NodeLinkGraphNode[],
+  width: number,
+  height: number,
+  padding: number,
+): PositionedNode[] {
   const cx = width / 2;
   const cy = height / 2;
-  const r = Math.max(0, Math.min(width, height) / 2 - Math.max(NODE_WIDTH, NODE_HEIGHT) / 2);
+  const innerWidth = Math.max(0, width - padding * 2);
+  const innerHeight = Math.max(0, height - padding * 2);
+  const r = Math.max(0, Math.min(innerWidth, innerHeight) / 2 - Math.max(NODE_WIDTH, NODE_HEIGHT) / 2);
   const count = nodes.length || 1;
   return nodes.map((node, i) => {
     const angle = (2 * Math.PI * i) / count - Math.PI / 2;
@@ -168,11 +197,20 @@ function layoutCircular(nodes: NodeLinkGraphNode[], width: number, height: numbe
   });
 }
 
-function layoutManual(nodes: NodeLinkGraphNode[], width: number, height: number): PositionedNode[] {
+function layoutManual(
+  nodes: NodeLinkGraphNode[],
+  width: number,
+  height: number,
+  padding: number,
+): PositionedNode[] {
+  const innerWidth = Math.max(0, width - padding * 2);
+  const innerHeight = Math.max(0, height - padding * 2);
   const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
   let gridIndex = 0;
   return nodes.map((node) => {
     if (typeof node.x === "number" && typeof node.y === "number") {
+      // Caller-supplied position, used verbatim — manual layout hands positioning control to the
+      // caller entirely, including the option of an intentional edge-to-edge placement.
       return { ...node, x: node.x, y: node.y };
     }
     // Missing position: fall back to a simple grid slot so it never ends up invisibly stacked at
@@ -180,9 +218,9 @@ function layoutManual(nodes: NodeLinkGraphNode[], width: number, height: number)
     const col = gridIndex % cols;
     const row = Math.floor(gridIndex / cols);
     gridIndex += 1;
-    const gapX = width / (cols + 1);
-    const gapY = Math.max(NODE_HEIGHT * 1.5, height / (Math.ceil(nodes.length / cols) + 1));
-    return { ...node, x: gapX * (col + 1), y: NODE_HEIGHT / 2 + gapY * row };
+    const gapX = innerWidth / (cols + 1);
+    const gapY = Math.max(NODE_HEIGHT * 1.5, innerHeight / (Math.ceil(nodes.length / cols) + 1));
+    return { ...node, x: padding + gapX * (col + 1), y: padding + NODE_HEIGHT / 2 + gapY * row };
   });
 }
 
@@ -235,20 +273,24 @@ export function NodeLinkGraph({
   ariaLabel,
   width = 480,
   height = 360,
+  padding = 24,
   onNodePositionChange,
   renderNode,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: NodeLinkGraphProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const markerId = useId();
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
 
   const positioned = useMemo<PositionedNode[]>(() => {
-    if (layout === "circular") return layoutCircular(nodes, width, height);
-    if (layout === "manual") return layoutManual(nodes, width, height);
-    return layoutHierarchical(nodes, width, height);
-  }, [nodes, layout, width, height]);
+    if (layout === "circular") return layoutCircular(nodes, width, height, padding);
+    if (layout === "manual") return layoutManual(nodes, width, height, padding);
+    return layoutHierarchical(nodes, width, height, padding);
+  }, [nodes, layout, width, height, padding]);
 
   const positionedById = useMemo(() => new Map(positioned.map((n) => [n.id, n])), [positioned]);
 
@@ -461,7 +503,7 @@ export function NodeLinkGraph({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

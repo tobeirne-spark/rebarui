@@ -239,7 +239,14 @@ body {
   padding-top: 0;
 }
 
-.rebar-card-footer:first-child {
+.rebar-card-footer:first-child,
+.rebar-card-header + .rebar-card-footer,
+.rebar-card-labels + .rebar-card-footer,
+.rebar-card-cover + .rebar-card-footer {
+  /* Covers every case where `footer` isn't preceded by a `body` — body supplies its own bottom
+     padding as the visual gap above footer, but header/labels/cover don't, so footer's own default
+     zero top-padding otherwise leaves it sitting flush against the header's border-bottom line
+     (e.g. a kanban-shaped card with no body: cornerBadge/labels/header, then straight to footer). */
   padding-top: var(--rebar-space-lg, 24px);
 }
 
@@ -908,6 +915,12 @@ body {
   font-weight: var(--rebar-font-weight-medium, 500);
   cursor: pointer;
   text-align: left;
+  /* A bare <button> renders the UA-default "ButtonText" color (effectively black) unless told
+     otherwise — invisible against a dark background regardless of theme, the same bug
+     .rebar-collapsible-trigger already documents and fixes the same way. Surfaces concretely in
+     DataGrid's groupBy feature (its group-header label sits inside this trigger) but is really an
+     Accordion-level gap, not specific to DataGrid. */
+  color: var(--rebar-color-text-primary, #212121);
 }
 
 .rebar-accordion-icon {
@@ -1548,6 +1561,15 @@ body {
   color: var(--rebar-color-text-primary, #212121);
 }
 
+.rebar-descriptions-value-editable {
+  /* Matches the surrounding value text size (Editable's own default is a larger 16px, sized for
+     being the sole focus of a form field, not a compact info-grid cell); the negative margin
+     compensates for Editable's own padding so an editable item doesn't visually sit shifted
+     relative to its plain siblings — same trick Card's own `.rebar-card-title-editable` uses. */
+  font-size: var(--rebar-font-size-sm, 14px);
+  margin: calc(-1 * var(--rebar-space-xs, 4px)) calc(-1 * var(--rebar-space-sm, 8px));
+}
+
 /* Timeline */
 .rebar-timeline {
   list-style: none;
@@ -1946,10 +1968,17 @@ body {
 
 /* ColorPicker */
 .rebar-color-picker-trigger {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--rebar-radius, 4px);
-  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border-strong, #333333);
+  /* The real, always-≥44×44px clickable footprint (heuristic #19) — the visible swatch inside
+     (.rebar-color-picker-trigger-swatch) can render smaller for the "sm"/"md" sizes without the
+     tap target itself ever shrinking, the same padded-hit-area trick ResizablePanels' divider
+     already uses. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
   cursor: pointer;
   padding: 0;
 }
@@ -1957,6 +1986,12 @@ body {
 .rebar-color-picker-trigger:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.rebar-color-picker-trigger-swatch {
+  display: block;
+  border-radius: var(--rebar-radius, 4px);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border-strong, #333333);
 }
 
 .rebar-color-picker-grid {
@@ -2719,7 +2754,21 @@ body {
   height: 4px;
   border-radius: var(--rebar-radius, 4px);
   background: var(--rebar-color-border-strong, #333333);
-  margin: 0 auto var(--rebar-space-sm, 8px);
+}
+
+/* The real drag-to-dismiss hit area, when enabled — the visible pill (.rebar-bottom-sheet-handle)
+   stays visually thin, same "thin visual line, padded-out real hit area" trick ResizablePanels'
+   own divider already uses, rather than growing the pill itself to a full 44px. */
+.rebar-drawer-drag-handle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: var(--rebar-space-xs, 4px);
+  cursor: grab;
+}
+.rebar-drawer-drag-handle:active {
+  cursor: grabbing;
 }
 
 /* ActionSheet — full-width, min-44px-tall action rows. Destructive treatment mirrors
@@ -3580,6 +3629,11 @@ body {
 }
 .rebar-pull-to-refresh-scroll {
   overflow-y: auto;
+  /* Without this, a real touchscreen's own native rubber-band/scroll-chaining bounce at
+     scrollTop 0 fights this component's own JS-driven pull transform — both try to move the
+     content at once. `contain` stops the browser's own overscroll effect (and stops an
+     already-scrolled parent from also scrolling) without blocking normal in-bounds scrolling. */
+  overscroll-behavior-y: contain;
 }
 
 /* PickerWheel */
@@ -4148,7 +4202,12 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--rebar-space-md, 16px);
-  padding: var(--rebar-space-md, 16px) 0;
+  /* Full padding on every side, offset by an equal negative horizontal margin — so the row's
+     content still lines up with the drawer's own edge (unchanged from a horizontal-only-padding
+     box), but the "current" row's highlighted background (below) gets even breathing room on all
+     four sides instead of sitting flush against the left/right edge while insetting top/bottom. */
+  padding: var(--rebar-space-md, 16px);
+  margin: 0 calc(-1 * var(--rebar-space-md, 16px));
   border-bottom: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
 }
 .rebar-version-history-row:last-child { border-bottom: none; }
@@ -4364,7 +4423,10 @@ body {
 
 /* GoalTracker */
 .rebar-goal-tracker { display: flex; flex-direction: column; gap: var(--rebar-space-lg, 24px); }
+.rebar-goal-tracker-label { display: block; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--rebar-space-xs, 4px); }
 .rebar-goal-tracker-aspiration-text { font-size: var(--rebar-font-size-lg, 20px); font-weight: var(--rebar-font-weight-medium, 500); }
+.rebar-goal-tracker-add-goal { margin-top: var(--rebar-space-sm, 8px); }
+.rebar-goal-tracker-add-focus-area { align-self: flex-start; }
 .rebar-goal-tracker-focus-areas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rebar-space-md, 16px); }
 .rebar-goal-tracker-focus-area { border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0); border-radius: var(--rebar-radius, 4px); padding: var(--rebar-space-md, 16px); }
 .rebar-goal-tracker-focus-area-header { display: flex; align-items: center; flex-wrap: wrap; gap: var(--rebar-space-sm, 8px); margin-bottom: var(--rebar-space-sm, 8px); }
@@ -4396,14 +4458,16 @@ body {
 .rebar-goal-tracker-burst-arm { position: absolute; top: 0; left: 0; width: 0; height: 0; }
 .rebar-goal-tracker-burst-particle {
   position: absolute;
-  top: -3px;
-  left: -3px;
-  width: 6px;
-  height: 6px;
+  top: 0;
+  left: 0;
   border-radius: 50%;
-  animation: rebar-goal-tracker-burst-particle 600ms ease-out forwards;
+  animation-name: rebar-goal-tracker-burst-particle;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
 }
-@keyframes rebar-goal-tracker-burst-particle { to { transform: translateX(28px) scale(0.4); opacity: 0; } }
+@keyframes rebar-goal-tracker-burst-particle {
+  to { transform: translateX(var(--rebar-goal-burst-travel, 28px)) scale(0.4); opacity: 0; }
+}
 
 /* TextToSpeechBar */
 .rebar-tts-bar { display: flex; flex-direction: column; gap: var(--rebar-space-md, 16px); box-sizing: border-box; }

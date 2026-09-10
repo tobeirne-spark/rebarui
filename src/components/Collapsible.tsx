@@ -2,6 +2,7 @@ import { forwardRef, useId, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
 import { useBionicChildren } from "../bionic";
+import { ChevronDownIcon } from "./icons";
 import type { BionicOptions } from "../bionic";
 
 export interface CollapsibleProps extends ComponentPropsWithoutRef<"div"> {
@@ -77,7 +78,7 @@ export const Collapsible = forwardRef<HTMLDivElement, CollapsibleProps>(function
       >
         {triggerContent}
         <span className="rebar-collapsible-icon" aria-hidden="true">
-          ▾
+          <ChevronDownIcon />
         </span>
       </button>
       {currentOpen ? (

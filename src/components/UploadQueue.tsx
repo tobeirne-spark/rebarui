@@ -3,6 +3,8 @@ import type { ComponentPropsWithoutRef } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Progress } from "./Progress";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface UploadQueueItem {
   id: string;
@@ -32,6 +34,10 @@ export interface UploadQueueProps extends Omit<ComponentPropsWithoutRef<"div">, 
   minimized?: boolean;
   defaultMinimized?: boolean;
   onMinimizedChange?: (minimized: boolean) => void;
+  /** Force bionic reading on/off for item names/error messages, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /**
@@ -53,9 +59,13 @@ export function UploadQueue({
   minimized,
   defaultMinimized,
   onMinimizedChange,
+  bionic,
+  bionicOptions,
   className,
   ...rest
 }: UploadQueueProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const isMinimizedControlled = minimized !== undefined;
   const [internalMinimized, setInternalMinimized] = useState(defaultMinimized ?? false);
   const currentMinimized = isMinimizedControlled ? minimized : internalMinimized;
@@ -125,11 +135,11 @@ export function UploadQueue({
               >
                 <div className="rebar-upload-queue-item-info">
                   <span className="rebar-upload-queue-item-name" data-rebar-part="item-name">
-                    {item.name}
+                    {renderBionicChildren(item.name, bionicEnabled, bionicOptions)}
                   </span>
                   {item.status === "error" ? (
                     <span className="rebar-upload-queue-item-error" data-rebar-part="item-error">
-                      {item.errorMessage ?? "Upload failed"}
+                      {renderBionicChildren(item.errorMessage ?? "Upload failed", bionicEnabled, bionicOptions)}
                     </span>
                   ) : null}
                 </div>

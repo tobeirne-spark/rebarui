@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { NodeLinkGraph } from "./NodeLinkGraph";
 import type { NodeLinkGraphEdge, NodeLinkGraphNode } from "./NodeLinkGraph";
+import type { BionicOptions } from "../bionic";
 
 export interface MindMapChild {
   id: string;
@@ -30,7 +31,15 @@ export interface MindMapProps extends Omit<ComponentPropsWithoutRef<"figure">, "
   width?: number;
   /** Viewport height in SVG units. Forwarded to the underlying `NodeLinkGraph`. Default `360`. */
   height?: number;
+  /** Inset kept clear between the diagram and its own edge — forwarded to the underlying
+   * `NodeLinkGraph`. Default `24`; see ref/HEURISTICS.md's diagram-canvas-padding default. */
+  padding?: number;
   className?: string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting
+   * — forwarded to the underlying `NodeLinkGraph`. Branch/child labels render as SVG `<text>`,
+   * which `useBionicChildren`'s span-splitting can't target. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 // Internal synthetic id for the central topic node. Unlikely to collide with a caller-supplied
@@ -65,6 +74,9 @@ export function MindMap({
   ariaLabel,
   width = 480,
   height = 360,
+  padding,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: MindMapProps) {
@@ -101,6 +113,9 @@ export function MindMap({
       ariaLabel={ariaLabel}
       width={width}
       height={height}
+      padding={padding}
+      bionic={bionic}
+      bionicOptions={bionicOptions}
       {...props}
     />
   );

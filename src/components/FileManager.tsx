@@ -265,7 +265,7 @@ export function FileManager({
   function resolveTreeDropTarget(event: DragEvent): { id: string; el: HTMLElement } | null {
     const el = (event.target as HTMLElement | null)?.closest('[role="treeitem"]') as HTMLElement | null;
     if (!el) return null;
-    const label = el.textContent?.replace(/^[▸▾]/, "").trim() ?? "";
+    const label = el.textContent?.trim() ?? "";
     const id = folderLabelToId.get(label);
     return id ? { id, el } : null;
   }

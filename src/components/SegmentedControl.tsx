@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
 import clsx from "clsx";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface SegmentedControlOption {
   value: string;
@@ -14,6 +16,9 @@ export interface SegmentedControlProps extends Omit<ComponentPropsWithoutRef<"di
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   disabled?: boolean;
+  /** Force bionic reading on/off for option labels, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /**
@@ -29,9 +34,13 @@ export function SegmentedControl({
   defaultValue,
   onValueChange,
   disabled,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: SegmentedControlProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const [internalValue, setInternalValue] = useState(defaultValue ?? options[0]?.value);
   const isControlled = value !== undefined;
   const current = isControlled ? value : internalValue;
@@ -85,7 +94,7 @@ export function SegmentedControl({
             onClick={() => select(option.value)}
             onKeyDown={handleKeyDown}
           >
-            {option.label}
+            {renderBionicChildren(option.label, bionicEnabled, bionicOptions)}
           </button>
         );
       })}

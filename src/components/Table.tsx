@@ -5,6 +5,8 @@ import { Checkbox } from "./Checkbox";
 import { Empty } from "./Empty";
 import { Pagination } from "./Pagination";
 import { Skeleton } from "./Skeleton";
+import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface TableColumn<T> {
   key: string;
@@ -59,6 +61,10 @@ export interface TableProps<T> {
   caption?: ReactNode;
   "aria-label"?: string;
   className?: string;
+  /** Force bionic reading on/off for the caption and column headers, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 function defaultAccessor<T>(row: T, key: string): unknown {
@@ -98,9 +104,14 @@ export function Table<T>({
   emptyMessage = "No data.",
   maxHeight,
   caption,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: TableProps<T>) {
+  const captionContent = useBionicChildren(caption, bionic, bionicOptions);
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const getRowKey = (row: T): string =>
     typeof rowKey === "string" ? String(defaultAccessor(row, rowKey)) : rowKey(row);
 
@@ -166,7 +177,7 @@ export function Table<T>({
     <div className={clsx("rebar-table-wrapper", className)} data-rebar-component="table" {...props}>
       {caption ? (
         <div className="rebar-table-caption" data-rebar-part="caption">
-          {caption}
+          {captionContent}
         </div>
       ) : null}
       <div className="rebar-table-scroll" data-rebar-part="scroll" style={{ maxHeight }}>
@@ -197,13 +208,13 @@ export function Table<T>({
                         className="rebar-table-sort-button"
                         onClick={() => handleSort(col)}
                       >
-                        <span>{col.header}</span>
+                        <span>{renderBionicChildren(col.header, bionicEnabled, bionicOptions)}</span>
                         <span className="rebar-table-sort-icon" aria-hidden="true">
                           {isSorted ? (sort!.direction === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>
                     ) : (
-                      col.header
+                      renderBionicChildren(col.header, bionicEnabled, bionicOptions)
                     )}
                   </th>
                 );

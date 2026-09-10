@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 import clsx from "clsx";
 import { Editable } from "./Editable";
 import { Empty } from "./Empty";
@@ -28,6 +28,18 @@ export interface GoalTrackerProps
   onGoalChange?: (focusAreaId: string, goalId: string, text: string) => void;
   onGoalToggle?: (focusAreaId: string, goalId: string, completed: boolean) => void;
   onDelete?: (kind: "focusArea" | "goal", ids: { focusAreaId: string; goalId?: string }) => void;
+  /** Adds an "Add focus area" affordance (below the list, and alongside the empty state) —
+   * omitted entirely when this isn't passed, same "caller owns the real operation" convention
+   * `onDelete` already follows here. */
+  onAddFocusArea?: () => void;
+  /** Adds an "Add goal" affordance at the end of one focus area's goal list. */
+  onAddGoal?: (focusAreaId: string) => void;
+  /** Confetti burst intensity on completing a goal — `"small"` (default) matches the original,
+   * subtle burst; `"big"` is a larger, more numerous, longer-traveling version for when a
+   * completion genuinely deserves to read as a celebration, not just a state flip; `"none"`
+   * disables the burst entirely. Always skipped outright when `prefers-reduced-motion` is set,
+   * regardless of this prop. */
+  celebration?: "none" | "small" | "big";
 }
 
 function prefersReducedMotion(): boolean {
@@ -35,12 +47,6 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-// Even spacing around the toggle, one arm per particle. A plain, deterministic layout (not
-// Math.random) — this only ever renders after a real client click, never during SSR, so there's
-// no hydration-mismatch concern here (unlike the trig-derived chart coordinates robot.md warns
-// about), but a fixed pattern reads just as celebratory as a random one and is easier to reason
-// about/test.
-const BURST_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
 const BURST_COLORS = [
   "var(--rebar-color-primary, #0066cc)",
   "var(--rebar-color-success, #2e7d32)",
@@ -48,7 +54,30 @@ const BURST_COLORS = [
   "var(--rebar-color-danger, #d32f2f)",
   "var(--rebar-color-info, #0288d1)",
 ];
-const BURST_DURATION_MS = 650;
+
+interface CelebrationConfig {
+  angles: number[];
+  particleSize: number;
+  travel: number;
+  durationMs: number;
+}
+
+// Even spacing around the toggle, one arm per particle. A plain, deterministic layout (not
+// Math.random) — this only ever renders after a real client click, never during SSR, so there's
+// no hydration-mismatch concern here (unlike the trig-derived chart coordinates robot.md warns
+// about), but a fixed pattern reads just as celebratory as a random one and is easier to reason
+// about/test. "big" uses more arms, bigger particles, and a longer travel distance — the original
+// 8-arm/6px/28px burst read as too subtle to clearly register as a celebration (compared against
+// Oestler's Simple Kanban, which this was originally modeled on).
+const CELEBRATION_CONFIG: Record<"small" | "big", CelebrationConfig> = {
+  small: { angles: [0, 45, 90, 135, 180, 225, 270, 315], particleSize: 6, travel: 28, durationMs: 600 },
+  big: {
+    angles: [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
+    particleSize: 10,
+    travel: 52,
+    durationMs: 750,
+  },
+};
 
 /**
  * A hand-rolled, dependency-free celebratory burst — a handful of colored dots animated outward
@@ -57,12 +86,14 @@ const BURST_DURATION_MS = 650;
  * "arm" `<span>` whose inline `rotate()` is set once in JS (the same "compute the static rotation
  * in JS, let CSS animate the rest" split `Sticky.tsx` already uses for its own procedural
  * rotation) — the CSS keyframe itself only ever animates `translateX`/`opacity` on the inner dot,
- * so no custom CSS property plumbing is needed to vary the direction per particle.
+ * so no custom CSS property plumbing is needed to vary the direction per particle beyond the
+ * per-burst `--rebar-goal-burst-travel` custom property carrying this celebration size's own
+ * travel distance.
  */
-function ConfettiBurst() {
+function ConfettiBurst({ config }: { config: CelebrationConfig }) {
   return (
     <span className="rebar-goal-tracker-burst" data-rebar-part="goal-burst" aria-hidden="true">
-      {BURST_ANGLES.map((angle, index) => (
+      {config.angles.map((angle, index) => (
         <span
           key={angle}
           className="rebar-goal-tracker-burst-arm"
@@ -70,7 +101,17 @@ function ConfettiBurst() {
         >
           <span
             className="rebar-goal-tracker-burst-particle"
-            style={{ background: BURST_COLORS[index % BURST_COLORS.length] }}
+            style={
+              {
+                width: config.particleSize,
+                height: config.particleSize,
+                marginTop: -config.particleSize / 2,
+                marginLeft: -config.particleSize / 2,
+                background: BURST_COLORS[index % BURST_COLORS.length],
+                animationDuration: `${config.durationMs}ms`,
+                "--rebar-goal-burst-travel": `${config.travel}px`,
+              } as CSSProperties
+            }
           />
         </span>
       ))}
@@ -82,6 +123,7 @@ interface GoalToggleProps {
   completed: boolean;
   label: string;
   onToggle: (completed: boolean) => void;
+  celebration: "none" | "small" | "big";
 }
 
 /**
@@ -91,7 +133,7 @@ interface GoalToggleProps {
  * variant of a purely celebratory animation, it's just skipped entirely, same call `BackTop`'s own
  * `prefersReducedMotion` check already makes for its scroll behavior.
  */
-function GoalToggle({ completed, label, onToggle }: GoalToggleProps) {
+function GoalToggle({ completed, label, onToggle, celebration }: GoalToggleProps) {
   const [burstId, setBurstId] = useState<number | null>(null);
   const nextBurstIdRef = useRef(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,11 +147,12 @@ function GoalToggle({ completed, label, onToggle }: GoalToggleProps) {
   const handleClick = () => {
     const next = !completed;
     onToggle(next);
-    if (next && !prefersReducedMotion()) {
+    if (next && celebration !== "none" && !prefersReducedMotion()) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       const id = nextBurstIdRef.current++;
       setBurstId(id);
-      timeoutRef.current = setTimeout(() => setBurstId(null), BURST_DURATION_MS);
+      const { durationMs } = CELEBRATION_CONFIG[celebration];
+      timeoutRef.current = setTimeout(() => setBurstId(null), durationMs + 50);
     }
   };
 
@@ -129,7 +172,9 @@ function GoalToggle({ completed, label, onToggle }: GoalToggleProps) {
       >
         {completed ? "✓" : ""}
       </button>
-      {burstId !== null ? <ConfettiBurst key={burstId} /> : null}
+      {burstId !== null && celebration !== "none" ? (
+        <ConfettiBurst key={burstId} config={CELEBRATION_CONFIG[celebration]} />
+      ) : null}
     </span>
   );
 }
@@ -152,6 +197,9 @@ export const GoalTracker = forwardRef<HTMLDivElement, GoalTrackerProps>(function
     onGoalChange,
     onGoalToggle,
     onDelete,
+    onAddFocusArea,
+    onAddGoal,
+    celebration = "small",
     className,
     ...props
   },
@@ -165,6 +213,9 @@ export const GoalTracker = forwardRef<HTMLDivElement, GoalTrackerProps>(function
       {...props}
     >
       <div className="rebar-goal-tracker-aspiration" data-rebar-part="aspiration">
+        <Text size="xs" color="secondary" className="rebar-goal-tracker-label">
+          Aspiration
+        </Text>
         <Editable
           value={aspiration}
           onChange={onAspirationChange}
@@ -188,6 +239,9 @@ export const GoalTracker = forwardRef<HTMLDivElement, GoalTrackerProps>(function
                 className="rebar-goal-tracker-focus-area"
                 data-rebar-part="focus-area"
               >
+                <Text size="xs" color="secondary" className="rebar-goal-tracker-label">
+                  Focus area
+                </Text>
                 <div className="rebar-goal-tracker-focus-area-header">
                   <Editable
                     value={focusArea.text}
@@ -222,6 +276,11 @@ export const GoalTracker = forwardRef<HTMLDivElement, GoalTrackerProps>(function
                   />
                 </div>
 
+                {focusArea.goals.length > 0 ? (
+                  <Text size="xs" color="secondary" className="rebar-goal-tracker-label">
+                    Goals
+                  </Text>
+                ) : null}
                 {focusArea.goals.length === 0 ? (
                   <Text
                     size="sm"
@@ -241,6 +300,7 @@ export const GoalTracker = forwardRef<HTMLDivElement, GoalTrackerProps>(function
                             goal.completed ? "incomplete" : "complete"
                           }`}
                           onToggle={(completed) => onGoalToggle?.(focusArea.id, goal.id, completed)}
+                          celebration={celebration}
                         />
                         <Editable
                           value={goal.text}
@@ -273,11 +333,36 @@ export const GoalTracker = forwardRef<HTMLDivElement, GoalTrackerProps>(function
                     ))}
                   </ul>
                 )}
+
+                {onAddGoal ? (
+                  <Button
+                    type="button"
+                    variant="tertiary"
+                    size="sm"
+                    className="rebar-goal-tracker-add-goal"
+                    data-rebar-part="add-goal"
+                    onClick={() => onAddGoal(focusArea.id)}
+                  >
+                    + Add goal
+                  </Button>
+                ) : null}
               </li>
             );
           })}
         </ul>
       )}
+
+      {onAddFocusArea ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="rebar-goal-tracker-add-focus-area"
+          data-rebar-part="add-focus-area"
+          onClick={onAddFocusArea}
+        >
+          + Add focus area
+        </Button>
+      ) : null}
     </div>
   );
 });

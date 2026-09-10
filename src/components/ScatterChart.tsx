@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartFilterFooter, useSeriesFilter } from "../chartSeriesFilter";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface ScatterChartSeries {
   label: string;
@@ -22,6 +25,13 @@ export interface ScatterChartProps extends Omit<ComponentPropsWithoutRef<"figure
   ariaLabel?: string;
   height?: number;
   yFormat?: (v: number) => string;
+  /** Adds a row of toggle buttons (one per series) below the chart that hide/show that series'
+   * whole column — off by default. The remaining visible columns reflow to fill the plot width,
+   * the same behavior as removing a series from `series` directly. */
+  filterable?: boolean;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -44,9 +54,15 @@ export function ScatterChart({
   ariaLabel,
   height = 320,
   yFormat = (v: number) => Math.round(v).toLocaleString(),
+  filterable,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: ScatterChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const { hidden, toggle, isVisible } = useSeriesFilter(series.map((s) => s.label));
+  const visibleSeries = filterable ? series.filter((s) => isVisible(s.label)) : series;
   const width = 700;
   const marginLeft = 62;
   const marginRight = 16;
@@ -55,7 +71,7 @@ export function ScatterChart({
   const plotWidth = width - marginLeft - marginRight;
   const plotHeight = height - marginTop - marginBottom;
 
-  const allValues = series.flatMap((s) => s.values);
+  const allValues = visibleSeries.flatMap((s) => s.values);
   if (allValues.length === 0) {
     return (
       <figure
@@ -65,6 +81,7 @@ export function ScatterChart({
         {...props}
       >
         {renderChartEmptyState(height)}
+        {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
       </figure>
     );
   }
@@ -78,7 +95,7 @@ export function ScatterChart({
   const tickCount = 5;
   const ticks = Array.from({ length: tickCount }, (_, i) => yMin + ((yMax - yMin) * i) / (tickCount - 1));
 
-  const n = series.length;
+  const n = visibleSeries.length;
   const bandWidth = plotWidth / n;
 
   return (
@@ -105,7 +122,7 @@ export function ScatterChart({
             </g>
           );
         })}
-        {series.map((s, i) => {
+        {visibleSeries.map((s, i) => {
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const cx = marginLeft + bandWidth * (i + 0.5);
           const mean = s.values.reduce((a, b) => a + b, 0) / s.values.length;
@@ -139,6 +156,7 @@ export function ScatterChart({
           );
         })}
       </svg>
+      {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
       {title ? (
         <figcaption
           data-rebar-part="title"
@@ -149,7 +167,7 @@ export function ScatterChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

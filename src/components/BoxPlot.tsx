@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface BoxPlotGroup {
   label: string;
@@ -28,6 +31,9 @@ export interface BoxPlotProps extends Omit<ComponentPropsWithoutRef<"figure">, "
   ariaLabel?: string;
   height?: number;
   yFormat?: (v: number) => string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -50,9 +56,13 @@ export function BoxPlot({
   ariaLabel,
   height = 320,
   yFormat = (v: number) => Math.round(v).toLocaleString(),
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: BoxPlotProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
   const width = 700;
   const marginLeft = 62;
   const marginRight = 16;
@@ -100,7 +110,9 @@ export function BoxPlot({
         style={{ width: "100%", maxWidth: width, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Box plot"}
+        {...backgroundProps}
       >
+        <rect x={0} y={0} width={width} height={height} fill="transparent" data-rebar-part="chart-background" />
         {ticks.map((t, i) => {
           const y = yScale(t);
           return (
@@ -122,6 +134,8 @@ export function BoxPlot({
           const yMedian = yScale(g.median);
           const boxTop = Math.min(yQ1, yQ3);
           const boxHeight = Math.abs(yQ1 - yQ3);
+          const markKey = String(i);
+          const selected = isSelected(markKey);
           return (
             <g key={g.label} data-rebar-part="box-plot-group">
               <line
@@ -140,9 +154,9 @@ export function BoxPlot({
                 width={boxWidth}
                 height={boxHeight}
                 fill={color}
-                fillOpacity={0.25}
+                fillOpacity={selected ? 0.45 : 0.25}
                 stroke={color}
-                strokeWidth={2}
+                strokeWidth={selected ? 3 : 2}
               />
               <line
                 data-rebar-part="box-plot-median"
@@ -163,9 +177,44 @@ export function BoxPlot({
               >
                 {g.label}
               </text>
+              {/* Covers the whole band (not just the visible box) so hovering anywhere near a
+                  group's whisker/box/whitespace all count as the same mark — drawn last (on top)
+                  so it's the one element that actually receives the pointer events. */}
+              <rect
+                data-rebar-part="box-plot-hit-area"
+                x={marginLeft + bandWidth * i}
+                y={marginTop}
+                width={bandWidth}
+                height={plotHeight}
+                fill="transparent"
+                style={{ cursor: "pointer" }}
+                {...getMarkProps(markKey)}
+              />
             </g>
           );
         })}
+        {activeKey
+          ? (() => {
+              const group = groups[Number(activeKey)];
+              if (!group) return null;
+              const cx = marginLeft + bandWidth * (Number(activeKey) + 0.5);
+              return (
+                <ChartValueTag
+                  x={cx}
+                  y={yScale(group.median)}
+                  viewBoxWidth={width}
+                  viewBoxHeight={height}
+                  accentColor={group.color ?? DEFAULT_PALETTE[Number(activeKey) % DEFAULT_PALETTE.length]}
+                  lines={[
+                    group.label + " (statistical summary)",
+                    "Max: " + yFormat(group.max) + "   Q3: " + yFormat(group.q3),
+                    "Median: " + yFormat(group.median),
+                    "Q1: " + yFormat(group.q1) + "   Min: " + yFormat(group.min),
+                  ]}
+                />
+              );
+            })()
+          : null}
       </svg>
       {title ? (
         <figcaption
@@ -177,7 +226,7 @@ export function BoxPlot({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

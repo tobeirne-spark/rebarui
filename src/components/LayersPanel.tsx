@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef, DragEvent, KeyboardEvent } from "react";
 import clsx from "clsx";
 import { Editable } from "./Editable";
 import { Empty } from "./Empty";
+import { ChevronDownIcon, ChevronRightIcon } from "./icons";
 
 export interface LayerNode {
   id: string;
@@ -72,7 +73,7 @@ function computeDropPosition(event: DragEvent<HTMLElement>, isGroup: boolean): L
 }
 
 function ExpandIcon({ open }: { open: boolean }) {
-  return <>{open ? "▾" : "▸"}</>;
+  return open ? <ChevronDownIcon /> : <ChevronRightIcon />;
 }
 
 // Small inline vector icons matching `Empty`'s own vector-fallback style (currentColor strokes,

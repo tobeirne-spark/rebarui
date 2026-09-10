@@ -26,4 +26,26 @@ describe("ColorPicker", () => {
     await user.click(screen.getByRole("button", { name: "#222222" }));
     expect(onChange).toHaveBeenCalledWith("#222222");
   });
+
+  it("defaults to size md, reflected as a data attribute", () => {
+    render(<ColorPicker />);
+    expect(screen.getByRole("button", { name: /Pick a color/ })).toHaveAttribute("data-rebar-size", "md");
+  });
+
+  it("renders a visibly smaller swatch for size sm without shrinking the real tap target", () => {
+    const { container } = render(<ColorPicker size="sm" defaultValue="#2e7d32" />);
+    const trigger = screen.getByRole("button", { name: /Pick a color/ });
+    expect(trigger).toHaveAttribute("data-rebar-size", "sm");
+    // The trigger button itself carries no inline size — CSS (min-width/min-height: 44px) is what
+    // keeps the real hit area at the touch-target minimum regardless of the visual swatch size.
+    expect(trigger).not.toHaveAttribute("style");
+    const swatch = container.querySelector('[data-rebar-part="swatch"]');
+    expect(swatch).toHaveStyle({ width: "20px", height: "20px", backgroundColor: "#2e7d32" });
+  });
+
+  it("renders a visibly larger swatch for size lg", () => {
+    const { container } = render(<ColorPicker size="lg" defaultValue="#2e7d32" />);
+    const swatch = container.querySelector('[data-rebar-part="swatch"]');
+    expect(swatch).toHaveStyle({ width: "36px", height: "36px" });
+  });
 });

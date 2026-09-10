@@ -28,6 +28,9 @@ export interface FlowchartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   width?: number;
   /** Viewport height in SVG units. Forwarded to the underlying `NodeLinkGraph`. Default `360`. */
   height?: number;
+  /** Inset kept clear between the diagram and its own edge — forwarded to the underlying
+   * `NodeLinkGraph`. Default `24`; see ref/HEURISTICS.md's diagram-canvas-padding default. */
+  padding?: number;
   className?: string;
 }
 
@@ -52,7 +55,16 @@ const DECISION_HALF_HEIGHT = 32;
  * genuine loops or multiple independent rejoining paths — those still render (every edge from
  * `next` is real and always drawn), just not necessarily in a visually optimal arrangement.
  */
-export function Flowchart({ steps, title, ariaLabel, width = 480, height = 360, className, ...props }: FlowchartProps) {
+export function Flowchart({
+  steps,
+  title,
+  ariaLabel,
+  width = 480,
+  height = 360,
+  padding,
+  className,
+  ...props
+}: FlowchartProps) {
   const shapeById = useMemo(() => {
     const map = new Map<string, FlowchartShape>();
     for (const step of steps) map.set(step.id, step.shape ?? "process");
@@ -87,6 +99,7 @@ export function Flowchart({ steps, title, ariaLabel, width = 480, height = 360, 
       ariaLabel={ariaLabel}
       width={width}
       height={height}
+      padding={padding}
       renderNode={(node) => {
         const shape = shapeById.get(node.id) ?? "process";
         const fill = node.color ?? "var(--rebar-color-bg-primary, #ffffff)";

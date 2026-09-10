@@ -45,7 +45,12 @@ export const AspectRatio = forwardRef<HTMLDivElement, AspectRatioProps>(function
       data-rebar-component="aspect-ratio"
     >
       {watermark ? (
-        <Watermark text={watermark} style={{ width: "100%", height: "100%" }}>
+        // A tighter gap than Watermark's own [100, 100] default: AspectRatio boxes are typically
+        // a small thumbnail (a few hundred px), not a full document/card — the default spacing
+        // fits at most one repeat at that size, which reads as "no watermark" rather than a
+        // visible repeating pattern (verified directly: the tile itself renders correctly, it's
+        // just too sparse to register at this scale).
+        <Watermark text={watermark} gap={[48, 48]} style={{ width: "100%", height: "100%" }}>
           {image}
         </Watermark>
       ) : (

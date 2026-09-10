@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
 import { Popover } from "./Popover";
+import { ChevronDownIcon } from "./icons";
 
 export interface SplitButtonItem {
   label: string;
@@ -63,7 +64,9 @@ export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function
             className="rebar-split-button-trigger"
             data-rebar-part="trigger"
           >
-            <span aria-hidden="true">▾</span>
+            <span aria-hidden="true">
+              <ChevronDownIcon />
+            </span>
           </Button>
         }
       >

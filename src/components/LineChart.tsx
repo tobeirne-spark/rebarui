@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface LineChartSeries {
   label: string;
@@ -25,6 +28,9 @@ export interface LineChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   /** Marks one x position with a vertical dashed line and a "crossover" label — for a cumulative
    * comparison where one series overtakes another partway through. */
   crossoverIndex?: number;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -50,9 +56,13 @@ export function LineChart({
   yFormat = (v: number) => Math.round(v).toLocaleString(),
   labelStep = 1,
   crossoverIndex,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: LineChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
   const width = 700;
   const marginLeft = 62;
   const marginRight = 20;
@@ -97,7 +107,16 @@ export function LineChart({
         style={{ width: "100%", maxWidth: width, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Line chart"}
+        {...backgroundProps}
       >
+        <rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          fill="transparent"
+          data-rebar-part="chart-background"
+        />
         {ticks.map((t, i) => {
           const y = yScale(t);
           return (
@@ -158,9 +177,24 @@ export function LineChart({
                 strokeWidth={2.5}
                 strokeDasharray={s.dashed ? "6 4" : undefined}
               />
-              {s.values.map((v, j) => (
-                <circle key={j} cx={xScale(j)} cy={yScale(v)} r={3.5} fill={color} />
-              ))}
+              {s.values.map((v, j) => {
+                const key = `${i}:${j}`;
+                const selected = isSelected(key);
+                return (
+                  <circle
+                    key={j}
+                    cx={xScale(j)}
+                    cy={yScale(v)}
+                    r={selected ? 5.5 : 3.5}
+                    fill={color}
+                    stroke={selected ? "var(--rebar-color-bg-primary, #ffffff)" : undefined}
+                    strokeWidth={selected ? 1.5 : undefined}
+                    style={{ cursor: "pointer" }}
+                    data-rebar-part="mark"
+                    {...getMarkProps(key)}
+                  />
+                );
+              })}
             </g>
           );
         })}
@@ -176,6 +210,26 @@ export function LineChart({
             {s.label}
           </text>
         ))}
+        {activeKey
+          ? (() => {
+              const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
+              const seriesIndex = Number(seriesIndexStr);
+              const pointIndex = Number(pointIndexStr);
+              const activeSeries = series[seriesIndex];
+              const value = activeSeries?.values[pointIndex];
+              if (!activeSeries || value === undefined) return null;
+              return (
+                <ChartValueTag
+                  x={xScale(pointIndex)}
+                  y={yScale(value)}
+                  viewBoxWidth={width}
+                  viewBoxHeight={height}
+                  accentColor={activeSeries.color ?? DEFAULT_PALETTE[seriesIndex % DEFAULT_PALETTE.length]}
+                  lines={[activeSeries.label, `${xLabels[pointIndex]}: ${yFormat(value)}`]}
+                />
+              );
+            })()
+          : null}
       </svg>
       {title ? (
         <figcaption
@@ -187,7 +241,7 @@ export function LineChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

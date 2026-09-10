@@ -1,5 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
+import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartFilterFooter, useSeriesFilter } from "../chartSeriesFilter";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface StackedBarChartSegment {
   label: string;
@@ -24,6 +28,13 @@ export interface StackedBarChartProps extends Omit<ComponentPropsWithoutRef<"fig
   ariaLabel?: string;
   height?: number;
   yFormat?: (v: number) => string;
+  /** Adds a row of toggle buttons — one per distinct segment label across every bar (the
+   * "series" a stacked bar chart's viewer actually thinks in) — below the chart. Hiding one drops
+   * that segment from every bar it appears in, not a whole bar. Off by default. */
+  filterable?: boolean;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -66,9 +77,18 @@ export function StackedBarChart({
   ariaLabel,
   height = 340,
   yFormat = (v: number) => `$${Math.round(v).toLocaleString()}`,
+  filterable,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: StackedBarChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const segmentLabels = [...new Set(bars.flatMap((bar) => bar.segments.map((s) => s.label)))];
+  const { hidden, toggle, isVisible } = useSeriesFilter(segmentLabels);
+  const visibleBars = filterable
+    ? bars.map((bar) => ({ ...bar, segments: bar.segments.filter((s) => isVisible(s.label)) }))
+    : bars;
   const width = 700;
   const marginLeft = 74;
   const marginRight = 16;
@@ -77,14 +97,30 @@ export function StackedBarChart({
   const plotWidth = width - marginLeft - marginRight;
   const plotHeight = height - marginTop - marginBottom;
 
-  const totals = bars.map((b) => b.segments.reduce((a, s) => a + s.value, 0));
+  const totals = visibleBars.map((b) => b.segments.reduce((a, s) => a + s.value, 0));
+  // Every bar totaling zero (a real all-zero dataset, or every segment currently filtered out)
+  // would otherwise divide into NaN below — the same "show a visible placeholder, never a
+  // NaN-based render" rule every other chart in this family already follows.
+  if (bars.length === 0 || Math.max(0, ...totals) === 0) {
+    return (
+      <figure
+        className={clsx("rebar-chart", "rebar-stacked-bar-chart", className)}
+        data-rebar-component="stacked-bar-chart"
+        style={{ margin: 0 }}
+        {...props}
+      >
+        {renderChartEmptyState(height)}
+        {filterable ? <ChartFilterFooter labels={segmentLabels} hidden={hidden} onToggle={toggle} /> : null}
+      </figure>
+    );
+  }
   const yMax = Math.max(...totals) * 1.1;
   const yScale = (v: number) => (v / yMax) * plotHeight;
 
   const tickCount = 5;
   const ticks = Array.from({ length: tickCount }, (_, i) => (yMax * i) / (tickCount - 1));
 
-  const n = bars.length;
+  const n = visibleBars.length;
   const bandWidth = plotWidth / n;
   const barWidth = bandWidth * 0.46;
 
@@ -119,7 +155,7 @@ export function StackedBarChart({
             </g>
           );
         })}
-        {bars.map((bar, i) => {
+        {visibleBars.map((bar, i) => {
           const cx = marginLeft + bandWidth * (i + 0.5);
           let cumulative = 0;
           const total = totals[i] ?? 0;
@@ -172,6 +208,7 @@ export function StackedBarChart({
           );
         })}
       </svg>
+      {filterable ? <ChartFilterFooter labels={segmentLabels} hidden={hidden} onToggle={toggle} /> : null}
       {title ? (
         <figcaption
           data-rebar-part="title"
@@ -182,7 +219,7 @@ export function StackedBarChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

@@ -149,12 +149,31 @@ Checklist for a new component:
     mode `--rebar-color-bg-primary`, making the thumb disappear entirely. Fix: give it a real
     border (a fixed, theme-aware stroke color) so it stays legible independent of whatever
     happens to be behind it in either theme, rather than relying solely on a background pairing.
+12. **Every real caller-facing text prop (label, title, description — not an id, not an
+    aria-only string, not a numeric/data value) gets wired through `useBionicChildren`/
+    `renderBionicChildren` (`bionic.tsx`) before a component ships**, not audited in afterward. See
+    `Collapsible`/`Result` for the exact wiring shape (`bionic?`/`bionicOptions?` props, the hook
+    called on each text prop, its return value rendered in place of the raw prop). A component
+    whose text renders inside an SVG `<text>` node (a diagram/chart label) needs this checked
+    specifically — `useBionicChildren`'s segments render as SVG `<tspan>` children, not plain DOM
+    spans, and aren't automatically safe to assume work without checking.
 
 ## Building blocks (`@rebar-ui/placement`)
 
 A block is a **named, pre-decided layout of real components** — the unit an agent (or a document
 author) picks when composing a page, supplying only content, never markup or layout properties
 (no direction, gap, or nesting decisions belong in a `Block[]` document).
+
+**The practical test when a new thing is ambiguous between the two:** would an app that adopts
+rebar-ui import this directly as a reusable feature inside its own product (→ component), or is
+this specifically a page-content-authoring shape this docs site's own Packer composes from smaller
+pieces (→ block)? Almost anything can be described as "a layout of other components" at some level
+of composition (a `Table` is a layout of rows and cells too) — the question that actually resolves
+it is *what's the reusable unit a consumer reaches for*: if it's the whole assembled thing, it's a
+component (even if internally complex — `LayersPanel`, `Wizard`, `Result`); if the reusable unit is
+something smaller than the assembly (a checklist item, in `GoalTracker`'s case) and the assembly
+itself is just this project's own page-content shape, decompose the smaller piece into a real
+component and let the assembly become a block instead.
 
 - `packages/placement/src/schema.ts` — the `Block` discriminated union (one variant per block
   type) plus its item/field interfaces. Add a new block by adding a new union member here.

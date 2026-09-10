@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BubbleChart } from "../components/BubbleChart";
+
+function getBubble(container: HTMLElement, index: number) {
+  return container.querySelectorAll('[data-rebar-part="bubble"]')[index] as HTMLElement;
+}
+
+function getTagLines(container: HTMLElement) {
+  const tag = container.querySelector('[data-rebar-part="value-tag"]');
+  return Array.from(tag?.querySelectorAll("text") ?? []).map((el) => el.textContent);
+}
 
 afterEach(cleanup);
 
@@ -78,5 +87,30 @@ describe("BubbleChart", () => {
       expect(r).toBeGreaterThanOrEqual(4);
       expect(r).toBeLessThanOrEqual(24);
     }
+  });
+
+  it("hovering a bubble shows its value tag; clicking persists it after the pointer leaves", () => {
+    const { container } = render(<BubbleChart series={series} title="Cost vs. quality" />);
+    const bubble = getBubble(container, 1); // Set A, point 1: x2 y14 size20
+
+    fireEvent.pointerEnter(bubble);
+    expect(getTagLines(container)).toEqual(["Set A", "x: 2  y: 14", "size: 20"]);
+    fireEvent.pointerLeave(bubble);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
+
+    fireEvent.click(bubble);
+    fireEvent.pointerLeave(bubble);
+    expect(getTagLines(container)).toEqual(["Set A", "x: 2  y: 14", "size: 20"]);
+  });
+
+  it("a dead click on empty chart space clears the persistent selection", () => {
+    const { container } = render(<BubbleChart series={series} title="Cost vs. quality" />);
+    const bubble = getBubble(container, 0);
+    const background = container.querySelector('[data-rebar-part="chart-background"]') as HTMLElement;
+
+    fireEvent.click(bubble);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).toBeInTheDocument();
+    fireEvent.click(background);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
   });
 });

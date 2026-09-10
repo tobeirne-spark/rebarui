@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { NodeLinkGraph } from "./NodeLinkGraph";
 import type { NodeLinkGraphEdge, NodeLinkGraphNode } from "./NodeLinkGraph";
+import type { BionicOptions } from "../bionic";
 
 export interface OrgChartPerson {
   id: string;
@@ -32,7 +33,15 @@ export interface OrgChartProps extends Omit<ComponentPropsWithoutRef<"figure">, 
   width?: number;
   /** Viewport height in SVG units. Forwarded to the underlying `NodeLinkGraph`. Default `360`. */
   height?: number;
+  /** Inset kept clear between the chart and its own edge — forwarded to the underlying
+   * `NodeLinkGraph`. Default `24`; see ref/HEURISTICS.md's diagram-canvas-padding default. */
+  padding?: number;
   className?: string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting
+   * — forwarded to the underlying `NodeLinkGraph`. Each person's name/role render as SVG `<text>`,
+   * which `useBionicChildren`'s span-splitting can't target. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const NODE_WIDTH = 120;
@@ -56,6 +65,9 @@ export function OrgChart({
   ariaLabel,
   width = 480,
   height = 360,
+  padding,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: OrgChartProps) {
@@ -88,6 +100,9 @@ export function OrgChart({
       ariaLabel={ariaLabel}
       width={width}
       height={height}
+      padding={padding}
+      bionic={bionic}
+      bionicOptions={bionicOptions}
       renderNode={(node) => {
         const [name, role] = node.label.split(LABEL_SEPARATOR);
         return (

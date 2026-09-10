@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import * as RadixSelect from "@radix-ui/react-select";
 import clsx from "clsx";
+import { ChevronDownIcon } from "./icons";
 
 export interface SelectOption {
   value: string;
@@ -38,7 +39,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
       >
         <RadixSelect.Value placeholder={placeholder} />
         <RadixSelect.Icon className="rebar-select-icon" aria-hidden="true">
-          ▾
+          <ChevronDownIcon />
         </RadixSelect.Icon>
       </RadixSelect.Trigger>
       <RadixSelect.Portal>

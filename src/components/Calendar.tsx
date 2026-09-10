@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
+import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
 export interface CalendarProps extends Omit<ComponentPropsWithoutRef<"div">, "value" | "defaultValue"> {
   value?: Date;
@@ -114,7 +115,7 @@ export const Calendar = ({
           aria-label="Previous month"
           onClick={goToPrevMonth}
         >
-          ‹
+          <ChevronLeftIcon />
         </Button>
         <span className="rebar-calendar-label" data-rebar-part="label">
           {monthLabel}
@@ -126,7 +127,7 @@ export const Calendar = ({
           aria-label="Next month"
           onClick={goToNextMonth}
         >
-          ›
+          <ChevronRightIcon />
         </Button>
       </div>
       <div className="rebar-calendar-weekdays" data-rebar-part="weekdays">

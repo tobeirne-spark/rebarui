@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface FunnelChartStage {
   label: string;
@@ -20,6 +22,9 @@ export interface FunnelChartProps extends Omit<ComponentPropsWithoutRef<"figure"
   /** Height, in SVG units, of each stage's own band (not the whole chart). */
   height?: number;
   valueFormat?: (v: number) => string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -41,9 +46,12 @@ export function FunnelChart({
   ariaLabel,
   height = 64,
   valueFormat = (v: number) => Math.round(v).toLocaleString(),
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: FunnelChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   if (stages.length === 0) {
     return (
       <figure
@@ -130,7 +138,7 @@ export function FunnelChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>
