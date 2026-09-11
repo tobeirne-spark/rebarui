@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
 import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
 import { ChartFilterFooter, useSeriesFilter } from "../chartSeriesFilter";
+import { computeTrendline } from "../chartTrendline";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
@@ -34,6 +35,9 @@ export interface LineChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
    * series (a label with no matching line would otherwise dangle); the footer is the always-full
    * control surface for bringing a hidden one back. */
   filterable?: boolean;
+  /** Adds a dashed linear-regression trendline per series, computed over its own values against
+   * x position — off by default. */
+  trendline?: boolean;
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -63,6 +67,7 @@ export function LineChart({
   labelStep = 1,
   crossoverIndex,
   filterable,
+  trendline,
   bionic,
   bionicOptions,
   className,
@@ -179,6 +184,7 @@ export function LineChart({
           if (filterable && !isVisible(s.label)) return null;
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const points = s.values.map((v, j) => `${xScale(j)},${yScale(v)}`).join(" ");
+          const trend = trendline ? computeTrendline(s.values.map((v, j) => ({ x: j, y: v }))) : null;
           return (
             <g key={s.label}>
               <polyline
@@ -188,6 +194,19 @@ export function LineChart({
                 strokeWidth={2.5}
                 strokeDasharray={s.dashed ? "6 4" : undefined}
               />
+              {trend ? (
+                <line
+                  x1={xScale(0)}
+                  y1={yScale(trend.intercept)}
+                  x2={xScale(s.values.length - 1)}
+                  y2={yScale(trend.slope * (s.values.length - 1) + trend.intercept)}
+                  stroke={color}
+                  strokeWidth={1.5}
+                  strokeDasharray="2 4"
+                  opacity={0.6}
+                  data-rebar-part="trendline"
+                />
+              ) : null}
               {s.values.map((v, j) => {
                 const key = `${i}:${j}`;
                 const selected = isSelected(key);

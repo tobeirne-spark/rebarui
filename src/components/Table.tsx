@@ -7,6 +7,7 @@ import { Pagination } from "./Pagination";
 import { Skeleton } from "./Skeleton";
 import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { useDelayedLoading } from "../useDelayedLoading";
 
 export interface TableColumn<T> {
   key: string;
@@ -49,6 +50,14 @@ export interface TableProps<T> {
   page?: number;
   onPageChange?: (page: number) => void;
   loading?: boolean;
+  /** Waits this long before showing the `loading` skeleton rows at all — a `loading` that goes
+   * back to `false` before this elapses never renders them, the fix for a near-instant (e.g.
+   * local, in-memory) fetch flashing skeleton rows for a single frame. Unset by default (shows
+   * immediately, exactly today's behavior) — see `ref/HEURISTICS.md` #52 and `useDelayedLoading`. */
+  loadingDelayMs?: number;
+  /** Once shown, keeps the skeleton rows up for at least this long, even if `loading` goes back
+   * to `false` sooner. Unset by default (hides immediately). */
+  loadingMinDurationMs?: number;
   /** Shown in place of the body when `data` is empty and `loading` is false. */
   emptyMessage?: ReactNode;
   /** Bounds the table's own scrollable body — see ref/HEURISTICS.md #45 (a control's footprint
@@ -100,7 +109,9 @@ export function Table<T>({
   pageSize,
   page: controlledPage,
   onPageChange,
-  loading = false,
+  loading: loadingProp = false,
+  loadingDelayMs,
+  loadingMinDurationMs,
   emptyMessage = "No data.",
   maxHeight,
   caption,
@@ -109,6 +120,14 @@ export function Table<T>({
   className,
   ...props
 }: TableProps<T>) {
+  const hasLoadingDelayConfig = (loadingDelayMs ?? 0) > 0 || (loadingMinDurationMs ?? 0) > 0;
+  // Always called; only its result is used, and only once a delay/minimum-duration is actually
+  // configured — otherwise `loading` passes through exactly as before, synchronously.
+  const delayedLoading = useDelayedLoading(loadingProp, {
+    delayMs: loadingDelayMs,
+    minDurationMs: loadingMinDurationMs,
+  });
+  const loading = hasLoadingDelayConfig ? delayedLoading : loadingProp;
   const captionContent = useBionicChildren(caption, bionic, bionicOptions);
   const ambientBionic = useAmbientBionic();
   const bionicEnabled = bionic ?? ambientBionic;

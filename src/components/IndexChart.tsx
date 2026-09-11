@@ -2,19 +2,22 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
 import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { ChartFilterFooter, useSeriesFilter } from "../chartSeriesFilter";
 import { computeTrendline } from "../chartTrendline";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
-export interface AreaChartSeries {
+export interface IndexChartSeries {
   label: string;
   /** Defaults to the next color in a small built-in palette, cycled by series index. */
   color?: string;
+  /** Raw values — rebased internally to `baseValue` at the series' own first point, so series
+   * starting from very different absolute scales become comparable by relative change. */
   values: number[];
 }
 
-export interface AreaChartProps extends Omit<ComponentPropsWithoutRef<"figure">, "title"> {
-  series: AreaChartSeries[];
+export interface IndexChartProps extends Omit<ComponentPropsWithoutRef<"figure">, "title"> {
+  series: IndexChartSeries[];
   xLabels: string[];
   /** Rendered as a real, visible caption above the chart — see ref/HEURISTICS.md #16. Optional
    * only so a chart embedded somewhere its own heading already serves this role doesn't get a
@@ -24,7 +27,14 @@ export interface AreaChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   ariaLabel?: string;
   height?: number;
   labelStep?: number;
-  /** Adds a dashed linear-regression trendline per series — off by default. */
+  /** The index value every series is rebased to at its own first point. Default `100` (the
+   * conventional "indexed to 100" reading — a value of 110 later means "+10% since the start"). */
+  baseValue?: number;
+  /** Adds a row of toggle buttons (one per series) below the chart that hide/show that series'
+   * whole line — off by default. */
+  filterable?: boolean;
+  /** Adds a dashed linear-regression trendline per series, computed over its own rebased (index)
+   * values against position — off by default. */
   trendline?: boolean;
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
@@ -40,25 +50,31 @@ const DEFAULT_PALETTE = [
 ];
 
 /**
- * A multi-series area chart over an ordered x-axis — the same shape as `LineChart` (same
- * scaling/label logic, reused exactly), with the area under each line filled using the series'
- * own color at low opacity so overlapping series stay legible.
+ * A multi-series line chart that rebases every series to a common starting index (`baseValue`,
+ * default 100) instead of plotting raw values — the standard "indexed to 100" comparison for
+ * series on very different absolute scales (e.g. comparing several stocks' relative performance
+ * regardless of their actual share price). A dashed reference line marks `baseValue` itself (no
+ * change since the start). Otherwise the exact same shape/scaling/interaction conventions as
+ * `LineChart`, which this is a rebasing variant of, not a redesign.
  */
-export function AreaChart({
+export function IndexChart({
   series,
   xLabels,
   title,
   ariaLabel,
   height = 300,
   labelStep = 1,
+  baseValue = 100,
+  filterable,
   trendline,
   bionic,
   bionicOptions,
   className,
   ...props
-}: AreaChartProps) {
+}: IndexChartProps) {
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
+  const { hidden, toggle, isVisible } = useSeriesFilter(series.map((s) => s.label));
   const width = 700;
   const marginLeft = 62;
   const marginRight = 20;
@@ -67,35 +83,44 @@ export function AreaChart({
   const plotWidth = width - marginLeft - marginRight;
   const plotHeight = height - marginTop - marginBottom;
 
-  const allValues = series.flatMap((s) => s.values);
-  if (allValues.length === 0 || xLabels.length < 2) {
+  // Rebase each series to baseValue at its own first value — a series starting at 0 has no
+  // meaningful percent change, so it's left flat at baseValue rather than dividing by zero.
+  const indexedSeries = series.map((s) => {
+    const first = s.values[0];
+    const indexed = !first ? s.values.map(() => baseValue) : s.values.map((v) => (v / first) * baseValue);
+    return { ...s, indexed };
+  });
+
+  const allValues = indexedSeries.flatMap((s) => s.indexed);
+  const allFilteredOut = filterable && series.length > 0 && series.every((s) => !isVisible(s.label));
+  if (allValues.length === 0 || xLabels.length < 2 || allFilteredOut) {
     return (
       <figure
-        className={clsx("rebar-chart", "rebar-area-chart", className)}
-        data-rebar-component="area-chart"
+        className={clsx("rebar-chart", "rebar-index-chart", className)}
+        data-rebar-component="index-chart"
         style={{ margin: 0 }}
         {...props}
       >
         {renderChartEmptyState(height)}
+        {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
       </figure>
     );
   }
-  const rawMin = Math.min(...allValues);
-  const rawMax = Math.max(...allValues);
+  const rawMin = Math.min(baseValue, ...allValues);
+  const rawMax = Math.max(baseValue, ...allValues);
   const pad = (rawMax - rawMin) * 0.08 || rawMax * 0.05 || 1;
-  const yMin = Math.max(0, rawMin - pad);
+  const yMin = rawMin - pad;
   const yMax = rawMax + pad;
   const yScale = (v: number) => marginTop + plotHeight - ((v - yMin) / (yMax - yMin)) * plotHeight;
   const xScale = (i: number) => marginLeft + (plotWidth * i) / (xLabels.length - 1);
-  const baselineY = marginTop + plotHeight;
 
   const tickCount = 5;
   const ticks = Array.from({ length: tickCount }, (_, i) => yMin + ((yMax - yMin) * i) / (tickCount - 1));
 
   return (
     <figure
-      className={clsx("rebar-chart", "rebar-area-chart", className)}
-      data-rebar-component="area-chart"
+      className={clsx("rebar-chart", "rebar-index-chart", className)}
+      data-rebar-component="index-chart"
       style={{ margin: 0 }}
       {...props}
     >
@@ -103,7 +128,7 @@ export function AreaChart({
         viewBox={`0 0 ${width} ${height}`}
         style={{ width: "100%", maxWidth: width, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
-        aria-label={ariaLabel ?? title ?? "Area chart"}
+        aria-label={ariaLabel ?? title ?? "Index chart"}
         {...backgroundProps}
       >
         <rect x={0} y={0} width={width} height={height} fill="transparent" data-rebar-part="chart-background" />
@@ -113,7 +138,7 @@ export function AreaChart({
             <g key={i}>
               <line x1={marginLeft} y1={y} x2={width - marginRight} y2={y} stroke="var(--rebar-color-border, #e0e0e0)" strokeWidth={1} />
               <text x={marginLeft - 8} y={y + 4} fontSize={11} textAnchor="end" fill="var(--rebar-color-text-secondary, #757575)">
-                {Math.round(t).toLocaleString()}
+                {Math.round(t)}
               </text>
             </g>
           );
@@ -133,21 +158,34 @@ export function AreaChart({
             </text>
           );
         })}
-        {series.map((s, i) => {
+        <g>
+          <line
+            x1={marginLeft}
+            y1={yScale(baseValue)}
+            x2={width - marginRight}
+            y2={yScale(baseValue)}
+            stroke="var(--rebar-color-text-secondary, #757575)"
+            strokeWidth={1.5}
+            strokeDasharray="3 3"
+          />
+          <text x={width - marginRight} y={yScale(baseValue) - 4} fontSize={10} textAnchor="end" fill="var(--rebar-color-text-secondary, #757575)">
+            {baseValue}
+          </text>
+        </g>
+        {indexedSeries.map((s, i) => {
+          if (filterable && !isVisible(s.label)) return null;
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
-          const linePoints = s.values.map((v, j) => `${xScale(j)},${yScale(v)}`).join(" ");
-          const areaPoints = `${xScale(0)},${baselineY} ${linePoints} ${xScale(s.values.length - 1)},${baselineY}`;
-          const trend = trendline ? computeTrendline(s.values.map((v, j) => ({ x: j, y: v }))) : null;
+          const points = s.indexed.map((v, j) => `${xScale(j)},${yScale(v)}`).join(" ");
+          const trend = trendline ? computeTrendline(s.indexed.map((v, j) => ({ x: j, y: v }))) : null;
           return (
             <g key={s.label}>
-              <polygon points={areaPoints} fill={color} fillOpacity={0.18} stroke="none" />
-              <polyline points={linePoints} fill="none" stroke={color} strokeWidth={2.5} />
+              <polyline points={points} fill="none" stroke={color} strokeWidth={2.5} />
               {trend ? (
                 <line
                   x1={xScale(0)}
                   y1={yScale(trend.intercept)}
-                  x2={xScale(s.values.length - 1)}
-                  y2={yScale(trend.slope * (s.values.length - 1) + trend.intercept)}
+                  x2={xScale(s.indexed.length - 1)}
+                  y2={yScale(trend.slope * (s.indexed.length - 1) + trend.intercept)}
                   stroke={color}
                   strokeWidth={1.5}
                   strokeDasharray="2 4"
@@ -155,7 +193,7 @@ export function AreaChart({
                   data-rebar-part="trendline"
                 />
               ) : null}
-              {s.values.map((v, j) => {
+              {s.indexed.map((v, j) => {
                 const key = `${i}:${j}`;
                 const selected = isSelected(key);
                 return (
@@ -176,26 +214,34 @@ export function AreaChart({
             </g>
           );
         })}
-        {series.map((s, i) => (
-          <text
-            key={s.label}
-            x={width - marginRight}
-            y={marginTop + 12 + i * 16}
-            fontSize={11}
-            textAnchor="end"
-            fill={s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
-          >
-            {s.label}
-          </text>
-        ))}
+        {(() => {
+          let visibleLabelIndex = 0;
+          return indexedSeries.map((s, i) => {
+            if (filterable && !isVisible(s.label)) return null;
+            const labelSlot = visibleLabelIndex++;
+            return (
+              <text
+                key={s.label}
+                x={width - marginRight}
+                y={marginTop + 12 + labelSlot * 16}
+                fontSize={11}
+                textAnchor="end"
+                fill={s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+              >
+                {s.label}
+              </text>
+            );
+          });
+        })()}
         {activeKey
           ? (() => {
               const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
               const seriesIndex = Number(seriesIndexStr);
               const pointIndex = Number(pointIndexStr);
-              const activeSeries = series[seriesIndex];
-              const value = activeSeries?.values[pointIndex];
+              const activeSeries = indexedSeries[seriesIndex];
+              const value = activeSeries?.indexed[pointIndex];
               if (!activeSeries || value === undefined) return null;
+              if (filterable && !isVisible(activeSeries.label)) return null;
               return (
                 <ChartValueTag
                   x={xScale(pointIndex)}
@@ -203,12 +249,13 @@ export function AreaChart({
                   viewBoxWidth={width}
                   viewBoxHeight={height}
                   accentColor={activeSeries.color ?? DEFAULT_PALETTE[seriesIndex % DEFAULT_PALETTE.length]}
-                  lines={[activeSeries.label, `${xLabels[pointIndex]}: ${Math.round(value).toLocaleString()}`]}
+                  lines={[activeSeries.label, `${xLabels[pointIndex]}: ${Math.round(value)}`]}
                 />
               );
             })()
           : null}
       </svg>
+      {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
       {title ? (
         <figcaption
           data-rebar-part="title"

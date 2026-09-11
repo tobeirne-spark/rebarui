@@ -1,3 +1,17 @@
+/**
+ * The published `rebar-ui` version — kept in sync with `package.json`'s `"version"` field by hand
+ * at each release (same manual-sync discipline as the docs site's own decoupled version display),
+ * not derived at build time. Stamped onto `<html data-rebar-ui-version>` the first time this
+ * package is imported (see below), so any rebar-ui-built page — this project's own docs site or a
+ * consumer's real app — carries a real, inspectable record of which version built it, without the
+ * consumer having to wire anything up. `RebarDevTools` reads this same attribute to display it.
+ */
+export const REBAR_UI_VERSION = "0.3.0";
+
+if (typeof document !== "undefined") {
+  document.documentElement.setAttribute("data-rebar-ui-version", REBAR_UI_VERSION);
+}
+
 export { Box } from "./components/Box";
 export type { BoxProps } from "./components/Box";
 
@@ -119,7 +133,15 @@ export { NavBar } from "./components/NavBar";
 export type { NavBarProps, NavBarItem } from "./components/NavBar";
 
 export { SidebarNav } from "./components/SidebarNav";
-export type { SidebarNavProps, SidebarNavItem } from "./components/SidebarNav";
+export type {
+  SidebarNavProps,
+  SidebarNavItem,
+  SidebarNavEntry,
+  SidebarNavHeading,
+  SidebarNavDivider,
+  SidebarNavWorkspace,
+  SidebarNavSearch,
+} from "./components/SidebarNav";
 
 export { NavIndex } from "./components/NavIndex";
 export type { NavIndexProps, NavIndexItem } from "./components/NavIndex";
@@ -213,6 +235,36 @@ export type { BubbleChartProps, BubbleChartSeries, BubbleChartPoint } from "./co
 export { Heatmap } from "./components/Heatmap";
 export type { HeatmapProps, HeatmapCell } from "./components/Heatmap";
 
+export { StackedLineChart } from "./components/StackedLineChart";
+export type { StackedLineChartProps, StackedLineChartSeries } from "./components/StackedLineChart";
+
+export { StackedAreaChart } from "./components/StackedAreaChart";
+export type { StackedAreaChartProps, StackedAreaChartSeries } from "./components/StackedAreaChart";
+
+export { SteppedBarChart } from "./components/SteppedBarChart";
+export type { SteppedBarChartProps, SteppedBarChartBar } from "./components/SteppedBarChart";
+
+export { StepChart } from "./components/StepChart";
+export type { StepChartProps, StepChartSeries, StepChartStep } from "./components/StepChart";
+
+export { IndexChart } from "./components/IndexChart";
+export type { IndexChartProps, IndexChartSeries } from "./components/IndexChart";
+
+export { Histogram } from "./components/Histogram";
+export type { HistogramProps, HistogramSeries } from "./components/Histogram";
+
+export { RibbonChart } from "./components/RibbonChart";
+export type { RibbonChartProps, RibbonChartSeries } from "./components/RibbonChart";
+
+export { CalendarHeatmap } from "./components/CalendarHeatmap";
+export type { CalendarHeatmapProps, CalendarHeatmapCell } from "./components/CalendarHeatmap";
+
+export { BulletGraph } from "./components/BulletGraph";
+export type { BulletGraphProps, BulletGraphMeasure } from "./components/BulletGraph";
+
+export { PackedBubbleChart } from "./components/PackedBubbleChart";
+export type { PackedBubbleChartProps, PackedBubbleItem } from "./components/PackedBubbleChart";
+
 export { UMAPPlot } from "./components/UMAPPlot";
 export type { UMAPPlotProps, UMAPPlotCluster, UMAPPlotPoint } from "./components/UMAPPlot";
 
@@ -305,6 +357,8 @@ export type { BionicOptions, BionicSegment } from "./bionic";
 
 export { useLongPress } from "./useLongPress";
 export type { UseLongPressOptions, LongPressHandlers } from "./useLongPress";
+export { useDelayedLoading } from "./useDelayedLoading";
+export type { UseDelayedLoadingOptions } from "./useDelayedLoading";
 
 export { BarChart } from "./components/BarChart";
 export type { BarChartProps, BarChartBar } from "./components/BarChart";

@@ -60,6 +60,12 @@ Framework Rules below; the Heuristics checklist follows the rest of this file.
   `data-theme="dark"`).** That's the recommended starting point — regular IBM Plex Sans font, not
   the hand-drawn `theme-sketch` look. Only reach for `theme-sketch` when that aesthetic is
   specifically requested; don't treat the two as an arbitrary coin-flip.
+- **Rendering `ThemeToggle`? Install and import both theme packages.** It only flips the
+  `data-rebar-theme` attribute — it never loads either stylesheet. A build that imports only
+  `theme-clean` but still offers the toggle leaves "sketch" with nothing to switch to.
+- **No favicon of your own? Use `node_modules/rebar-ui/assets/favicon.svg`** — a real,
+  theme-adaptive "R" mark shipped in the package (reacts to `prefers-color-scheme`, no JS). Copy it
+  into the build's `public/` directory and link it, rather than shipping with none.
 - **Every component carries `data-rebar-component="<kebab-name>"`** on its root, and
   `data-rebar-part="<part>"` on each internal structural piece (header, body, item, ...) — the
   hook both Playwright tests and a consuming migration script rely on.

@@ -109,4 +109,118 @@ describe("SidebarNav", () => {
     const { container } = render(<SidebarNav items={ITEMS} />);
     expect(container.querySelector('[data-rebar-component="sidebar-nav"]')).toBeInTheDocument();
   });
+
+  it("renders header, panel, and footer slots, each resolving a collapsed-aware function form", () => {
+    const { container, rerender } = render(
+      <SidebarNav
+        items={ITEMS}
+        header={({ collapsed }) => (collapsed ? "H-collapsed" : "H-expanded")}
+        panel="A promo panel"
+        footer="A footer row"
+      />,
+    );
+    expect(screen.getByText("H-expanded")).toBeInTheDocument();
+    expect(screen.getByText("A promo panel")).toBeInTheDocument();
+    expect(screen.getByText("A footer row")).toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="header"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="panel"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="footer"]')).toBeInTheDocument();
+
+    rerender(
+      <SidebarNav
+        items={ITEMS}
+        collapsed
+        header={({ collapsed }) => (collapsed ? "H-collapsed" : "H-expanded")}
+      />,
+    );
+    expect(screen.getByText("H-collapsed")).toBeInTheDocument();
+  });
+
+  it("renders a heading and a divider entry, hiding the heading (not the divider) while collapsed", () => {
+    const entries = [
+      { type: "heading" as const, label: "Shortcuts" },
+      { label: "Tasks", href: "/tasks" },
+      { type: "divider" as const },
+      { label: "Reports", href: "/reports" },
+    ];
+    const { container, rerender } = render(<SidebarNav items={entries} />);
+    expect(screen.getByText("Shortcuts")).toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="divider"]')).toBeInTheDocument();
+
+    rerender(<SidebarNav items={entries} collapsed />);
+    expect(screen.queryByText("Shortcuts")).not.toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="divider"]')).toBeInTheDocument();
+  });
+
+  it("renders a badge on an item, hidden while collapsed", () => {
+    const entries = [{ label: "Chat", href: "/chat", badge: "5" }];
+    const { container, rerender } = render(<SidebarNav items={entries} />);
+    expect(container.querySelector('[data-rebar-part="badge"]')).toHaveTextContent("5");
+
+    rerender(<SidebarNav items={entries} collapsed />);
+    expect(container.querySelector('[data-rebar-part="badge"]')).not.toBeInTheDocument();
+  });
+
+  it("variant=\"grid\" renders a 2-column tile grid, falling back to a single column while collapsed", () => {
+    const { container, rerender } = render(<SidebarNav items={ITEMS.slice(0, 2)} variant="grid" />);
+    expect(container.querySelector(".rebar-sidebar-nav-list-grid")).toBeInTheDocument();
+
+    rerender(<SidebarNav items={ITEMS.slice(0, 2)} variant="grid" collapsed />);
+    expect(container.querySelector(".rebar-sidebar-nav-list-grid")).not.toBeInTheDocument();
+  });
+
+  it("a workspace switcher renders label, description, and responds to click", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <SidebarNav
+        items={ITEMS}
+        workspace={{ label: "Saleshouse", description: "general team", onClick }}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /Saleshouse/ });
+    expect(screen.getByText("general team")).toBeInTheDocument();
+    await user.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("built-in search filters items (and matching nested children) by label as the user types", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    render(<SidebarNav items={ITEMS} search={{ onSearch }} />);
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Projects" })).toBeInTheDocument();
+
+    await user.type(screen.getByRole("searchbox"), "dash");
+    expect(onSearch).toHaveBeenLastCalledWith("dash");
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Projects" })).not.toBeInTheDocument();
+  });
+
+  it("search auto-expands a group whose child matches, and hides one whose subtree doesn't", async () => {
+    const user = userEvent.setup();
+    render(<SidebarNav items={ITEMS} search />);
+    await user.type(screen.getByRole("searchbox"), "billing");
+    expect(screen.getByRole("link", { name: "Billing" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
+  });
+
+  it("search collapses to a bare icon while the sidebar is collapsed", () => {
+    const { container } = render(<SidebarNav items={ITEMS} search collapsed />);
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="search"]')).toBeInTheDocument();
+  });
+
+  it("activeStyle applies the matching modifier class to the active item", () => {
+    const { container, rerender } = render(<SidebarNav items={ITEMS} activeStyle="bar" />);
+    expect(container.querySelector(".rebar-sidebar-nav-active-bar")).toBeInTheDocument();
+
+    rerender(<SidebarNav items={ITEMS} activeStyle="fill" />);
+    expect(container.querySelector(".rebar-sidebar-nav-active-fill")).toBeInTheDocument();
+  });
+
+  it("collapseTogglePlacement=\"edge\" applies the edge modifier class", () => {
+    const { container } = render(<SidebarNav items={ITEMS} collapseTogglePlacement="edge" />);
+    expect(container.querySelector(".rebar-sidebar-nav-collapse-toggle-edge")).toBeInTheDocument();
+  });
 });

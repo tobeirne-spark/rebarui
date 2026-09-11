@@ -21,6 +21,13 @@ export interface ThemeToggleProps {
  * than assuming a default. A real, shipped component — not private page/block chrome — so it can
  * be reused anywhere a site wants to give visitors this same control (`site-header`'s
  * `themeToggle` flag renders this directly).
+ *
+ * **Using this component means both theme packages must be installed and imported** —
+ * `@rebar-ui/theme-clean` AND `@rebar-ui/theme-sketch`'s CSS, not just whichever one is the
+ * build's own default. This toggle only flips the `data-rebar-theme` attribute; it does not load
+ * either stylesheet for you. Offering the switch without both themes present means the "sketch"
+ * (or "clean") state silently has nothing to switch to — indistinguishable from a broken control,
+ * since nothing on screen indicates the missing half. See `ref/HEURISTICS.md` #50.
  */
 export function ThemeToggle({ label = "Theme", className }: ThemeToggleProps) {
   const [style, setStyle] = useState<"sketch" | "clean">(() =>

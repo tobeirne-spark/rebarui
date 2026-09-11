@@ -59,4 +59,11 @@ describe("BarChart", () => {
     const { container } = render(<BarChart bars={bars} title="Monthly totals" />);
     expect(container.querySelector('[data-rebar-component="bar-chart"]')).toBeInTheDocument();
   });
+
+  it("renders a trendline across the bars only when trendline is set", () => {
+    const { container, rerender } = render(<BarChart bars={bars} title="Monthly totals" />);
+    expect(container.querySelector('[data-rebar-part="trendline"]')).not.toBeInTheDocument();
+    rerender(<BarChart bars={bars} title="Monthly totals" trendline />);
+    expect(container.querySelector('[data-rebar-part="trendline"]')).toBeInTheDocument();
+  });
 });

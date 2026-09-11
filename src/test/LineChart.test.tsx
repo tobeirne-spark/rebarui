@@ -166,4 +166,11 @@ describe("LineChart", () => {
     fireEvent.click(screen.getByRole("button", { name: "antd" }));
     expect(container.querySelectorAll("polyline").length).toBeGreaterThan(0);
   });
+
+  it("renders a trendline per series only when trendline is set", () => {
+    const { container, rerender } = render(<LineChart series={series} xLabels={xLabels} title="t" />);
+    expect(container.querySelectorAll('[data-rebar-part="trendline"]')).toHaveLength(0);
+    rerender(<LineChart series={series} xLabels={xLabels} title="t" trendline />);
+    expect(container.querySelectorAll('[data-rebar-part="trendline"]')).toHaveLength(2);
+  });
 });

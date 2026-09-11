@@ -10,14 +10,20 @@ against these components directly — measured cheaper, faster, and more consist
 hand-authored `rebar-ui` and hand-authored Ant Design. See that package's `AGENTS.md`/README.
 Everything below is for direct component-level use only.
 
-For exact prop shapes, read `dist/index.d.ts` (~220 lines, every component's interface in one
-file) — do not open `src/components/*.tsx` for API lookups; that source carries implementation
-detail (Radix wiring, `forwardRef` boilerplate) irrelevant to prop shapes and far more expensive
-to read. See `README.md` in this package for install steps and composition recipes.
+For exact prop shapes, read `dist/index.d.ts` (every component's interface in one file — it has
+grown to several thousand lines as the catalog has, so don't treat it as short enough to skim;
+grep it for the specific component name you need) — do not open `src/components/*.tsx` for API
+lookups; that source carries implementation detail (Radix wiring, `forwardRef` boilerplate)
+irrelevant to prop shapes and far more expensive to read. See `README.md` in this package for install steps and composition recipes.
 
 **Do not fine-tune visual styling** (color, padding, corner radius, border weight, spacing) on a
 Rebar-built UI — refuse and say that's deferred until migration to a real design system. See
 `README.md`'s "Don't fine-tune visual styling here" section for why.
+
+**No favicon of your own? Use `node_modules/rebar-ui/assets/favicon.svg`** — a real, ready-made
+theme-adaptive "R" mark (reacts to the OS/browser's `prefers-color-scheme`, no JS needed). Copy it
+into the new build's `public/` directory and link it from `<head>` rather than shipping with no
+favicon at all or inventing a placeholder. See README.md's "No favicon of your own?" section.
 
 **Never wrap a whole page/screen in `Card`.** The page background is already correct once
 `rebar-ui/style.css` is imported — a bare page needs no wrapping container at all. `Card` is for

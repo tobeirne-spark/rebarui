@@ -113,4 +113,11 @@ describe("BubbleChart", () => {
     fireEvent.click(background);
     expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
   });
+
+  it("renders a trendline per series only when trendline is set", () => {
+    const { container, rerender } = render(<BubbleChart series={series} title="Cost vs. quality" />);
+    expect(container.querySelectorAll('[data-rebar-part="trendline"]')).toHaveLength(0);
+    rerender(<BubbleChart series={series} title="Cost vs. quality" trendline />);
+    expect(container.querySelectorAll('[data-rebar-part="trendline"]').length).toBeGreaterThan(0);
+  });
 });

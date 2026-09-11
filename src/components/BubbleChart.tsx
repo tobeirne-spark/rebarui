@@ -2,6 +2,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
 import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { computeTrendline } from "../chartTrendline";
 import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
@@ -33,6 +34,9 @@ export interface BubbleChartProps extends Omit<ComponentPropsWithoutRef<"figure"
   height?: number;
   xFormat?: (v: number) => string;
   yFormat?: (v: number) => string;
+  /** Adds a dashed linear-regression trendline per series, computed over its own real x/y points
+   * (not `size`) — off by default. */
+  trendline?: boolean;
   /** Force bionic reading on/off for the title and legend labels, overriding the ambient
    * data-rebar-bionic setting. */
   bionic?: boolean;
@@ -70,6 +74,7 @@ export function BubbleChart({
   height = 320,
   xFormat = (v: number) => Math.round(v).toLocaleString(),
   yFormat = (v: number) => Math.round(v).toLocaleString(),
+  trendline,
   bionic,
   bionicOptions,
   className,
@@ -174,8 +179,28 @@ export function BubbleChart({
         ))}
         {series.map((s, i) => {
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+          const trend = trendline ? computeTrendline(s.points.map((p) => ({ x: p.x, y: p.y }))) : null;
           return (
             <g key={s.label}>
+              {trend
+                ? (() => {
+                    const x1 = Math.min(...s.points.map((p) => p.x));
+                    const x2 = Math.max(...s.points.map((p) => p.x));
+                    return (
+                      <line
+                        x1={xScale(x1)}
+                        y1={yScale(trend.slope * x1 + trend.intercept)}
+                        x2={xScale(x2)}
+                        y2={yScale(trend.slope * x2 + trend.intercept)}
+                        stroke={color}
+                        strokeWidth={1.5}
+                        strokeDasharray="2 4"
+                        opacity={0.6}
+                        data-rebar-part="trendline"
+                      />
+                    );
+                  })()
+                : null}
               {s.points.map((p, j) => {
                 const key = `${i}:${j}`;
                 const selected = isSelected(key);

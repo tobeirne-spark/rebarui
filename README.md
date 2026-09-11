@@ -18,10 +18,12 @@ composing a whole screen.
 
 ## For coding agents: read this first, not the source
 
-**The exact prop shape of every component is in `dist/index.d.ts`** (~220 lines, one file, every
-interface) — read that, not the individual files under `src/components/`. The `.tsx` source files
-carry full implementation (Radix wiring, `forwardRef` boilerplate, JSX) that's irrelevant to "what
-props does this take" and costs far more to read than the type declarations alone.
+**The exact prop shape of every component is in `dist/index.d.ts`** (one file, every interface —
+it's grown to several thousand lines as the component catalog has, so don't assume it's short
+enough to skim; grep it for the specific component name you need) — read that, not the individual
+files under `src/components/`. The `.tsx` source files carry full implementation (Radix wiring,
+`forwardRef` boilerplate, JSX) that's irrelevant to "what props does this take" and costs far more
+to read than the type declarations alone.
 
 ```
 node_modules/rebar-ui/dist/index.d.ts
@@ -52,6 +54,29 @@ plain DOM attributes toggled live, no rebuild, no Provider. Every text-bearing c
 follows `data-rebar-bionic` automatically; a `bionic` prop on any of them overrides it for just
 that instance, and `bionicOptions` (`fixationStrength`, `saccadeFrequency`, `skipShortWords`) tunes
 the split.
+
+**Offering `ThemeToggle`? Install and import *both* theme packages.** The toggle only flips the
+`data-rebar-theme` attribute between `"sketch"`/`"clean"` — it never loads either stylesheet
+itself. If a build imports only `@rebar-ui/theme-clean` (the recommended default above) but still
+renders `<ThemeToggle />`, switching to "sketch" silently does nothing: no CSS is loaded for it to
+switch to, indistinguishable from a broken control. Import both themes' CSS whenever the toggle is
+in play, even though only one is the active default.
+
+## No favicon of your own? Use the one this package ships
+
+`node_modules/rebar-ui/assets/favicon.svg` is a real, ready-to-use favicon — a theme-adaptive "R"
+mark that redraws itself dark-on-light or light-on-dark via a `prefers-color-scheme` media query
+baked into the file, no build step or JS required. Use it as a new build's default favicon when the
+consumer hasn't supplied their own: copy it into the app's `public/`
+(or equivalent) directory and reference it from `<head>`:
+
+```html
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+```
+
+It reacts only to the OS/browser's own color-scheme setting, not this library's own
+`data-rebar-theme`/`data-theme` toggle — a favicon renders outside the page's DOM, so it has no way
+to see either attribute; that's a real platform limitation, not a bug in the file.
 
 ## The page background is already handled — don't add your own
 
