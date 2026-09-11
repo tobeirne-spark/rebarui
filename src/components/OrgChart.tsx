@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { NodeLinkGraph } from "./NodeLinkGraph";
 import type { NodeLinkGraphEdge, NodeLinkGraphNode } from "./NodeLinkGraph";
+import { renderBionicSvgText, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
 export interface OrgChartPerson {
@@ -37,9 +38,11 @@ export interface OrgChartProps extends Omit<ComponentPropsWithoutRef<"figure">, 
    * `NodeLinkGraph`. Default `24`; see ref/HEURISTICS.md's diagram-canvas-padding default. */
   padding?: number;
   className?: string;
-  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting
-   * — forwarded to the underlying `NodeLinkGraph`. Each person's name/role render as SVG `<text>`,
-   * which `useBionicChildren`'s span-splitting can't target. */
+  /** Force bionic reading on/off, overriding the ambient data-rebar-bionic setting — applies to
+   * both the chart's own title (forwarded to `NodeLinkGraph`) and each person's name/role, which
+   * render as SVG `<text>`/`<tspan>` via the SVG-specific `renderBionicSvgText` (`useBionicChildren`'s
+   * plain-`<span>` splitting is invalid inside SVG `<text>`, so this is a distinct code path, not
+   * the same fix reused). */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
 }
@@ -71,6 +74,8 @@ export function OrgChart({
   className,
   ...props
 }: OrgChartProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const nodes = useMemo<NodeLinkGraphNode[]>(
     () =>
       people.map((person) => ({
@@ -125,7 +130,7 @@ export function OrgChart({
               fontWeight="bold"
               fill="var(--rebar-color-text-primary, #212121)"
             >
-              {name}
+              {renderBionicSvgText(name ?? "", bionicEnabled, bionicOptions)}
             </text>
             <text
               textAnchor="middle"
@@ -134,7 +139,7 @@ export function OrgChart({
               fontSize="var(--rebar-font-size-xs, 10px)"
               fill="var(--rebar-color-text-secondary, #757575)"
             >
-              {role ?? ""}
+              {renderBionicSvgText(role ?? "", bionicEnabled, bionicOptions)}
             </text>
           </>
         );

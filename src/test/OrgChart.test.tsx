@@ -3,7 +3,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { OrgChart } from "../components/OrgChart";
 import type { OrgChartPerson } from "../components/OrgChart";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.documentElement.removeAttribute("data-rebar-bionic");
+});
 
 function parseTransform(transform: string | null) {
   const translate = transform?.match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
@@ -81,5 +84,18 @@ describe("OrgChart", () => {
   it("renders a visible figcaption from title, distinct from any person's own role", () => {
     render(<OrgChart people={people} title="Acme org chart" />);
     expect(screen.getByText("Acme org chart")).toBeInTheDocument();
+  });
+
+  it("splits each person's name/role for bionic reading via SVG tspan when ambient", () => {
+    document.documentElement.setAttribute("data-rebar-bionic", "true");
+    const { container } = render(<OrgChart people={people} />);
+    const fixations = container.querySelectorAll("tspan.rebar-bionic-fixation");
+    expect(fixations.length).toBeGreaterThan(0);
+    expect(fixations[0]?.tagName.toLowerCase()).toBe("tspan");
+  });
+
+  it("does not split name/role for bionic reading when not ambient", () => {
+    const { container } = render(<OrgChart people={people} />);
+    expect(container.querySelector(".rebar-bionic-fixation")).not.toBeInTheDocument();
   });
 });

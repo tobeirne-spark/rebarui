@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import type { ComponentPropsWithoutRef, KeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ComponentPropsWithoutRef, KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
@@ -122,11 +122,24 @@ export function PickerWheel({
     window.addEventListener("pointerup", handleUp);
   };
 
-  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (options.length === 0) return;
-    e.preventDefault();
-    selectIndex(selectedIndex + (e.deltaY > 0 ? 1 : -1));
-  };
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  // A plain JSX `onWheel` handler can't call `preventDefault()` here — React (like the browser
+  // itself for scrollable-feeling elements) attaches wheel listeners as passive by default, so
+  // `preventDefault()` inside one is silently ignored with a console warning, not just a style
+  // nit: without it, spinning the wheel also scrolls the surrounding page. Attaching the listener
+  // natively with `{ passive: false }` is the standard fix.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || options.length === 0) return;
+    const listener = (e: WheelEvent) => {
+      e.preventDefault();
+      selectIndex(selectedIndex + (e.deltaY > 0 ? 1 : -1));
+    };
+    track.addEventListener("wheel", listener, { passive: false });
+    return () => track.removeEventListener("wheel", listener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIndex, options]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "ArrowUp") {
@@ -158,13 +171,13 @@ export function PickerWheel({
         style={{ height: itemHeight, top: centerOffset }}
       />
       <div
+        ref={trackRef}
         className="rebar-picker-wheel-track"
         data-rebar-part="track"
         role="listbox"
         aria-label={ariaLabel}
         tabIndex={0}
         onPointerDown={handlePointerDown}
-        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         style={{
           transform: `translateY(${displayTranslate}px)`,

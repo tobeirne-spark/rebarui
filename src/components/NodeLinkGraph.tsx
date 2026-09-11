@@ -1,7 +1,7 @@
-import { useCallback, useId, useMemo, useRef, useState } from "react";
-import type { ComponentPropsWithoutRef, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { ComponentPropsWithoutRef, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import clsx from "clsx";
-import { useBionicChildren } from "../bionic";
+import { renderBionicSvgText, useAmbientBionic, useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
 export interface NodeLinkGraphNode {
@@ -49,14 +49,35 @@ export interface NodeLinkGraphProps extends Omit<ComponentPropsWithoutRef<"figur
    * hook for persisting a drag back into whatever state supplied `nodes[].x`/`y` in the first
    * place. Not fired at all in `"hierarchical"`/`"circular"` layout. */
   onNodePositionChange?: (id: string, x: number, y: number) => void;
+  /** Fires whenever the computed layout, pan, or zoom changes — everything a paired
+   * `DiagramMinimap` elsewhere on the page needs to stay in sync, in this component's own layout
+   * coordinate space: `nodes` (every node's resolved `id`/`x`/`y`) and `viewportBounds` (the region
+   * currently visible, derived by inverting the current pan/zoom transform against this
+   * component's own `width`/`height`). This is the one supported way to connect the two — see
+   * `DiagramMinimap`'s own doc comment for why it's a standalone component with no built-in
+   * `NodeLinkGraph` dependency of its own. */
+  onViewportChange?: (view: {
+    nodes: { id: string; x: number; y: number }[];
+    viewportBounds: { x: number; y: number; width: number; height: number };
+  }) => void;
   /** Custom node rendering — receives the node (with its computed `x`/`y` filled in) and must
    * return SVG content (it's rendered inside a `<g>` already translated to the node's position, so
    * a custom renderer draws centered on `0,0`). Defaults to a rounded rect + centered label. */
   renderNode?: (node: Required<Pick<NodeLinkGraphNode, "id" | "label" | "x" | "y">> & NodeLinkGraphNode) => ReactNode;
+  /** Overrides one edge's own stroke color/width — e.g. `PertChart` highlighting its critical
+   * path. Deliberately narrower than a full custom-edge renderer: NodeLinkGraph still owns the
+   * actual line/label/arrow structure (a caller only tweaks how one already-drawn edge looks, not
+   * what it draws), so this doesn't need to reimplement that structure per caller the way a full
+   * `renderNode`-style override would. Return `undefined` (or omit the prop) to leave every edge at
+   * its default look. */
+  renderEdgeStyle?: (edge: NodeLinkGraphEdge) => { stroke?: string; strokeWidth?: number } | undefined;
   className?: string;
-  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting.
-   * Node/edge labels are rendered as SVG `<text>`, which `useBionicChildren`'s span-splitting
-   * can't target — only the (HTML) `<figcaption>` title is covered here. */
+  /** Force bionic reading on/off, overriding the ambient data-rebar-bionic setting — applies to
+   * the (HTML) `<figcaption>` title via `useBionicChildren`, and to the default node/edge label
+   * `<text>` via the SVG-specific `renderBionicSvgText` (`useBionicChildren`'s plain-`<span>`
+   * splitting is invalid inside SVG `<text>`, so this is a distinct code path). A caller-supplied
+   * `renderNode` draws its own `<text>` and is responsible for its own bionic wiring if wanted —
+   * this only covers the default node rendering. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
 }
@@ -67,7 +88,15 @@ interface PositionedNode extends NodeLinkGraphNode {
 }
 
 const NODE_WIDTH = 120;
-const NODE_HEIGHT = 44;
+// Taller than the default node circle itself (see NODE_RADIUS) — this is the *layout-spacing*
+// footprint (how much vertical room hierarchical/circular layout reserves per row), not the drawn
+// shape's own size, since the default rendering now draws a circle with its label below it, not a
+// box with the label centered inside.
+const NODE_HEIGHT = 64;
+// Default node's own drawn radius (Neo4j-Bloom-style circular node, not the previous rounded
+// rect) — a caller-supplied `renderNode` (OrgChart/Flowchart's own boxes/diamonds/pills) draws
+// whatever shape it wants and ignores this entirely.
+const NODE_RADIUS = 22;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
 // Step applied per +/- button click — a full click is a single deliberate action, so it gets a
@@ -275,13 +304,17 @@ export function NodeLinkGraph({
   height = 360,
   padding = 24,
   onNodePositionChange,
+  onViewportChange,
   renderNode,
+  renderEdgeStyle,
   bionic,
   bionicOptions,
   className,
   ...props
 }: NodeLinkGraphProps) {
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const markerId = useId();
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -293,6 +326,29 @@ export function NodeLinkGraph({
   }, [nodes, layout, width, height, padding]);
 
   const positionedById = useMemo(() => new Map(positioned.map((n) => [n.id, n])), [positioned]);
+
+  // A paired DiagramMinimap needs the same coordinate space this component itself lays nodes out
+  // in, not raw pan/zoom numbers — inverting the pan/zoom transform against this component's own
+  // width/height gives the currently-visible region in that space (the transform maps content-
+  // space (cx, cy) to screen-space via screenX = pan.x + cx*zoom, so the inverse recovers exactly
+  // what's on screen right now).
+  useEffect(() => {
+    if (!onViewportChange) return;
+    onViewportChange({
+      nodes: positioned.map((n) => ({ id: n.id, x: n.x, y: n.y })),
+      viewportBounds: {
+        x: -pan.x / zoom,
+        y: -pan.y / zoom,
+        width: width / zoom,
+        height: height / zoom,
+      },
+    });
+    // onViewportChange is a caller-supplied callback, not itself a reactive dependency — including
+    // it would fire this effect (and thus the caller's own state update) on every render of an
+    // inline arrow function, an infinite loop the same class of bug documented elsewhere in this
+    // codebase for a similar "caller passes a fresh closure every render" trap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positioned, pan, zoom, width, height]);
 
   const panRef = useRef<{ dragging: boolean; startX: number; startY: number; originX: number; originY: number }>({
     dragging: false,
@@ -328,13 +384,26 @@ export function NodeLinkGraph({
     [pan.x, pan.y],
   );
 
-  const handleWheel = useCallback((e: ReactWheelEvent<SVGSVGElement>) => {
-    e.preventDefault();
-    // Proportional to this event's own `deltaY` (negative deltaY = scroll/pinch "up" = zoom in),
-    // clamped per event — NOT a flat `ZOOM_STEP` every time. See `MAX_WHEEL_ZOOM_DELTA` above.
-    const rawDelta = -e.deltaY * WHEEL_ZOOM_SENSITIVITY;
-    const delta = clamp(rawDelta, -MAX_WHEEL_ZOOM_DELTA, MAX_WHEEL_ZOOM_DELTA);
-    setZoom((z) => clamp(round(z + delta), MIN_ZOOM, MAX_ZOOM));
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  // A plain JSX `onWheel` handler can't call `preventDefault()` here — React (like the browser
+  // itself for scrollable-feeling elements) attaches wheel listeners as passive by default, so
+  // `preventDefault()` inside one is silently ignored with a console warning, not just a style
+  // nit: without it, a wheel-zoom gesture also scrolls the surrounding page. Attaching the
+  // listener natively with `{ passive: false }` is the standard fix.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const listener = (e: WheelEvent) => {
+      e.preventDefault();
+      // Proportional to this event's own `deltaY` (negative deltaY = scroll/pinch "up" = zoom in),
+      // clamped per event — NOT a flat `ZOOM_STEP` every time. See `MAX_WHEEL_ZOOM_DELTA` above.
+      const rawDelta = -e.deltaY * WHEEL_ZOOM_SENSITIVITY;
+      const delta = clamp(rawDelta, -MAX_WHEEL_ZOOM_DELTA, MAX_WHEEL_ZOOM_DELTA);
+      setZoom((z) => clamp(round(z + delta), MIN_ZOOM, MAX_ZOOM));
+    };
+    svg.addEventListener("wheel", listener, { passive: false });
+    return () => svg.removeEventListener("wheel", listener);
   }, []);
 
   const zoomIn = useCallback(() => setZoom((z) => clamp(round(z + ZOOM_STEP), MIN_ZOOM, MAX_ZOOM)), []);
@@ -402,13 +471,13 @@ export function NodeLinkGraph({
         </button>
       </div>
       <svg
+        ref={svgRef}
         className="rebar-node-link-graph-canvas"
         viewBox={`0 0 ${width} ${height}`}
         style={{ width: "100%", maxWidth: width, height: "auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Node-link graph"}
         onPointerDown={handleBackgroundPointerDown}
-        onWheel={handleWheel}
       >
         <defs>
           <marker
@@ -422,6 +491,14 @@ export function NodeLinkGraph({
           >
             <path d="M0,0 L8,4 L0,8 Z" fill="var(--rebar-color-text-secondary, #757575)" />
           </marker>
+          {/* Soft drop shadow behind the default node circle — the "floating above the canvas"
+              look this component's own default rendering is asked to lean toward (the Neo4j Bloom
+              node-link-graph convention: solid-colored circular nodes, label below, not a bordered
+              box with text inside), as distinct from `layout`'s deterministic *positioning* (which
+              stays exactly as documented — this is a visual-only change). */}
+          <filter id={`${markerId}-node-shadow`} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodOpacity="0.25" />
+          </filter>
         </defs>
         <g
           data-rebar-part="pan-zoom-container"
@@ -438,8 +515,8 @@ export function NodeLinkGraph({
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
-                  stroke="var(--rebar-color-text-secondary, #757575)"
-                  strokeWidth={1.5}
+                  stroke={renderEdgeStyle?.(edge)?.stroke ?? "var(--rebar-color-text-secondary, #757575)"}
+                  strokeWidth={renderEdgeStyle?.(edge)?.strokeWidth ?? 1.5}
                   markerEnd={`url(#${markerId}-arrow)`}
                 />
                 {edge.label ? (
@@ -450,7 +527,7 @@ export function NodeLinkGraph({
                     fontSize="var(--rebar-font-size-xs, 10px)"
                     fill="var(--rebar-color-text-secondary, #757575)"
                   >
-                    {edge.label}
+                    {renderBionicSvgText(edge.label, bionicEnabled, bionicOptions)}
                   </text>
                 ) : null}
               </g>
@@ -469,23 +546,20 @@ export function NodeLinkGraph({
                 renderNode(node)
               ) : (
                 <>
-                  <rect
-                    x={-NODE_WIDTH / 2}
-                    y={-NODE_HEIGHT / 2}
-                    width={NODE_WIDTH}
-                    height={NODE_HEIGHT}
-                    rx={6}
-                    fill={node.color ?? "var(--rebar-color-bg-primary, #ffffff)"}
-                    stroke="var(--rebar-color-border-strong, #333333)"
-                    strokeWidth={1.5}
+                  <circle
+                    data-rebar-part="node-shape"
+                    r={NODE_RADIUS}
+                    fill={node.color ?? "var(--rebar-color-primary, #0066cc)"}
+                    filter={`url(#${markerId}-node-shadow)`}
                   />
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
+                    y={NODE_RADIUS + 16}
                     fontSize="var(--rebar-font-size-sm, 12px)"
                     fill="var(--rebar-color-text-primary, #212121)"
                   >
-                    {node.label}
+                    {renderBionicSvgText(node.label, bionicEnabled, bionicOptions)}
                   </text>
                 </>
               )}

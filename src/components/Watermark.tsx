@@ -41,7 +41,23 @@ function buildTile({
     : `<text x="${cx}" y="${cy}" font-size="${fontSize}" fill="${color}" opacity="${opacity}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rotate} ${cx} ${cy})">${text ?? ""}</text>`;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${tileWidth}" height="${tileHeight}">${content}</svg>`;
-  return `data:image/svg+xml;base64,${typeof window !== "undefined" ? window.btoa(svg) : Buffer.from(svg).toString("base64")}`;
+  return `data:image/svg+xml;base64,${toBase64Utf8(svg)}`;
+}
+
+// A real, hit-directly bug, not just a cosmetic hydration-mismatch warning: `window.btoa` encodes
+// each JS string character as a single Latin1 byte, while `Buffer.from(str).toString("base64")`
+// (the server-side branch this used to fall back to) encodes as real UTF-8 — for any non-ASCII
+// watermark text (e.g. "©"), those two produce genuinely *different* base64 output, not just a
+// differently-formatted one. Decoded as UTF-8 (an SVG's default), the client's Latin1-encoded byte
+// is invalid UTF-8 on its own, which can render as a replacement character or corrupt the tile —
+// worse than the console warning made it look. Fixed by UTF-8-encoding the string on both branches
+// before base64, so server and client produce byte-identical output.
+function toBase64Utf8(str: string): string {
+  if (typeof window === "undefined") return Buffer.from(str, "utf-8").toString("base64");
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return window.btoa(binary);
 }
 
 /**
@@ -82,7 +98,18 @@ export function Watermark({
         aria-hidden="true"
         style={{
           position: "absolute",
-          inset: 0,
+          // A string "0px", not the bare number 0 or the `inset: 0` shorthand — a real, hit-
+          // directly SSR hydration mismatch either other way: react-dom's server renderer always
+          // serializes a numeric style value for one of these properties with a "px" suffix in the
+          // literal HTML string, but a bare `0` (or the `inset` shorthand) computed client-side
+          // during hydration doesn't reliably re-derive that exact "0px" string form for
+          // comparison, so the two never match on first paint. An explicit "0px" string matches
+          // the server's own serialization exactly, sidestepping the mismatch rather than leaving
+          // a real console error on every page load.
+          top: "0px",
+          right: "0px",
+          bottom: "0px",
+          left: "0px",
           pointerEvents: "none",
           backgroundImage: `url("${tile}")`,
           backgroundRepeat: "repeat",

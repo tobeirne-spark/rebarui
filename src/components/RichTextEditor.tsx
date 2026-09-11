@@ -41,6 +41,20 @@ const COMMANDS: { command: string; label: string; glyph: string }[] = [
  * live DOM when `value` genuinely differs from the editor's own current `innerHTML`, so typing
  * never fights the cursor position mid-edit (the same "don't clobber input mid-interaction"
  * discipline `Card`'s own `editable` title fix already established).
+ *
+ * **No bionic reading here — a real, checked non-fit, not an oversight (ref/HEURISTICS.md 1.1's
+ * audit).** Bionic reading works by wrapping the *first fraction of each word* in its own element;
+ * applying that to `value` itself would inject presentation markup into the real saved document —
+ * the exact content a caller's `dangerouslySetInnerHTML` consumer or server-side field expects back
+ * verbatim, not mixed with `<span class="rebar-bionic-fixation">` wrappers around fragments of
+ * every word. That's a fundamentally different problem than every other bionic-wired component:
+ * everywhere else, the *rendered* text is a display-only derivation of a separate `value`/`label`
+ * prop the split never touches; here, the editable region's rendered DOM *is* the value. The
+ * placeholder (shown via `.rebar-rich-text-editor-content:empty::before { content:
+ * attr(data-placeholder) }`) has the same "same blocker class as diagrams" problem noted elsewhere
+ * in this codebase for a different reason: CSS generated content can't carry per-word `<span>`
+ * markup at all without a JS mechanism to inject real DOM nodes — and doing that here would mean
+ * injecting content into the otherwise-`:empty` region the CSS selector itself depends on.
  */
 export function RichTextEditor({
   value,

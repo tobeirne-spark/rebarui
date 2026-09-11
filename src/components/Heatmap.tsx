@@ -207,6 +207,14 @@ export function Heatmap({
           data-rebar-part="title"
           style={{
             textAlign: "center",
+            // Centering plainly across the figure's own full width would center the caption over
+            // the *whole* SVG box, including the row-label gutter on the left — but the actual
+            // cell grid only occupies the region after that gutter, so the two visibly don't line
+            // up (a real, hit-directly offset, not a cosmetic nitpick). Padding the caption's own
+            // centering region by the same proportion the grid is shifted (as a %, so it tracks
+            // the SVG's own responsive `width: 100%` scaling exactly) re-centers it over the grid
+            // itself instead of the whole figure.
+            paddingLeft: `${(rowLabelWidth / width) * 100}%`,
             fontSize: "var(--rebar-font-size-sm)",
             color: "var(--rebar-color-text-secondary, #757575)",
             marginTop: "var(--rebar-space-xs)",

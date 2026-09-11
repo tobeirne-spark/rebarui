@@ -111,4 +111,59 @@ describe("LineChart", () => {
     fireEvent.click(background);
     expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
   });
+
+  it("omits the filter footer entirely unless filterable is set", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" />);
+    expect(container.querySelector('[data-rebar-part="chart-filters"]')).not.toBeInTheDocument();
+  });
+
+  it("toggling a series off in the filter footer hides its line and points", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" filterable />);
+    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+    expect(container.querySelectorAll("circle")).toHaveLength(6);
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    expect(container.querySelectorAll("polyline")).toHaveLength(1);
+    expect(container.querySelectorAll("circle")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "antd" })).toHaveAttribute("aria-pressed", "false");
+    // Its own top-right label disappears too — no dangling label for a line that isn't drawn
+    // (scoped to the svg itself, since the filter footer's own button is also named "antd").
+    expect(container.querySelector("svg")?.textContent).not.toContain("antd");
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+  });
+
+  it("the y-axis scale stays fixed to the full dataset regardless of what's hidden", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" filterable />);
+    const ticksBefore = Array.from(container.querySelectorAll("svg > g > text")).map((el) => el.textContent);
+
+    // "rebar-ui" (max 22) hidden — if the scale rescaled to "antd" alone (max 30), the tick
+    // labels would change; they must not.
+    fireEvent.click(screen.getByRole("button", { name: "rebar-ui" }));
+    const ticksAfter = Array.from(container.querySelectorAll("svg > g > text")).map((el) => el.textContent);
+    expect(ticksAfter).toEqual(ticksBefore);
+  });
+
+  it("clears a persisted tag's own mark from view (not stale) once its series is hidden", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" filterable />);
+    const mark = getMark(container, 0); // "antd", point 0
+    fireEvent.click(mark);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
+  });
+
+  it("shows the empty state (with a still-usable filter footer) when every series is toggled off", () => {
+    const { container } = render(<LineChart series={series} xLabels={xLabels} title="Cumulative cost" filterable />);
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    fireEvent.click(screen.getByRole("button", { name: "rebar-ui" }));
+
+    expect(container.querySelector('[data-rebar-component="empty"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "antd" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    expect(container.querySelectorAll("polyline").length).toBeGreaterThan(0);
+  });
 });

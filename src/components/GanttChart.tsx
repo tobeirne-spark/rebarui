@@ -35,6 +35,13 @@ export interface GanttChartProps extends Omit<ComponentPropsWithoutRef<"figure">
    * bug this project's chart components already guard against for trig-derived SVG coordinates
    * (see `PieChart.tsx`'s `round()` helper). */
   dateFormat?: (d: Date) => string;
+  /** Draws a distinct vertical "today" hash-mark at this date, when it falls within the chart's
+   * own date domain — a real, visible "where are we now" reference against the task bars, not
+   * something a viewer has to infer from the axis ticks alone. Omitted entirely (no mark at all)
+   * outside the domain or when not supplied. Pair with `WaybackSlider` (feeding this chart a whole
+   * historical snapshot of `tasks` per reporting date) for "scrub to any past reporting date's
+   * values" — this prop only draws where *today* falls on whichever snapshot is currently shown. */
+  currentDate?: Date;
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -61,6 +68,7 @@ export function GanttChart({
   rowHeight = 32,
   width = 640,
   dateFormat = defaultDateFormat,
+  currentDate,
   bionic,
   bionicOptions,
   className,
@@ -69,7 +77,13 @@ export function GanttChart({
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const marginLeft = 140;
   const marginRight = 16;
-  const marginTop = 28;
+  // A real, hit-directly overlap: the "Today" label sits at the same height as the regular date
+  // tick labels, and the two collide illegibly whenever "today" lands at (or near) an axis tick —
+  // exactly what happens whenever `currentDate` is the same date a caller's own tick generation
+  // already lands on. Reserving a taller top margin gives "Today" its own row above the ticks
+  // instead, only when `currentDate` is actually in use (an unaffected chart keeps the original,
+  // tighter margin).
+  const marginTop = currentDate ? 42 : 28;
   const marginBottom = 12;
   const plotWidth = width - marginLeft - marginRight;
   const plotHeight = tasks.length * rowHeight;
@@ -232,6 +246,38 @@ export function GanttChart({
             ];
           });
         })}
+        {currentDate && currentDate.getTime() >= domainMin && currentDate.getTime() <= domainMax
+          ? (() => {
+              const x = xScale(currentDate.getTime());
+              return (
+                <g data-rebar-part="current-date-marker">
+                  <line
+                    x1={x}
+                    y1={marginTop}
+                    x2={x}
+                    y2={marginTop + plotHeight}
+                    stroke="var(--rebar-color-danger, #d32f2f)"
+                    strokeWidth={1.5}
+                    strokeDasharray="2 2"
+                  />
+                  {/* Deliberately not at `marginTop - 10` (the same height the regular date-tick
+                      labels use) — this reserves its own row nearer the very top edge (see the
+                      `marginTop` comment above) so the two never collide even when "today" lands
+                      on, or right next to, a real axis tick. */}
+                  <text
+                    x={x}
+                    y={12}
+                    fontSize={10}
+                    textAnchor="middle"
+                    fill="var(--rebar-color-danger, #d32f2f)"
+                    style={{ fontWeight: 600 }}
+                  >
+                    Today
+                  </text>
+                </g>
+              );
+            })()
+          : null}
       </svg>
       {title ? (
         <figcaption

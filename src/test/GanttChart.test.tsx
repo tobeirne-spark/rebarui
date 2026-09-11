@@ -89,4 +89,24 @@ describe("GanttChart", () => {
     ];
     expect(() => render(<GanttChart tasks={withDanglingDep} title="Launch plan" />)).not.toThrow();
   });
+
+  it("draws a current-date marker when currentDate falls within the chart's own domain", () => {
+    const { container } = render(
+      <GanttChart tasks={tasks} title="Launch plan" currentDate={new Date("2026-01-15T00:00:00Z")} />,
+    );
+    expect(container.querySelector('[data-rebar-part="current-date-marker"]')).toBeInTheDocument();
+    expect(screen.getByText("Today")).toBeInTheDocument();
+  });
+
+  it("omits the current-date marker entirely when currentDate falls outside the domain", () => {
+    const { container } = render(
+      <GanttChart tasks={tasks} title="Launch plan" currentDate={new Date("2020-01-01T00:00:00Z")} />,
+    );
+    expect(container.querySelector('[data-rebar-part="current-date-marker"]')).not.toBeInTheDocument();
+  });
+
+  it("omits the current-date marker when currentDate isn't supplied at all", () => {
+    const { container } = render(<GanttChart tasks={tasks} title="Launch plan" />);
+    expect(container.querySelector('[data-rebar-part="current-date-marker"]')).not.toBeInTheDocument();
+  });
 });

@@ -66,4 +66,57 @@ describe("PieChart", () => {
     const { container } = render(<PieChart slices={slices} title="Traffic sources" />);
     expect(container.querySelector('[data-rebar-component="pie-chart"]')).toBeInTheDocument();
   });
+
+  it("offsets an exploded slice outward via a group transform, leaving others untouched", () => {
+    const { container } = render(
+      <PieChart
+        slices={[
+          { label: "Direct", value: 40, exploded: true },
+          { label: "Referral", value: 30 },
+          { label: "Organic", value: 30 },
+        ]}
+        title="Traffic sources"
+      />,
+    );
+    const groups = container.querySelectorAll('[data-rebar-part="slice-group"]');
+    expect(groups[0]).toHaveAttribute("transform", expect.stringContaining("translate"));
+    expect(groups[1]).not.toHaveAttribute("transform");
+    expect(groups[2]).not.toHaveAttribute("transform");
+    expect(container.querySelector('path[data-rebar-exploded="true"]')).toBeInTheDocument();
+  });
+
+  it("labelPosition='inside' renders percentage text inside each large-enough slice, no legend", () => {
+    const { container } = render(<PieChart slices={slices} title="Traffic sources" labelPosition="inside" />);
+    expect(container.querySelectorAll('[data-rebar-part="inside-label"]')).toHaveLength(3);
+    expect(container.querySelector('[data-rebar-part="legend"]')).not.toBeInTheDocument();
+  });
+
+  it("labelPosition='inside' omits the label on a slice too thin to hold it legibly", () => {
+    const { container } = render(
+      <PieChart
+        slices={[
+          { label: "Big", value: 97 },
+          { label: "Tiny", value: 3 },
+        ]}
+        title="Mostly one thing"
+        labelPosition="inside"
+      />,
+    );
+    expect(container.querySelectorAll('[data-rebar-part="inside-label"]')).toHaveLength(1);
+  });
+
+  it("labelPosition='outside' renders a label + leader line per slice, no legend", () => {
+    const { container } = render(<PieChart slices={slices} title="Traffic sources" labelPosition="outside" />);
+    expect(container.querySelectorAll('[data-rebar-part="outside-label"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-rebar-part="outside-label"] line')).toHaveLength(3);
+    expect(container.querySelector('[data-rebar-part="legend"]')).not.toBeInTheDocument();
+    expect(screen.getByText("Direct (40%)")).toBeInTheDocument();
+  });
+
+  it("defaults to the legend, matching pre-labelPosition behavior", () => {
+    const { container } = render(<PieChart slices={slices} title="Traffic sources" />);
+    expect(container.querySelector('[data-rebar-part="legend"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="inside-label"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-part="outside-label"]')).not.toBeInTheDocument();
+  });
 });

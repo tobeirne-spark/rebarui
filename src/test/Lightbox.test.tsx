@@ -104,4 +104,72 @@ describe("Lightbox", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("renders no action buttons when no action props are supplied", async () => {
+    const user = userEvent.setup();
+    render(<Lightbox src="https://example.com/photo.jpg" alt="A photo" />);
+    await user.click(screen.getByRole("button", { name: "Open full image: A photo" }));
+    expect(document.querySelector('[data-rebar-part="actions"]')).toBeNull();
+  });
+
+  it("shows only the action buttons whose callback was actually supplied", async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    const onDelete = vi.fn();
+    render(<Lightbox src="https://example.com/photo.jpg" alt="A photo" onCopy={onCopy} onDelete={onDelete} />);
+    await user.click(screen.getByRole("button", { name: "Open full image: A photo" }));
+
+    expect(screen.getByRole("button", { name: "Copy image" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete image" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Move image" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download image" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More actions" })).not.toBeInTheDocument();
+  });
+
+  it("fires the copy/delete/move/download callbacks on click", async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    const onDelete = vi.fn();
+    const onMove = vi.fn();
+    const onDownload = vi.fn();
+    render(
+      <Lightbox
+        src="https://example.com/photo.jpg"
+        alt="A photo"
+        onCopy={onCopy}
+        onDelete={onDelete}
+        onMove={onMove}
+        onDownload={onDownload}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Open full image: A photo" }));
+
+    await user.click(screen.getByRole("button", { name: "Copy image" }));
+    await user.click(screen.getByRole("button", { name: "Delete image" }));
+    await user.click(screen.getByRole("button", { name: "Move image" }));
+    await user.click(screen.getByRole("button", { name: "Download image" }));
+
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onDownload).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders caller-supplied moreActions in a real Dropdown menu", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <Lightbox
+        src="https://example.com/photo.jpg"
+        alt="A photo"
+        moreActions={[{ key: "report", label: "Report image", onSelect }]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Open full image: A photo" }));
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const item = await screen.findByText("Report image");
+    await user.click(item);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
 });

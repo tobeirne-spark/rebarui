@@ -216,7 +216,15 @@ export function Tour({
             />
           </>
         ) : (
-          <div className="rebar-tour-mask" data-rebar-part="mask" style={{ inset: 0 }} />
+          <div
+            className="rebar-tour-mask"
+            data-rebar-part="mask"
+            // Longhand, not `inset: 0` — see Watermark.tsx's own overlay for why: a real SSR
+            // hydration mismatch, since a browser's CSSOM normalizes `inset` into these four
+            // longhand properties immediately on parsing server-rendered HTML, and React's
+            // client-side reconciliation still expects the shorthand form.
+            style={{ top: 0, right: 0, bottom: 0, left: 0 }}
+          />
         )}
       </div>
       <div

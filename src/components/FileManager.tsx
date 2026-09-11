@@ -23,6 +23,21 @@ export interface FileManagerNode {
   children?: FileManagerNode[];
 }
 
+export interface FileManagerAction {
+  key: string;
+  label: string;
+  /** Defaults to enabled whenever at least one item is selected — override for an action that
+   * needs a narrower precondition (e.g. "Download" only meaningful for a single file, not several
+   * at once). */
+  disabled?: (selectedIds: string[]) => boolean;
+  /** Fired with the currently-selected ids — the caller decides what the action actually does
+   * (zip-and-download, share, open in another tool, ...); this component has no idea what any
+   * given action means, the same "report intent, caller owns the real operation" convention
+   * `onMove`/`onRename`/`onDelete` already established below. */
+  onSelect: (selectedIds: string[]) => void;
+  variant?: "secondary" | "destructive";
+}
+
 export interface FileManagerProps extends Omit<ComponentPropsWithoutRef<"div">, "children"> {
   root: FileManagerNode;
   selectedIds?: string[];
@@ -35,6 +50,17 @@ export interface FileManagerProps extends Omit<ComponentPropsWithoutRef<"div">, 
   onMove?: (nodeIds: string[], targetFolderId: string) => void;
   onRename?: (nodeId: string, newName: string) => void;
   onDelete?: (nodeIds: string[]) => void;
+  /** Arbitrary caller-defined toolbar buttons beyond the built-in delete — each fires back with
+   * the currently-selected ids, closing the gap the original delete-only action set left (e.g. a
+   * zip-and-download flow, sharing, opening in another tool) without this component needing to
+   * know what any of those mean. Shown only while at least one item is selected, same as the
+   * built-in Delete button. */
+  actions?: FileManagerAction[];
+  /** Constrains this component to a single-file-picker shape: hides the folder-navigation sidebar
+   * and the grid/table view toggle (forced to grid), and selecting a file replaces the selection
+   * instead of adding to it — for embedding a "pick one file" control (e.g. inside a form) rather
+   * than a full dual-pane browser. */
+  singleFileMode?: boolean;
   "aria-label"?: string;
 }
 
@@ -145,12 +171,14 @@ export function FileManager({
   onMove,
   onRename,
   onDelete,
+  actions,
+  singleFileMode = false,
   className,
   "aria-label": ariaLabel = "File manager",
   ...rest
 }: FileManagerProps) {
   const [currentFolderId, setCurrentFolderId] = useState(root.id);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [viewMode, setViewMode] = useState<"grid" | "table">(singleFileMode ? "grid" : "table");
   const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>(defaultSelectedIds);
   const [dragIds, setDragIds] = useState<string[] | null>(null);
   const [dragOverGridId, setDragOverGridId] = useState<string | null>(null);
@@ -194,6 +222,10 @@ export function FileManager({
   };
 
   const toggleSelected = (id: string) => {
+    if (singleFileMode) {
+      setSelectedIds(currentSelectedIds.includes(id) ? [] : [id]);
+      return;
+    }
     const next = currentSelectedIds.includes(id)
       ? currentSelectedIds.filter((x) => x !== id)
       : [...currentSelectedIds, id];
@@ -406,23 +438,25 @@ export function FileManager({
       data-rebar-component="file-manager"
       aria-label={ariaLabel}
     >
-      <div
-        ref={treeWrapperRef}
-        className="rebar-file-manager-tree"
-        data-rebar-part="tree"
-        onDragEnter={handleTreeDragEnter}
-        onDragOver={handleTreeDragOver}
-        onDragLeave={handleTreeDragLeave}
-        onDrop={handleTreeDrop}
-      >
-        <TreeView
-          data={folderTreeData}
-          selected={currentFolderId}
-          onSelect={navigateTo}
-          defaultExpanded={allFolderIds}
-          aria-label="Folders"
-        />
-      </div>
+      {!singleFileMode ? (
+        <div
+          ref={treeWrapperRef}
+          className="rebar-file-manager-tree"
+          data-rebar-part="tree"
+          onDragEnter={handleTreeDragEnter}
+          onDragOver={handleTreeDragOver}
+          onDragLeave={handleTreeDragLeave}
+          onDrop={handleTreeDrop}
+        >
+          <TreeView
+            data={folderTreeData}
+            selected={currentFolderId}
+            onSelect={navigateTo}
+            defaultExpanded={allFolderIds}
+            aria-label="Folders"
+          />
+        </div>
+      ) : null}
       <div className="rebar-file-manager-main" data-rebar-part="main">
         <div className="rebar-file-manager-toolbar" data-rebar-part="toolbar">
           <span className="rebar-file-manager-current-folder" data-rebar-part="current-folder">
@@ -430,30 +464,47 @@ export function FileManager({
           </span>
           <div className="rebar-file-manager-toolbar-actions">
             {currentSelectedIds.length > 0 ? (
-              <Button variant="destructive" size="sm" onClick={() => onDelete?.(currentSelectedIds)}>
-                Delete ({currentSelectedIds.length})
-              </Button>
+              <>
+                {actions?.map((action) => (
+                  <Button
+                    key={action.key}
+                    variant={action.variant ?? "secondary"}
+                    size="sm"
+                    disabled={action.disabled?.(currentSelectedIds)}
+                    onClick={() => action.onSelect(currentSelectedIds)}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+                <Button variant="destructive" size="sm" onClick={() => onDelete?.(currentSelectedIds)}>
+                  Delete ({currentSelectedIds.length})
+                </Button>
+              </>
             ) : null}
-            <button
-              type="button"
-              className="rebar-file-manager-view-button"
-              data-rebar-part="view-grid-button"
-              aria-label="Grid view"
-              aria-pressed={viewMode === "grid"}
-              onClick={() => setViewMode("grid")}
-            >
-              Grid
-            </button>
-            <button
-              type="button"
-              className="rebar-file-manager-view-button"
-              data-rebar-part="view-table-button"
-              aria-label="Table view"
-              aria-pressed={viewMode === "table"}
-              onClick={() => setViewMode("table")}
-            >
-              Table
-            </button>
+            {!singleFileMode ? (
+              <>
+                <button
+                  type="button"
+                  className="rebar-file-manager-view-button"
+                  data-rebar-part="view-grid-button"
+                  aria-label="Grid view"
+                  aria-pressed={viewMode === "grid"}
+                  onClick={() => setViewMode("grid")}
+                >
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  className="rebar-file-manager-view-button"
+                  data-rebar-part="view-table-button"
+                  aria-label="Table view"
+                  aria-pressed={viewMode === "table"}
+                  onClick={() => setViewMode("table")}
+                >
+                  Table
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
         {children.length === 0 ? (

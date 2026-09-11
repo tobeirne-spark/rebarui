@@ -15,8 +15,9 @@ export interface SplitButtonProps extends Omit<ComponentPropsWithoutRef<"div">, 
   /** The primary action, fired by clicking the main button (never by opening the menu). */
   onClick?: () => void;
   items: SplitButtonItem[];
-  /** Passed through to both the primary and caret Button. */
-  variant?: "primary" | "secondary";
+  /** Passed through to both the primary and caret Button — the full set `Button` itself supports,
+   * e.g. `"destructive"` for a "Delete" + secondary-actions menu. */
+  variant?: "primary" | "secondary" | "tertiary" | "destructive";
   /** Passed through to both the primary and caret Button — matches Button's own size values. */
   size?: "sm" | "md" | "lg";
 }

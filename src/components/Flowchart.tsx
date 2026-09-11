@@ -3,6 +3,8 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { NodeLinkGraph } from "./NodeLinkGraph";
 import type { NodeLinkGraphEdge, NodeLinkGraphNode } from "./NodeLinkGraph";
+import { renderBionicSvgText, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export type FlowchartShape = "process" | "decision" | "start-end";
 
@@ -32,6 +34,13 @@ export interface FlowchartProps extends Omit<ComponentPropsWithoutRef<"figure">,
    * `NodeLinkGraph`. Default `24`; see ref/HEURISTICS.md's diagram-canvas-padding default. */
   padding?: number;
   className?: string;
+  /** Force bionic reading on/off, overriding the ambient data-rebar-bionic setting — applies to
+   * both the diagram's own title (forwarded to `NodeLinkGraph`) and each step's own label, which
+   * renders as SVG `<text>`/`<tspan>` via the SVG-specific `renderBionicSvgText`
+   * (`useBionicChildren`'s plain-`<span>` splitting is invalid inside SVG `<text>`, so this is a
+   * distinct code path, not the same fix reused). */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const NODE_WIDTH = 120;
@@ -62,9 +71,13 @@ export function Flowchart({
   width = 480,
   height = 360,
   padding,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: FlowchartProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const shapeById = useMemo(() => {
     const map = new Map<string, FlowchartShape>();
     for (const step of steps) map.set(step.id, step.shape ?? "process");
@@ -100,6 +113,8 @@ export function Flowchart({
       width={width}
       height={height}
       padding={padding}
+      bionic={bionic}
+      bionicOptions={bionicOptions}
       renderNode={(node) => {
         const shape = shapeById.get(node.id) ?? "process";
         const fill = node.color ?? "var(--rebar-color-bg-primary, #ffffff)";
@@ -111,7 +126,7 @@ export function Flowchart({
             fontSize="var(--rebar-font-size-sm, 12px)"
             fill="var(--rebar-color-text-primary, #212121)"
           >
-            {node.label}
+            {renderBionicSvgText(node.label, bionicEnabled, bionicOptions)}
           </text>
         );
 

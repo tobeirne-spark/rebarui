@@ -42,11 +42,11 @@ export interface RadarChartProps extends Omit<ComponentPropsWithoutRef<"figure">
 }
 
 const DEFAULT_PALETTE = [
-  "var(--rebar-color-text-secondary, #757575)",
   "var(--rebar-color-primary, #0066cc)",
   "var(--rebar-color-success, #2e7d32)",
   "var(--rebar-color-warning, #f57c00)",
   "var(--rebar-color-danger, #d32f2f)",
+  "var(--rebar-color-text-secondary, #757575)",
 ];
 
 const RING_COUNT = 4;

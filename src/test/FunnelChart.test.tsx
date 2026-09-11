@@ -56,4 +56,39 @@ describe("FunnelChart", () => {
     const { container } = render(<FunnelChart stages={stages} title="Conversion funnel" />);
     expect(container.querySelector('[data-rebar-component="funnel-chart"]')).toBeInTheDocument();
   });
+
+  it("draws each stage as a curved (bezier) shape, not a straight-sided trapezoid", () => {
+    const { container } = render(<FunnelChart stages={stages} title="Conversion funnel" />);
+    const paths = container.querySelectorAll('[data-rebar-part="stage"] path');
+    expect(paths).toHaveLength(3);
+    paths.forEach((path) => {
+      // A real cubic bezier command on both sides — a plain trapezoid would only ever use M/L/Z.
+      expect(path.getAttribute("d")).toMatch(/C /);
+    });
+  });
+
+  it("renders a milestone as a dashed line with its label, at the requested stage boundary", () => {
+    const { container } = render(
+      <FunnelChart
+        stages={stages}
+        title="Conversion funnel"
+        milestones={[{ afterStageIndex: 0, label: "Industry benchmark" }]}
+      />,
+    );
+    const milestones = container.querySelectorAll('[data-rebar-part="milestone"]');
+    expect(milestones).toHaveLength(1);
+    expect(milestones[0]?.querySelector("line")).toHaveAttribute("stroke-dasharray", "4 3");
+    expect(screen.getByText("Industry benchmark")).toBeInTheDocument();
+  });
+
+  it("omits an out-of-range milestone (at or past the last stage) rather than rendering a bogus line", () => {
+    const { container } = render(
+      <FunnelChart
+        stages={stages}
+        title="Conversion funnel"
+        milestones={[{ afterStageIndex: 2, label: "Past the end" }]}
+      />,
+    );
+    expect(container.querySelectorAll('[data-rebar-part="milestone"]')).toHaveLength(0);
+  });
 });

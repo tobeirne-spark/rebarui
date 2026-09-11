@@ -154,9 +154,15 @@ Checklist for a new component:
     `renderBionicChildren` (`bionic.tsx`) before a component ships**, not audited in afterward. See
     `Collapsible`/`Result` for the exact wiring shape (`bionic?`/`bionicOptions?` props, the hook
     called on each text prop, its return value rendered in place of the raw prop). A component
-    whose text renders inside an SVG `<text>` node (a diagram/chart label) needs this checked
-    specifically — `useBionicChildren`'s segments render as SVG `<tspan>` children, not plain DOM
-    spans, and aren't automatically safe to assume work without checking.
+    whose text renders inside an SVG `<text>` node (a diagram/chart label) needs a genuinely
+    different code path, not the same hook: `useBionicChildren`'s split renders plain HTML
+    `<span>`s, which are invalid content inside SVG `<text>` at all — use `renderBionicSvgText`
+    (same `bionic.tsx` module) instead, which splits into real `<tspan>` elements. See
+    `NodeLinkGraph`'s default node/edge label rendering (and `OrgChart`/`Flowchart`'s own
+    `renderNode`, which draw their own `<text>` and wire this themselves) for the working pattern —
+    call `useAmbientBionic()` once at the component's own top level (a plain function, not a hook,
+    is what actually splits each label, since diagram labels come from a `.map()` over a
+    variable-length list, where calling a hook per-item would break the rules of hooks).
 
 ## Building blocks (`@rebar-ui/placement`)
 
@@ -171,9 +177,14 @@ pieces (→ block)? Almost anything can be described as "a layout of other compo
 of composition (a `Table` is a layout of rows and cells too) — the question that actually resolves
 it is *what's the reusable unit a consumer reaches for*: if it's the whole assembled thing, it's a
 component (even if internally complex — `LayersPanel`, `Wizard`, `Result`); if the reusable unit is
-something smaller than the assembly (a checklist item, in `GoalTracker`'s case) and the assembly
-itself is just this project's own page-content shape, decompose the smaller piece into a real
-component and let the assembly become a block instead.
+something smaller than the assembly and the assembly itself is just this project's own page-content
+shape, decompose the smaller piece into a real component and let the assembly become a block
+instead — the worked example: `GoalTracker` (an Aspiration → Focus Area → Goal hierarchy) was
+reclassified exactly this way. Its real reusable unit was one checkable row, extracted as the
+`TodoItem` component (a toggle plus an optional celebration burst, `label` left as a plain
+`ReactNode` slot so it composes with `Editable` or anything else); the hierarchy, inline editing,
+and add/delete affordances around it became the `goal-tracker` block instead of staying a
+standalone export.
 
 - `packages/placement/src/schema.ts` — the `Block` discriminated union (one variant per block
   type) plus its item/field interfaces. Add a new block by adding a new union member here.
@@ -547,10 +558,11 @@ environments, unlike sin/cos/tan/exp/log, which aren't standardized to be correc
 future chart doing its own polar-to-cartesian math needs the same guard.
 
 More components, added straight from the planned-components gap catalog as they were identified:
-`DatePicker` (pure composition — a trigger button opening a `Popover` containing the real
-`Calendar`, no date-grid logic of its own, the same way `SplitButton` composes `Button` + `Popover`;
-picking a day closes the popover, since a single date is a complete choice, unlike `TimePicker`'s
-deliberate stay-open behavior); `Image` (a real `<img>` load/error state machine, distinct from
+`DatePicker` (a compact day/month/year numeric triplet — three bounded `NumberInput`s, closer in
+spirit to `NumberInput` than to a second `Calendar`; a full calendar popover here would just
+duplicate `Calendar` itself, so this is the fast, keyboard-first direct-entry shape instead — reach
+for `Calendar` directly, in a `Popover` if a trigger-button shape is wanted, when visual browsing is
+actually the point); `Image` (a real `<img>` load/error state machine, distinct from
 `AspectRatio` which has no concept of "is this still loading" — the `<img>` itself is always
 rendered, never conditionally unmounted, so `alt` stays in the accessibility tree through every
 state; loading indicator and error `fallback` are overlays on top of it); `Lightbox` (click-to-

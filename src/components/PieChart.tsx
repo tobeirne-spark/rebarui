@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface PieChartSlice {
   label: string;
@@ -8,7 +10,13 @@ export interface PieChartSlice {
   /** Defaults to the next color in a small built-in palette, cycled by slice index — supply one
    * explicitly only when a specific color carries real meaning. */
   color?: string;
+  /** Visually pops this slice outward from the center — the standard "exploded pie" convention for
+   * calling attention to one or more slices, distinct from `labelPosition` (which controls where
+   * every slice's text goes, not which slice stands out). */
+  exploded?: boolean;
 }
+
+export type PieChartLabelPosition = "legend" | "inside" | "outside";
 
 export interface PieChartProps extends Omit<ComponentPropsWithoutRef<"figure">, "title"> {
   slices: PieChartSlice[];
@@ -23,6 +31,17 @@ export interface PieChartProps extends Omit<ComponentPropsWithoutRef<"figure">, 
   size?: number;
   /** 0 (default) renders a solid pie; e.g. 0.6 punches a donut hole 60% of the outer radius. */
   innerRadiusRatio?: number;
+  /** Where each slice's label/percentage appears. `"legend"` (default): a swatch + label +
+   * percentage row below the chart, as before. `"inside"`: the percentage sits centered inside
+   * each slice wide enough to hold it legibly (a sliver too thin to read stays unlabeled rather
+   * than overflowing its own slice). `"outside"`: label + percentage placed just past the arc with
+   * a short leader line — the standard convention for a pie with several small slices where
+   * "inside" would be illegible. The legend row is omitted for `"inside"`/`"outside"` since the
+   * per-slice labels already carry the same information. */
+  labelPosition?: PieChartLabelPosition;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -84,17 +103,43 @@ function slicePath(cx: number, cy: number, outerR: number, innerR: number, start
  * a small number of parts make up a whole, with a legend row (swatch + label + percentage) below
  * the arcs rather than labels crammed inside thin slices.
  */
+// The distance (in SVG units) an `exploded` slice is pushed outward along its own bisector, and
+// how far past the outer radius an `"outside"` label + leader line sits.
+const EXPLODE_OFFSET = 10;
+const OUTSIDE_LABEL_GAP = 18;
+// Extra viewBox margin reserved for the label text itself (beyond the leader-line gap above) —
+// generous rather than measured, since SVG text width isn't known ahead of layout; a slice
+// pointing straight left/right needs the *whole* label string to fit between the arc and the
+// viewBox edge, not just the leader line's own short gap.
+const OUTSIDE_TEXT_BUDGET = 110;
+// A slice narrower than this fraction of the whole pie can't legibly hold its own "inside" label —
+// left unlabeled rather than overflowing into its neighbors.
+const MIN_INSIDE_LABEL_FRACTION = 0.06;
+
 export function PieChart({
   slices,
   title,
   ariaLabel,
   size = 240,
   innerRadiusRatio = 0,
+  labelPosition = "legend",
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: PieChartProps) {
-  const cx = size / 2;
-  const cy = size / 2;
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const hasExploded = slices.some((s) => s.exploded);
+  // "outside" labels and any exploded slice both need extra breathing room past the base circle —
+  // padding is added to the viewBox (not the circle itself) so the arcs stay the same size either
+  // way, just with more margin around them.
+  const margin =
+    4 +
+    (labelPosition === "outside" ? OUTSIDE_LABEL_GAP + OUTSIDE_TEXT_BUDGET : 0) +
+    (hasExploded ? EXPLODE_OFFSET : 0);
+  const viewSize = size + margin * 2;
+  const cx = viewSize / 2;
+  const cy = viewSize / 2;
   const outerR = size / 2 - 4;
   const innerR = outerR * Math.max(0, Math.min(innerRadiusRatio, 0.95));
 
@@ -120,7 +165,8 @@ export function PieChart({
     const startAngle = cumulative * 360;
     cumulative += fraction;
     const endAngle = cumulative * 360;
-    return { ...slice, color, fraction, startAngle, endAngle };
+    const midAngle = (startAngle + endAngle) / 2;
+    return { ...slice, color, fraction, startAngle, endAngle, midAngle };
   });
 
   return (
@@ -131,51 +177,107 @@ export function PieChart({
       {...props}
     >
       <svg
-        viewBox={`0 0 ${size} ${size}`}
-        style={{ width: "100%", maxWidth: size, height: "auto", margin: "0 auto", display: "block" }}
+        viewBox={`0 0 ${viewSize} ${viewSize}`}
+        style={{ width: "100%", maxWidth: viewSize, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Pie chart"}
       >
-        {computed.map((slice) => (
-          <path
-            key={slice.label}
-            data-rebar-part="slice"
-            d={slicePath(cx, cy, outerR, innerR, slice.startAngle, slice.endAngle)}
-            fill={slice.color}
-          />
-        ))}
+        {computed.map((slice) => {
+          // Same angle convention `polarToCartesian` uses (0deg = 12 o'clock, clockwise) so an
+          // exploded slice's push direction matches its own visual bisector exactly.
+          const rad = ((slice.midAngle - 90) * Math.PI) / 180;
+          const explodeDx = slice.exploded ? round(Math.cos(rad) * EXPLODE_OFFSET) : 0;
+          const explodeDy = slice.exploded ? round(Math.sin(rad) * EXPLODE_OFFSET) : 0;
+          const midR = (outerR + innerR) / 2;
+          const insideLabelPos = polarToCartesian(cx, cy, midR, slice.midAngle);
+          const outsideLabelPos = polarToCartesian(cx, cy, outerR + OUTSIDE_LABEL_GAP, slice.midAngle);
+          const leaderStart = polarToCartesian(cx, cy, outerR, slice.midAngle);
+          const isRightHalf = Math.cos(rad) >= 0;
+          return (
+            <g
+              key={slice.label}
+              data-rebar-part="slice-group"
+              transform={explodeDx || explodeDy ? `translate(${explodeDx} ${explodeDy})` : undefined}
+            >
+              <path
+                data-rebar-part="slice"
+                data-rebar-exploded={slice.exploded || undefined}
+                d={slicePath(cx, cy, outerR, innerR, slice.startAngle, slice.endAngle)}
+                fill={slice.color}
+              />
+              {labelPosition === "inside" && slice.fraction >= MIN_INSIDE_LABEL_FRACTION ? (
+                <text
+                  data-rebar-part="inside-label"
+                  x={insideLabelPos.x}
+                  y={insideLabelPos.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={11}
+                  fill="var(--rebar-color-bg-primary, #ffffff)"
+                  style={{ fontWeight: 600, pointerEvents: "none" }}
+                >
+                  {Math.round(slice.fraction * 100)}%
+                </text>
+              ) : null}
+              {labelPosition === "outside" ? (
+                <g data-rebar-part="outside-label">
+                  <line
+                    x1={leaderStart.x}
+                    y1={leaderStart.y}
+                    x2={outsideLabelPos.x}
+                    y2={outsideLabelPos.y}
+                    stroke="var(--rebar-color-text-secondary, #757575)"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={outsideLabelPos.x + (isRightHalf ? 3 : -3)}
+                    y={outsideLabelPos.y}
+                    textAnchor={isRightHalf ? "start" : "end"}
+                    dominantBaseline="middle"
+                    fontSize={11}
+                    fill="var(--rebar-color-text-primary, #212121)"
+                  >
+                    {slice.label} ({Math.round(slice.fraction * 100)}%)
+                  </text>
+                </g>
+              ) : null}
+            </g>
+          );
+        })}
       </svg>
-      <div
-        data-rebar-part="legend"
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: "var(--rebar-space-sm, 8px)",
-          marginTop: "var(--rebar-space-xs, 4px)",
-        }}
-      >
-        {computed.map((slice) => (
-          <span
-            key={slice.label}
-            data-rebar-part="legend-item"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              fontSize: "var(--rebar-font-size-sm, 12px)",
-              color: "var(--rebar-color-text-primary, #212121)",
-            }}
-          >
+      {labelPosition === "legend" ? (
+        <div
+          data-rebar-part="legend"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "var(--rebar-space-sm, 8px)",
+            marginTop: "var(--rebar-space-xs, 4px)",
+          }}
+        >
+          {computed.map((slice) => (
             <span
-              aria-hidden="true"
-              data-rebar-part="legend-swatch"
-              style={{ width: 10, height: 10, borderRadius: 2, background: slice.color, display: "inline-block" }}
-            />
-            {slice.label} ({Math.round(slice.fraction * 100)}%)
-          </span>
-        ))}
-      </div>
+              key={slice.label}
+              data-rebar-part="legend-item"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: "var(--rebar-font-size-sm, 12px)",
+                color: "var(--rebar-color-text-primary, #212121)",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                data-rebar-part="legend-swatch"
+                style={{ width: 10, height: 10, borderRadius: 2, background: slice.color, display: "inline-block" }}
+              />
+              {slice.label} ({Math.round(slice.fraction * 100)}%)
+            </span>
+          ))}
+        </div>
+      ) : null}
       {title ? (
         <figcaption
           data-rebar-part="title"
@@ -186,7 +288,7 @@ export function PieChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

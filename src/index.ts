@@ -118,6 +118,9 @@ export type { RateProps } from "./components/Rate";
 export { NavBar } from "./components/NavBar";
 export type { NavBarProps, NavBarItem } from "./components/NavBar";
 
+export { SidebarNav } from "./components/SidebarNav";
+export type { SidebarNavProps, SidebarNavItem } from "./components/SidebarNav";
+
 export { NavIndex } from "./components/NavIndex";
 export type { NavIndexProps, NavIndexItem } from "./components/NavIndex";
 
@@ -237,6 +240,12 @@ export type { GeoChartProps, GeoChartRegion, GeoChartLayoutEntry } from "./compo
 export { GanttChart } from "./components/GanttChart";
 export type { GanttChartProps, GanttChartTask } from "./components/GanttChart";
 
+export { PertChart } from "./components/PertChart";
+export type { PertChartProps, PertTask } from "./components/PertChart";
+
+export { WaybackSlider } from "./components/WaybackSlider";
+export type { WaybackSliderProps } from "./components/WaybackSlider";
+
 export { SankeyDiagram } from "./components/SankeyDiagram";
 export type { SankeyDiagramProps, SankeyDiagramNode, SankeyDiagramLink } from "./components/SankeyDiagram";
 
@@ -318,6 +327,9 @@ export type { FunnelChartProps, FunnelChartStage } from "./components/FunnelChar
 export { WaterfallChart } from "./components/WaterfallChart";
 export type { WaterfallChartProps, WaterfallChartStep } from "./components/WaterfallChart";
 
+export { DistributionChart } from "./components/DistributionChart";
+export type { DistributionChartProps, DistributionSeries } from "./components/DistributionChart";
+
 export { RadarChart } from "./components/RadarChart";
 export type { RadarChartProps, RadarChartSeries } from "./components/RadarChart";
 
@@ -392,6 +404,32 @@ export type { GitGraphProps, GitGraphCommit } from "./components/GitGraph";
 export { VersionHistory } from "./components/VersionHistory";
 export type { VersionHistoryProps, VersionSnapshot } from "./components/VersionHistory";
 
+export { IndexBar } from "./components/IndexBar";
+export type { IndexBarProps, IndexBarGroup } from "./components/IndexBar";
+
+export { GraphExplorer } from "./components/GraphExplorer";
+export type {
+  GraphExplorerProps,
+  GraphExplorerNode,
+  GraphExplorerEdge,
+  GraphExplorerAction,
+} from "./components/GraphExplorer";
+
+export { ErrorBlock } from "./components/ErrorBlock";
+export type { ErrorBlockProps, ErrorBlockStatus } from "./components/ErrorBlock";
+
+export { NoticeBar } from "./components/NoticeBar";
+export type { NoticeBarProps, NoticeBarTone } from "./components/NoticeBar";
+
+export { ProgressCircle } from "./components/ProgressCircle";
+export type { ProgressCircleProps } from "./components/ProgressCircle";
+
+export { Selector } from "./components/Selector";
+export type { SelectorProps, SelectorOption } from "./components/Selector";
+
+export { NumberKeyboard } from "./components/NumberKeyboard";
+export type { NumberKeyboardProps } from "./components/NumberKeyboard";
+
 export { ChatThread } from "./components/ChatThread";
 export type {
   ChatThreadProps,
@@ -409,12 +447,8 @@ export type { UploadQueueProps, UploadQueueItem } from "./components/UploadQueue
 export { InfiniteScrollGrid } from "./components/InfiniteScrollGrid";
 export type { InfiniteScrollGridProps } from "./components/InfiniteScrollGrid";
 
-export { GoalTracker } from "./components/GoalTracker";
-export type {
-  GoalTrackerProps,
-  GoalTrackerGoal,
-  GoalTrackerFocusArea,
-} from "./components/GoalTracker";
+export { TodoItem } from "./components/TodoItem";
+export type { TodoItemProps } from "./components/TodoItem";
 
 export { TextToSpeechBar } from "./components/TextToSpeechBar";
 export type { TextToSpeechBarProps, TtsState, TtsVoiceOption } from "./components/TextToSpeechBar";
@@ -430,6 +464,9 @@ export type { SlashCommandMenuProps, SlashCommand } from "./components/SlashComm
 
 export { VoiceComposer } from "./components/VoiceComposer";
 export type { VoiceComposerProps, VoiceComposerState } from "./components/VoiceComposer";
+
+export { AiChatInput } from "./components/AiChatInput";
+export type { AiChatInputProps, AiChatInputIntent } from "./components/AiChatInput";
 
 export { ShapeGallery } from "./components/ShapeGallery";
 export type { ShapeGalleryProps, ShapeGalleryItem } from "./components/ShapeGallery";

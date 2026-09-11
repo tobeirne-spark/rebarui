@@ -101,4 +101,14 @@ describe("Heatmap", () => {
     fireEvent.click(background);
     expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
   });
+
+  it("centers the title over the cell grid, not the whole figure including the row-label gutter", () => {
+    // Regression test for a real, visible bug: centering the caption across the figure's full
+    // width (row-label gutter included) put it out of alignment with the cell grid, which only
+    // occupies the region after that gutter.
+    const { container } = render(<Heatmap data={data} rows={rows} cols={cols} title="Usage density" />);
+    const caption = container.querySelector('figcaption[data-rebar-part="title"]') as HTMLElement;
+    expect(caption.style.paddingLeft).not.toBe("");
+    expect(caption.style.paddingLeft).not.toBe("0%");
+  });
 });

@@ -33,6 +33,15 @@ export interface ButtonGroupProps extends ComponentPropsWithoutRef<"div"> {
  * group) is a surprising, hard-to-trace behavior. `Button`'s own `size`/`variant` props already
  * exist and read clearly set directly on each child; this component doesn't duplicate that
  * surface.
+ *
+ * **Overall width, stated explicitly (previously ambiguous from the demo alone):** the root is a
+ * plain `display: inline-flex` — intrinsically sized to its content (the sum of its children's
+ * widths for `orientation="horizontal"`, the widest child's width for `"vertical"`, since a
+ * column flex container's default `align-items: stretch` fills every child to that width). There
+ * is no `fullWidth`/`size` prop, and none is planned: a consumer who wants the group to fill its
+ * container passes `style={{ display: "flex" }}` (or a `className`) the same way every other
+ * `...props`-forwarding component in this library is resized, rather than this component
+ * inventing its own one-off sizing API.
  */
 export const ButtonGroup = forwardRef<HTMLDivElement, ButtonGroupProps>(function ButtonGroup(
   { children, orientation = "horizontal", className, ...props },

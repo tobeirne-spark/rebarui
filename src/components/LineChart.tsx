@@ -2,6 +2,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
 import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { ChartFilterFooter, useSeriesFilter } from "../chartSeriesFilter";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
@@ -28,17 +29,22 @@ export interface LineChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   /** Marks one x position with a vertical dashed line and a "crossover" label — for a cumulative
    * comparison where one series overtakes another partway through. */
   crossoverIndex?: number;
+  /** Adds a row of toggle buttons (one per series) below the chart that hide/show that series'
+   * whole line — off by default. The in-chart label list only ever shows currently-visible
+   * series (a label with no matching line would otherwise dangle); the footer is the always-full
+   * control surface for bringing a hidden one back. */
+  filterable?: boolean;
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
-  "var(--rebar-color-text-secondary, #757575)",
   "var(--rebar-color-primary, #0066cc)",
   "var(--rebar-color-success, #2e7d32)",
   "var(--rebar-color-warning, #f57c00)",
   "var(--rebar-color-danger, #d32f2f)",
+  "var(--rebar-color-text-secondary, #757575)",
 ];
 
 /**
@@ -56,6 +62,7 @@ export function LineChart({
   yFormat = (v: number) => Math.round(v).toLocaleString(),
   labelStep = 1,
   crossoverIndex,
+  filterable,
   bionic,
   bionicOptions,
   className,
@@ -63,6 +70,7 @@ export function LineChart({
 }: LineChartProps) {
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
+  const { hidden, toggle, isVisible } = useSeriesFilter(series.map((s) => s.label));
   const width = 700;
   const marginLeft = 62;
   const marginRight = 20;
@@ -72,7 +80,8 @@ export function LineChart({
   const plotHeight = height - marginTop - marginBottom;
 
   const allValues = series.flatMap((s) => s.values);
-  if (allValues.length === 0 || xLabels.length < 2) {
+  const allFilteredOut = filterable && series.length > 0 && series.every((s) => !isVisible(s.label));
+  if (allValues.length === 0 || xLabels.length < 2 || allFilteredOut) {
     return (
       <figure
         className={clsx("rebar-chart", "rebar-line-chart", className)}
@@ -81,6 +90,7 @@ export function LineChart({
         {...props}
       >
         {renderChartEmptyState(height)}
+        {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
       </figure>
     );
   }
@@ -166,6 +176,7 @@ export function LineChart({
           </g>
         ) : null}
         {series.map((s, i) => {
+          if (filterable && !isVisible(s.label)) return null;
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const points = s.values.map((v, j) => `${xScale(j)},${yScale(v)}`).join(" ");
           return (
@@ -198,18 +209,28 @@ export function LineChart({
             </g>
           );
         })}
-        {series.map((s, i) => (
-          <text
-            key={s.label}
-            x={width - marginRight}
-            y={marginTop + 12 + i * 16}
-            fontSize={11}
-            textAnchor="end"
-            fill={s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
-          >
-            {s.label}
-          </text>
-        ))}
+        {(() => {
+          // Only currently-visible series get a label here (a label with no matching line would
+          // otherwise dangle) — packed tightly via a running visible-only counter, rather than
+          // leaving a gap wherever a hidden series' own original index used to sit.
+          let visibleLabelIndex = 0;
+          return series.map((s, i) => {
+            if (filterable && !isVisible(s.label)) return null;
+            const labelSlot = visibleLabelIndex++;
+            return (
+              <text
+                key={s.label}
+                x={width - marginRight}
+                y={marginTop + 12 + labelSlot * 16}
+                fontSize={11}
+                textAnchor="end"
+                fill={s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+              >
+                {s.label}
+              </text>
+            );
+          });
+        })()}
         {activeKey
           ? (() => {
               const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
@@ -218,6 +239,9 @@ export function LineChart({
               const activeSeries = series[seriesIndex];
               const value = activeSeries?.values[pointIndex];
               if (!activeSeries || value === undefined) return null;
+              // A mark on a series that's since been hidden (via the filter footer, independent
+              // of this selection state) shouldn't still show a tag for a line no longer drawn.
+              if (filterable && !isVisible(activeSeries.label)) return null;
               return (
                 <ChartValueTag
                   x={xScale(pointIndex)}
@@ -231,6 +255,7 @@ export function LineChart({
             })()
           : null}
       </svg>
+      {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
       {title ? (
         <figcaption
           data-rebar-part="title"

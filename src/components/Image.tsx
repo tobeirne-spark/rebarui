@@ -16,22 +16,33 @@ function mergeRefs<T>(...refs: (Ref<T> | undefined)[]) {
   };
 }
 
-export type ImageLoadStatus = "loading" | "loaded" | "error";
+export type ImageLoadStatus = "empty" | "loading" | "loaded" | "error";
 
 export interface ImageProps
-  extends Omit<ComponentPropsWithoutRef<"img">, "alt" | "onLoad" | "onError"> {
-  src: string;
+  extends Omit<ComponentPropsWithoutRef<"img">, "alt" | "onLoad" | "onError" | "src"> {
+  /** Omit (or pass `""`) to render the `empty` state — e.g. a gallery slot before an image has
+   * been uploaded yet. Distinct from `error` (a real `src` that failed to load): "there's nothing
+   * here yet" and "something went wrong" are different claims, per ref/HEURISTICS.md #20 (loading/
+   * error/empty/disabled all need their own designed state, not just the happy path). */
+  src?: string;
   /** Required — an <img> with no alt text is a silent accessibility gap. */
   alt: string;
-  /** Shown if the image fails to load. Defaults to a simple broken-image placeholder box. */
+  /** Shown if the image fails to load. Defaults to a fixed, generic message — deliberately NOT
+   * derived from `alt` (which describes the image's *content*, e.g. "A mountain lake at sunrise",
+   * not what went wrong loading it; using it as the visible failure copy would show a caller's own
+   * content description as if it were an error message). */
   fallback?: ReactNode;
+  /** Shown when no `src` is given at all. Defaults to a plain "No image" placeholder, visually
+   * distinct from the `error` fallback (a real, different problem: nothing supplied yet, vs. a
+   * real src that failed). */
+  emptyIndicator?: ReactNode;
   /** Shown while the image is loading. Defaults to a real Spin. */
   loadingIndicator?: ReactNode;
   onLoad?: (event: SyntheticEvent<HTMLImageElement>) => void;
   onError?: (event: SyntheticEvent<HTMLImageElement>) => void;
 }
 
-function DefaultFallback({ alt }: { alt: string }) {
+function DefaultFallback() {
   return (
     <span className="rebar-image-fallback-default">
       <svg
@@ -51,7 +62,24 @@ function DefaultFallback({ alt }: { alt: string }) {
           strokeLinejoin="round"
         />
       </svg>
-      <span className="rebar-image-fallback-text">{alt || "Image failed to load"}</span>
+      <span className="rebar-image-fallback-text">Image failed to load</span>
+    </span>
+  );
+}
+
+function DefaultEmpty() {
+  return (
+    <span className="rebar-image-empty-default">
+      <svg
+        className="rebar-image-fallback-icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+      <span className="rebar-image-fallback-text">No image</span>
     </span>
   );
 }
@@ -65,7 +93,7 @@ function DefaultFallback({ alt }: { alt: string }) {
  * error, empty, and disabled states are all designed, not just the happy path).
  */
 export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
-  { src, alt, fallback, loadingIndicator, onLoad, onError, className, style, loading, ...rest },
+  { src, alt, fallback, emptyIndicator, loadingIndicator, onLoad, onError, className, style, loading, ...rest },
   ref,
 ) {
   const [status, setStatus] = useState<ImageLoadStatus>("loading");
@@ -115,6 +143,21 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
     onError?.(event);
   };
 
+  if (!src) {
+    return (
+      <span
+        className={clsx("rebar-image", className)}
+        data-rebar-component="image"
+        data-rebar-image-status="empty"
+        style={style}
+      >
+        <span className="rebar-image-empty" data-rebar-part="empty" role="img" aria-label={alt}>
+          {emptyIndicator ?? <DefaultEmpty />}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <span
       className={clsx("rebar-image", className)}
@@ -142,7 +185,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
       ) : null}
       {status === "error" ? (
         <span className="rebar-image-fallback" data-rebar-part="fallback">
-          {fallback ?? <DefaultFallback alt={alt} />}
+          {fallback ?? <DefaultFallback />}
         </span>
       ) : null}
     </span>

@@ -11,6 +11,13 @@ export interface FunnelChartStage {
   color?: string;
 }
 
+export interface FunnelChartMilestone {
+  /** Places this milestone at the boundary just below this stage index (0-based) — e.g. `0`
+   * marks the line between the first and second stages. */
+  afterStageIndex: number;
+  label: string;
+}
+
 export interface FunnelChartProps extends Omit<ComponentPropsWithoutRef<"figure">, "title"> {
   stages: FunnelChartStage[];
   /** Rendered as a real, visible caption above the chart — see ref/HEURISTICS.md #16. Optional
@@ -22,6 +29,10 @@ export interface FunnelChartProps extends Omit<ComponentPropsWithoutRef<"figure"
   /** Height, in SVG units, of each stage's own band (not the whole chart). */
   height?: number;
   valueFormat?: (v: number) => string;
+  /** Dashed marker lines at specific stage boundaries — a target/checkpoint callout distinct from
+   * the stages themselves (e.g. "industry benchmark" or "Q3 goal"), the same visual convention
+   * `LineChart`'s own `crossoverIndex` marker uses. */
+  milestones?: FunnelChartMilestone[];
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -46,6 +57,7 @@ export function FunnelChart({
   ariaLabel,
   height = 64,
   valueFormat = (v: number) => Math.round(v).toLocaleString(),
+  milestones = [],
   bionic,
   bionicOptions,
   className,
@@ -101,11 +113,19 @@ export function FunnelChart({
           const yMid = (yTop + yBottom) / 2 + 4;
           const topW = widths[i] ?? 0;
           const bottomW = widths[i + 1] ?? topW;
+          // Each side eases from its own top width to its own bottom width via a cubic bezier
+          // (control points at 1/3 and 2/3 down the band, holding each end's tangent flat) rather
+          // than a straight diagonal — the whole funnel reads as one continuously-tapering shape
+          // instead of stacked, angular trapezoids, since each stage's curve starts flat where the
+          // previous one's ended and vice versa.
+          const yC1 = yTop + height / 3;
+          const yC2 = yTop + (height * 2) / 3;
           const path = [
             `M ${cx - topW / 2} ${yTop}`,
             `L ${cx + topW / 2} ${yTop}`,
-            `L ${cx + bottomW / 2} ${yBottom}`,
+            `C ${cx + topW / 2} ${yC1}, ${cx + bottomW / 2} ${yC2}, ${cx + bottomW / 2} ${yBottom}`,
             `L ${cx - bottomW / 2} ${yBottom}`,
+            `C ${cx - bottomW / 2} ${yC2}, ${cx - topW / 2} ${yC1}, ${cx - topW / 2} ${yTop}`,
             "Z",
           ].join(" ");
           return (
@@ -123,6 +143,32 @@ export function FunnelChart({
               </text>
               <text x={width - marginRight + 12} y={yMid} fontSize={12} textAnchor="start" fill="var(--rebar-color-text-secondary, #757575)">
                 {valueFormat(stage.value)}
+              </text>
+            </g>
+          );
+        })}
+        {milestones.map((milestone, i) => {
+          if (milestone.afterStageIndex < 0 || milestone.afterStageIndex >= stages.length - 1) return null;
+          const y = marginTop + height * (milestone.afterStageIndex + 1);
+          return (
+            <g key={i} data-rebar-part="milestone">
+              <line
+                x1={marginLeft}
+                y1={y}
+                x2={width - marginRight}
+                y2={y}
+                stroke="var(--rebar-color-warning, #f57c00)"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+              />
+              <text
+                x={width - marginRight}
+                y={y - 5}
+                fontSize={10}
+                textAnchor="end"
+                fill="var(--rebar-color-warning, #f57c00)"
+              >
+                {milestone.label}
               </text>
             </g>
           );
