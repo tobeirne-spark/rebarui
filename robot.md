@@ -211,7 +211,11 @@ Current block catalog (39 types — see `schema.ts` for exact field shapes):
 `header`, `nav-bar`, `site-header` (a real site nav bar — logo, a `NavBar` capped at half the
 header's width per the "Nav overflow" heuristic, and optional trailing content: a version string,
 a login action, or a signed-in user's avatar; the lone-block wrapper-skip described below also
-applies to this one, so it lands as a clean top-level `<header>` landmark), `nav-index`,
+applies to this one, so it lands as a clean top-level `<header>` landmark; `logo.iconPath`/
+`iconViewBox` render the mark as a real inline `<svg fill="currentColor">` instead of `iconSrc`'s
+plain `<img>` — the only way it can inherit the ambient text color and react live to a light/dark
+toggle, since an externally-loaded image has no visibility into the host page's own DOM/CSS at
+all), `nav-index`,
 `page-index`, `banner`, `checklist`, `callout`, `goal-tracker` (an Aspiration → Focus Area → Goal
 hierarchy of checkable `TodoItem` rows, with inline editing and add/delete affordances — the block
 `GoalTracker` was reclassified into, see the worked example above), `ai-chat` (a `ChatThread`
