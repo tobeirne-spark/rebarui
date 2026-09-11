@@ -23,4 +23,11 @@ describe("Divider", () => {
     expect(screen.getByText("Or")).toBeInTheDocument();
     expect(screen.getByRole("separator")).toHaveAttribute("data-rebar-component", "divider");
   });
+
+  it("forwards arbitrary data-* props onto the root, with and without text", () => {
+    const { rerender } = render(<Divider data-rebar-part="label" />);
+    expect(screen.getByRole("separator")).toHaveAttribute("data-rebar-part", "label");
+    rerender(<Divider data-rebar-part="label">Or</Divider>);
+    expect(screen.getByRole("separator")).toHaveAttribute("data-rebar-part", "label");
+  });
 });

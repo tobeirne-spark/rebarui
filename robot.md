@@ -56,6 +56,10 @@ Framework Rules below; the Heuristics checklist follows the rest of this file.
 - **Theming is CSS custom properties only** (`--rebar-*`), never a component prop or inline
   hardcoded color/spacing value. A `--rebar-color-*`/`--rebar-space-*` token, not a hex code or a
   raw pixel number, in every style rule a component ships.
+- **Default a new build to `@rebar-ui/theme-clean` + `data-rebar-theme="clean"`, light mode (no
+  `data-theme="dark"`).** That's the recommended starting point — regular IBM Plex Sans font, not
+  the hand-drawn `theme-sketch` look. Only reach for `theme-sketch` when that aesthetic is
+  specifically requested; don't treat the two as an arbitrary coin-flip.
 - **Every component carries `data-rebar-component="<kebab-name>"`** on its root, and
   `data-rebar-part="<part>"` on each internal structural piece (header, body, item, ...) — the
   hook both Playwright tests and a consuming migration script rely on.
@@ -202,14 +206,20 @@ standalone export.
   drag targets and a double-click-gated edit modal that its `Card`/`Kanban` pieces don't impose by
   themselves), so check it again at the block level, not only inside each component it calls.
 
-Current block catalog (32 types — see `schema.ts` for exact field shapes):
+Current block catalog (37 types — see `schema.ts` for exact field shapes):
 
 `header`, `nav-bar`, `site-header` (a real site nav bar — logo, a `NavBar` capped at half the
 header's width per the "Nav overflow" heuristic, and optional trailing content: a version string,
 a login action, or a signed-in user's avatar; the lone-block wrapper-skip described below also
 applies to this one, so it lands as a clean top-level `<header>` landmark), `nav-index`,
-`page-index`, `banner`, `checklist`, `callout`, `feature-grid`, `pillar-grid`, `card-grid`,
-`persona-card`, `form`, `table`, `data-list`, `filter-bar`, `tabs` (recursive — each tab holds its
+`page-index`, `banner`, `checklist`, `callout`, `goal-tracker` (an Aspiration → Focus Area → Goal
+hierarchy of checkable `TodoItem` rows, with inline editing and add/delete affordances — the block
+`GoalTracker` was reclassified into, see the worked example above), `ai-chat` (a `ChatThread`
+transcript over an `AiChatInput` composer — local-only state seeded from the block's own
+`messages`; sending appends the caller's new message and deliberately never fabricates an assistant
+reply, since this is a static-render demo surface, not a real backend), `feature-grid`,
+`pillar-grid`, `card-grid`, `persona-card`, `form`, `table`, `data-list`, `filter-bar`, `tabs`
+(recursive — each tab holds its
 own `Block[]`), `modal` (recursive, renders forced-open — a static-render convention, not for a
 normal live page), `wizard`, `hero`, `section-header`, `doc-section` (the block this project's own
 prose pages are built from; supports a tiny inline markup — `` `code` ``, `[label](href)`,
@@ -218,7 +228,11 @@ this block too, not just its subsections), `props-table`, `iframe` (a real `<ifr
 required `title`), `comparison` (recursive, the first block whose own layout isn't single-column —
 two labeled panels, each holding its own `Block[]`; measures the left panel's real rendered height
 and applies it to the right, so an embedded `iframe` on either side always matches its sibling
-instead of needing a hand-picked height), `heuristic` (one entry of a heuristics/design-principles
+instead of needing a hand-picked height), `side-panel` (a nested `main: Block[]` document rendered
+beside `rebar-ui`'s `SidePanel` — the Slack "thread"/"details" pattern: persistent and non-modal,
+no backdrop, the main content stays fully visible and interactive while the panel is open; distinct
+from `modal`, which is a forced-open, backdrop-covering `Dialog` meant for a static-render context
+only), `heuristic` (one entry of a heuristics/design-principles
 page — heading, bolded rule, `doc-section`-style rationale prose, plus an optional code sample
 and/or a nested live `Block[]` example; carries its own stable `id` rather than slugifying one from
 `title`, since existing cross-references and a `page-index` block's own `sections` list may already
@@ -295,6 +309,15 @@ const blocks: Block[] = [
 - A `modal` block renders **forced open** — fine for a static render/screenshot context, wrong
   for a normal interactive page (it covers the whole viewport as a fixed overlay with no other
   content reachable). Link out to a real, normally-triggered `Dialog` instead on a live page.
+- **`BlockRenderer` already is the page shell — render its output directly as the page.** It
+  renders a plain `<Box data-rebar-placement-root><Stack gap="lg">` wrapper on top of the page's
+  own already-correct background (`body`'s `--rebar-color-bg-primary`, set once
+  `rebar-ui/style.css` is imported). Never nest it inside a `Card`, or any other element with its
+  own background/border, "for structure" — a bare page needs no such wrapper at all. Doing so
+  forces the entire page into that element's border/shadow/corner-radius/padding treatment, which
+  is exactly what produces a page that looks like one giant grey/boxed rectangle instead of a
+  normal page with individually card-shaped pieces on it (`card-grid`/`persona-card`/
+  `pillar-grid` already render their own, correctly-scoped `Card`s where that's the real shape).
 
 ## Working on the marketing site (`apps/docs`)
 
@@ -524,7 +547,11 @@ internal `DrawerPanel` (not exported) built on the same Radix Dialog wiring `Dia
 slides in from any edge, `BottomSheet` is `Drawer` fixed to the bottom plus a purely decorative drag
 handle (no real drag-to-dismiss physics — dismissal is always via the close button/Esc/backdrop,
 never drag-only), `ActionSheet` renders a fixed action list instead of arbitrary children and holds
-its own controlled open state so picking an action closes it; `MobileTabBar` (a bottom-fixed nav
+its own controlled open state so picking an action closes it; `SidePanel` (a persistent, non-modal
+side panel — the Slack "thread"/"details" pattern; unlike the `Drawer` family above it has no
+backdrop/portal/overlay, sits beside the main content in normal document flow, and collapses to a
+slim always-present 44px rail with a toggle rather than fully disappearing, so there's always a
+real way back in); `MobileTabBar` (a bottom-fixed nav
 row, structurally closer to `NavBar` than to `Dialog` — no open/close state, every item real,
 keyboard-focusable, and at least 44×44); `ScrollArea` (CSS-only themed scrollbar, real
 `overflow: auto`, no JS); `SplitButton` (pure `Button` + `Popover` composition); `Calendar` (a
@@ -734,6 +761,120 @@ already used. Paired with `useLongPress` (`packages/core/src/useLongPress.ts`, e
 `useLongPress` call exists for the whole board (calling a hook inside a `.map()` over cards would
 violate the rules of hooks); which card is being pressed is tracked via a ref set on each card's
 own `onTouchStart`, read when the shared timer actually fires.
+
+A large batch shipped from the mobile/diagram catalog and a heuristic-scored backlog pass (this
+catalog had gone stale across two waves of work — the list below brings it current):
+`ButtonGroup` (a visually joined row/column of already-built `Button` elements taken as `children`
+— no `cloneElement` prop-forwarding onto them, since a child might not even be a `Button`; distinct
+from `SplitButton`, which pairs one primary action with a dropdown of secondary ones rather than
+several always-visible equal actions), `ContextMenu` (right-click/long-press positioning around a
+wrapped `children` region, item shape deliberately identical to `Dropdown`'s own `DropdownItem` so
+migrating a menu between the two patterns needs no data reshaping, plus a `separator` entry
+`Dropdown` has never needed), `Menubar` (a row of `Dropdown`s — real desktop-app "File/Edit/View"
+menus — reusing that same item shape plus `separator`), `Toggle` (a single persistent-pressed
+on/off button, `aria-pressed`-based, sharing `Button`'s CSS class for visual consistency without
+wrapping `Button` itself, since `Button` hardcodes its own `data-rebar-component`/`loading`
+semantics this component has no equivalent of) and `ToggleGroup` (several `Toggle`s as one group,
+`type="single"|"multiple"` borrowed from the real Radix/shadcn distinction — deliberately still a
+set of independent `aria-pressed` buttons, not `SegmentedControl`'s `radiogroup`/`radio` composite,
+since a toolbar of Bold/Italic/Underline is semantically a set of independent toggles, not one
+logical field), `SpeedDial` (a FAB that expands into several always-labeled, real `Button` sub-
+actions — never icon-only, never a hover-reveal — closing itself after a pick the same way
+`ActionSheet` does), `Masonry` (a Pinterest-style waterfall grid built on plain CSS multi-column
+layout, not a JS height-measuring algorithm — correct on the very first paint including SSR, with
+one stated, accepted tradeoff: item order reads column-then-row, not "shortest column next," since
+CSS columns fill top-to-bottom before wrapping), `UMAPPlot` (a 2D embedding scatter plot for
+browsing a vector database's contents — deliberately omits numeric axis ticks, since a UMAP
+embedding's raw x/y values carry no interpretable unit on their own, only relative clustering does;
+reuses the same `useChartMarkSelection`/`ChartValueTag` persistent-hover pattern every other chart
+in this family shares), `GitGraph` (a static, read-only branch/commit graph — purpose-built rather
+than composed from `NodeLinkGraph`, since a git graph's layout rules are fundamentally different:
+branch columns are assigned once via a single forward pass and never rebalanced, position along the
+timeline is a direct unscaled function of array order, and a commit connects only to its own real
+`parentIds`, never an arbitrary edge list; a same-column connector is a straight line, a cross-
+column one a cubic Bézier whose control points sit at the shared vertical midpoint so the curve
+starts/ends perfectly tangent to the column it's leaving/entering), `VersionHistory` (a `DrawerPanel`
+composition listing timestamped snapshots, each restorable only behind a real `Popconfirm` since
+restoring is a destructive, overwriting action — holds no state of its own beyond what it forwards
+straight through, the same thin-wrapper shape `BottomSheet` uses), `ChatThread` (a chat-bubble
+transcript — the caller owns all networking/streaming state, same controlled-presentation
+convention as `FileUpload`/`Toast`; the one real behavior it owns is auto-scroll-vs.-leave-the-user-
+alone, decided off a ref read synchronously the instant new content lands rather than React state,
+which would re-render one tick too late — see `TodoItem` below for the sibling `GoalTracker`
+reclassification this component pairs with for a full AI-chat surface), `WaveformAudioPlayer` (a
+real `<audio>`-backed transport control with a purely decorative but deterministic bar waveform —
+seeded per-`src` hash, not `Math.random` — that doubles as a real keyboard-operable `role="slider"`
+scrub bar, not a drag-only control), `UploadQueue` (a persistent, portal-rendered app-wide upload
+panel with pause/resume/retry/dismiss per item, collapsible to a count pill — the caller owns
+cross-route persistence by lifting `items` state above the router), `InfiniteScrollGrid` (a real
+`IntersectionObserver` on a trailing sentinel, not a `scroll`-listener with manual math; a
+`firedRef` guard prevents a duplicate `onLoadMore` burst on a tall viewport where newly-appended
+content doesn't push the sentinel off-screen, clearing on either a genuine intersection-state flip
+or an `items`/`hasMore` change), `TextToSpeechBar`/`VoiceComposer` (a TTS playback bar and a
+voice-recording composer, each a small state machine — idle/generating-or-recording/playing-or-
+transcribing/ready/error — with a real `aria-live="polite"` status message per state, since an async
+state transition like this needs to reach a non-visual user, not just an icon swap),
+`FloatingSelectionToolbar` (appears above a real, non-collapsed text selection anchored entirely
+inside a given container — a selection dragged out into a sibling doesn't count — flips to below
+when there's no room above, and prefers below-by-default on a coarse/touch pointer since the OS's
+own native selection-handle UI already occupies the space above on most mobile browsers, a stated,
+undetectable limitation rather than a solved one), `SlashCommandMenu` (a Notion-style inline "/"
+menu — presentational/controlled like `Mentions`, reusing `CommandPalette`'s exact filtering and
+flat cross-group keyboard-nav approach, but categorized and icon+description-rich per row; keyboard
+nav is a capture-phase `window` listener rather than the menu's own `onKeyDown`, since real DOM
+focus deliberately never leaves the caller's own editor while this menu is open), `ShapeGallery` (a
+roving-tabindex swatch grid — arrow keys move focus, only the focused cell sits in the Tab order;
+each swatch is a `div[role="button"]` rather than a real `<button>` specifically so it can nest a
+real `<button>` favorite-toggle inside it, which the HTML content model forbids for two real
+buttons), and `FileManager` (a real file/folder tree with two swappable views sharing one
+`Checkbox`-based multi-select model — native HTML5 drag-and-drop between folders is fully supported
+in grid view, but not by dragging a table row in table view, where the `ContextMenu` "Move to…"
+fallback is the *primary* move mechanism, not just a fallback — an honest, stated scope boundary,
+not a gap; renaming drives the real `Editable` component's own click-to-edit trigger via a per-node
+ref rather than inventing a second rename gesture).
+
+This session's additions: `IndexBar` (an alphabetical-jump sidebar over grouped items — the
+antd-mobile pattern; the letter rail is a continuous-drag touch surface tracked via
+`document.elementFromPoint`, not 26 individually-tappable ≥44×44 targets, the standard resolution
+this exact pattern uses industry-wide, see ref/HEURISTICS.md #19/#1), `GraphExplorer` (a
+force-directed network graph for hundreds-to-low-thousands of nodes — the Neo4j Bloom look —
+rendered to `<canvas>` with a real `d3-force` simulation, since `NodeLinkGraph` deliberately stays
+SVG + deterministic layouts sized for a few dozen nodes at most; a real category legend, search-to-
+select, and a radial action menu are all real focusable HTML layered over the canvas, only "tap an
+arbitrary node without knowing its name first" is mouse/touch-only; supports genuine two-finger
+pinch-to-zoom anchored on the pinch's own midpoint, confirmed via Chrome DevTools Protocol's real
+touch dispatch, not synthetic events a real browser's `setPointerCapture` would reject), `TodoItem`
+(the checkable-row primitive extracted from `GoalTracker`'s reclassification — see "Building
+blocks" above for the full worked example — plus the `goal-tracker` placement-layer block it now
+pairs with), `DistributionChart` (a parametric normal/bell-curve chart from `mean`/`stdDev` per
+series, not raw-sample KDE — a deliberate scope call — reusing the same persistent hover-tag
+pattern the rest of the chart family shares), `SidebarNav` (a vertical dashboard nav with one level
+of collapsible nested groups, auto-expanding whichever group contains the active item, plus an
+icon-only `collapsed` mode with its own `aria-label` fallback when no visible text remains),
+`WaybackSlider` (a generic scrubber over a plain `dates: Date[]` array — built on the real `Slider`
+as a discrete index, with zero knowledge of what a "snapshot" actually contains; `GanttChart`/
+`PertChart` both pair with it by keeping their own full historical data externally and feeding
+whichever date it reports into the real chart), `PertChart` (real forward/backward CPM — critical
+path method — computed from `duration`/`dependsOn`, built on `NodeLinkGraph` via a custom 4-line
+node box and `renderEdgeStyle` highlighting the critical path in red), `AiChatInput` (an
+auto-growing textarea with an `intent`-aware primary button — `"message"|"command"|"search"` →
+Send/Run/Search, the caller classifies, this component never infers — plus an optional dictation
+toggle with the same accepted no-real-recording exception `VoiceComposer`'s own `state` prop
+already has), and five components closing real gaps found by fetching antd-mobile's actual source
+tree (`gh api repos/ant-design/ant-design-mobile/contents/src/components`, not a guessed list) and
+cross-referencing it against everything already shipped: `ErrorBlock` (`status:
+"default"|"disconnected"|"empty"|"busy"`, each with its own default title/description/icon, all
+overridable; `status="empty"` composes the real `Empty` component directly rather than duplicating
+its illustration), `NoticeBar` (a persistent full-width announcement strip, distinct from `Alert`
+and `Toast`; single-line overflow triggers a real measured — `ResizeObserver`-driven, not guessed —
+marquee, not a guessed-from-character-count heuristic), `ProgressCircle` (a plain circular progress
+ring, deliberately lighter than `GaugeChart` for a bare percentage with no axis/ticks/thresholds),
+`Selector<T>` (a generic grid of selectable chips, every option visible and tappable at once —
+distinct from `MultiSelect`'s dropdown), and `NumberKeyboard` (an on-screen numeric keypad composed
+on the real `BottomSheet`, presentational only like `FileUpload`/`ChatThread`; `randomOrder`
+shuffles the 0-9 digit positions each time it opens, a real security feature against
+shoulder-surfing/screen-recording attacks that rely on remembering key *position* rather than
+value).
 
 ## Where to look for more
 

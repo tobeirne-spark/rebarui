@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { Empty } from "./Empty";
 
@@ -17,6 +18,13 @@ export interface ChatMessage {
   content: string;
   status?: ChatMessageStatus;
   timestamp?: string | Date;
+  /** An avatar shown beside this message's bubble — omitted entirely (the message renders exactly
+   * as it did before this field existed, no layout change) unless `avatarFallback` is passed,
+   * matching `Avatar`'s own required `fallback` (used for initials, and — with `avatarPlaceholder`
+   * — deterministic portrait selection, so the same name always gets the same portrait). */
+  avatarFallback?: string;
+  avatarSrc?: string;
+  avatarPlaceholder?: boolean;
 }
 
 export interface ChatThreadProps extends ComponentPropsWithoutRef<"div"> {
@@ -100,7 +108,7 @@ function MessageBubble({
   const status = message.status ?? "sent";
   const isError = status === "error";
 
-  return (
+  const bubble = (
     <div
       className={clsx("rebar-chat-message", `rebar-chat-message-${message.role}`)}
       data-rebar-part="message"
@@ -143,6 +151,27 @@ function MessageBubble({
           Retry
         </Button>
       ) : null}
+    </div>
+  );
+
+  // Omitted entirely (no wrapping row, no layout change at all) unless `avatarFallback` is
+  // passed — a transcript with no avatars renders exactly as it did before this field existed.
+  if (!message.avatarFallback) return bubble;
+
+  return (
+    <div
+      className="rebar-chat-message-row"
+      data-rebar-part="message-row"
+      data-rebar-role={message.role}
+    >
+      <Avatar
+        fallback={message.avatarFallback}
+        src={message.avatarSrc}
+        placeholder={message.avatarPlaceholder}
+        size="sm"
+        alt=""
+      />
+      {bubble}
     </div>
   );
 }

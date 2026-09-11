@@ -1,16 +1,16 @@
 import { forwardRef } from "react";
 import * as RadixSeparator from "@radix-ui/react-separator";
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
 
-export interface DividerProps {
+export interface DividerProps extends Omit<ComponentPropsWithoutRef<"div">, "children"> {
   orientation?: "horizontal" | "vertical";
   children?: ReactNode;
   className?: string;
 }
 
 export const Divider = forwardRef<HTMLDivElement, DividerProps>(function Divider(
-  { orientation = "horizontal", children, className },
+  { orientation = "horizontal", children, className, ...props },
   ref,
 ) {
   if (children) {
@@ -21,6 +21,7 @@ export const Divider = forwardRef<HTMLDivElement, DividerProps>(function Divider
         aria-orientation={orientation}
         className={clsx("rebar-divider", "rebar-divider-with-text", className)}
         data-rebar-component="divider"
+        {...props}
       >
         <span className="rebar-divider-line" data-rebar-part="line" />
         <span className="rebar-divider-text" data-rebar-part="text">
@@ -37,6 +38,7 @@ export const Divider = forwardRef<HTMLDivElement, DividerProps>(function Divider
       orientation={orientation}
       className={clsx("rebar-divider", className)}
       data-rebar-component="divider"
+      {...props}
     />
   );
 });

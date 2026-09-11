@@ -288,4 +288,51 @@ describe("ChatThread", () => {
       expect(geometry.getScrollTop()).toBe(900);
     });
   });
+
+  describe("per-message avatar", () => {
+    it("omits the avatar row entirely when no message has avatarFallback (no layout change)", () => {
+      const { container } = render(
+        <ChatThread messages={[{ id: "1", role: "user", content: "Hi" }]} />,
+      );
+      expect(container.querySelector('[data-rebar-part="message-row"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-rebar-part="message"]')).toBeInTheDocument();
+    });
+
+    it("renders a real Avatar next to a message that has avatarFallback", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[
+            { id: "1", role: "user", content: "Hi", avatarFallback: "Jane Doe" },
+            { id: "2", role: "assistant", content: "Hello", avatarFallback: "Assistant" },
+          ]}
+        />,
+      );
+      const rows = container.querySelectorAll('[data-rebar-part="message-row"]');
+      expect(rows).toHaveLength(2);
+      expect(container.querySelectorAll('[data-rebar-component="avatar"]')).toHaveLength(2);
+    });
+
+    it("renders the real Avatar fallback initials from avatarFallback (jsdom never loads the placeholder image itself — same documented limitation Avatar's own test suite already established)", () => {
+      render(
+        <ChatThread
+          messages={[
+            { id: "1", role: "assistant", content: "Hi", avatarFallback: "Ada Lovelace", avatarPlaceholder: true },
+          ]}
+        />,
+      );
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
+
+    it("tags the avatar row with the message's role", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[{ id: "1", role: "user", content: "Hi", avatarFallback: "Jane Doe" }]}
+        />,
+      );
+      expect(container.querySelector('[data-rebar-part="message-row"]')).toHaveAttribute(
+        "data-rebar-role",
+        "user",
+      );
+    });
+  });
 });

@@ -38,8 +38,12 @@ import "rebar-ui/style.css";
 import "@rebar-ui/theme-clean/theme.css";
 ```
 
-Set `data-rebar-theme="clean"` (or `"sketch"`) on `<html>` or any wrapping element. Add
-`data-theme="dark"` alongside it for dark mode, or `data-rebar-bionic="true"` for bionic reading
+Set `data-rebar-theme="clean"` on `<html>` or any wrapping element — **this is the recommended
+default for a new build**: light mode (no `data-theme="dark"`) with `theme-clean`'s regular
+IBM Plex Sans font, not the hand-drawn `theme-sketch` look. Reach for `@rebar-ui/theme-sketch` +
+`data-rebar-theme="sketch"` only when the hand-drawn "Balsamiq-as-code" aesthetic is specifically
+wanted; don't treat the two as an arbitrary coin-flip. Add `data-theme="dark"` alongside it for
+dark mode, or `data-rebar-bionic="true"` for bionic reading
 (bolds the first portion of each word so the eye can pattern-match it — a dyslexia-readability aid;
 deliberately bold-only, not dimmed, so contrast never depends on what surface the text sits on) — both are
 plain DOM attributes toggled live, no rebuild, no Provider. Every text-bearing component
@@ -48,6 +52,40 @@ plain DOM attributes toggled live, no rebuild, no Provider. Every text-bearing c
 follows `data-rebar-bionic` automatically; a `bionic` prop on any of them overrides it for just
 that instance, and `bionicOptions` (`fixationStrength`, `saccadeFrequency`, `skipShortWords`) tunes
 the split.
+
+## The page background is already handled — don't add your own
+
+Once `rebar-ui/style.css` is imported, `body { background: var(--rebar-color-bg-primary) }` is
+already set. A bare page needs **no wrapping container at all** for background/layout purposes —
+render your content directly (a plain `<div>`/`<main>`, or `Stack gap="lg"` to space sections
+out) and the page background is already correct.
+
+**Never wrap an entire page or screen in `Card` (or any other single bounded-content
+component).** `Card` is for one bounded piece of content — a list item, a summary tile, a panel
+that sits *on* the page — not the page itself. A `Card` around everything forces the whole
+viewport into Card's own border/shadow/corner-radius/padding treatment, which is exactly what
+produces a page that looks like one giant grey/boxed rectangle instead of a normal page with
+cards on it. If nothing on the page is genuinely card-shaped, don't reach for `Card` at all.
+
+```tsx
+// Wrong — the entire screen becomes one Card, background/border apply to everything
+<Card>
+  <Heading level={1}>Dashboard</Heading>
+  <Stack gap="lg">{/* ...everything else... */}</Stack>
+</Card>
+
+// Right — page content renders directly; Card (if used) wraps only the pieces that are
+// actually card-shaped
+<Stack gap="lg">
+  <Heading level={1}>Dashboard</Heading>
+  <Card>{/* one summary tile */}</Card>
+  <Card>{/* another summary tile */}</Card>
+</Stack>
+```
+
+Building a whole page with `@rebar-ui/placement` instead? `BlockRenderer` already renders this
+same plain, unwrapped root for you (see that package's README) — don't nest its output inside a
+`Card`/`Box` with its own background either, for the same reason.
 
 ## Composition recipes
 

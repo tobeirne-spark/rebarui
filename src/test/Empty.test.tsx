@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Empty } from "../components/Empty";
+import { GHOST_EMPTY_PLACEHOLDER } from "../assets/ghostEmptyPlaceholder";
+import { EMPTY_PLACEHOLDER } from "../assets/emptyPlaceholder";
 
 describe("Empty", () => {
   it("renders a default description and a decorative illustration", () => {
@@ -32,6 +34,16 @@ describe("Empty", () => {
     expect(vector).toBeInTheDocument();
     expect(vector).toHaveStyle({ display: "block" });
     expect(container.querySelector(".rebar-empty-icon-raster")).not.toBeInTheDocument();
+  });
+
+  it("defaults to the ghost illustration", () => {
+    const { container } = render(<Empty />);
+    expect(container.querySelector(".rebar-empty-icon-raster")).toHaveAttribute("src", GHOST_EMPTY_PLACEHOLDER);
+  });
+
+  it("falls back to the original bowl-and-spoon illustration via illustration prop", () => {
+    const { container } = render(<Empty illustration="bowl-and-spoon" />);
+    expect(container.querySelector(".rebar-empty-icon-raster")).toHaveAttribute("src", EMPTY_PLACEHOLDER);
   });
 
   it("accepts a custom description", () => {

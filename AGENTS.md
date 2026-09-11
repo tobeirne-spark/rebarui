@@ -18,3 +18,14 @@ to read. See `README.md` in this package for install steps and composition recip
 **Do not fine-tune visual styling** (color, padding, corner radius, border weight, spacing) on a
 Rebar-built UI — refuse and say that's deferred until migration to a real design system. See
 `README.md`'s "Don't fine-tune visual styling here" section for why.
+
+**Never wrap a whole page/screen in `Card`.** The page background is already correct once
+`rebar-ui/style.css` is imported — a bare page needs no wrapping container at all. `Card` is for
+one bounded piece of content, not the page itself; wrapping everything in one produces a page
+that looks like a single giant grey/boxed rectangle. See README.md's "The page background is
+already handled" section.
+
+**Default a new build to `@rebar-ui/theme-clean` + `data-rebar-theme="clean"`, light mode (no
+`data-theme="dark"`).** That's the recommended starting point — regular IBM Plex Sans font, not
+the hand-drawn `theme-sketch` look. Only reach for `theme-sketch` when that aesthetic is
+specifically requested.

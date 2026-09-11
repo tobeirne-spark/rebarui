@@ -86,7 +86,7 @@ export { Badge } from "./components/Badge";
 export type { BadgeProps, BadgeTone } from "./components/Badge";
 
 export { Empty } from "./components/Empty";
-export type { EmptyProps } from "./components/Empty";
+export type { EmptyProps, EmptyIcon, EmptyIllustration } from "./components/Empty";
 
 export { Skeleton } from "./components/Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./components/Skeleton";
@@ -338,6 +338,8 @@ export type { BoxPlotProps, BoxPlotGroup } from "./components/BoxPlot";
 
 export { Drawer } from "./components/Drawer";
 export type { DrawerProps, DrawerSide } from "./components/Drawer";
+export { SidePanel } from "./components/SidePanel";
+export type { SidePanelProps } from "./components/SidePanel";
 
 export { BottomSheet } from "./components/BottomSheet";
 export type { BottomSheetProps } from "./components/BottomSheet";
@@ -350,6 +352,16 @@ export type { MobileTabBarProps, MobileTabBarItem } from "./components/MobileTab
 
 export { ScrollArea } from "./components/ScrollArea";
 export type { ScrollAreaProps } from "./components/ScrollArea";
+export { Footer } from "./components/Footer";
+export type { FooterProps, FooterLinkItem, FooterChipItem } from "./components/Footer";
+export { ScrollMask } from "./components/ScrollMask";
+export type { ScrollMaskProps } from "./components/ScrollMask";
+export { Ellipsis } from "./components/Ellipsis";
+export type { EllipsisProps, EllipsisDirection } from "./components/Ellipsis";
+export { FloatingBubble } from "./components/FloatingBubble";
+export type { FloatingBubbleProps, FloatingBubbleAxis, FloatingBubbleOffset } from "./components/FloatingBubble";
+export { FloatingPanel } from "./components/FloatingPanel";
+export type { FloatingPanelProps, FloatingPanelRef } from "./components/FloatingPanel";
 
 export { SplitButton } from "./components/SplitButton";
 export type { SplitButtonProps, SplitButtonItem } from "./components/SplitButton";

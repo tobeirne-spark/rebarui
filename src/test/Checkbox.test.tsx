@@ -27,4 +27,20 @@ describe("Checkbox", () => {
     expect(checkbox).toHaveAttribute("data-rebar-component", "checkbox");
     expect(checkbox).toHaveAttribute("data-testid", "terms-checkbox");
   });
+
+  // Regression test: the indicator previously always rendered "✓" with no `data-state=
+  // "indeterminate"` CSS rule at all, so an indeterminate checkbox (e.g. Table's own partial-
+  // selection "select all") rendered a real, invisible white-on-white checkmark.
+  it("renders a distinct indeterminate glyph, not the checked checkmark, when checked='indeterminate'", () => {
+    const { container } = render(<Checkbox checked="indeterminate">Select all</Checkbox>);
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox).toHaveAttribute("data-state", "indeterminate");
+    expect(container.querySelector(".rebar-checkbox-icon-indeterminate")).toBeInTheDocument();
+    expect(container.querySelector(".rebar-checkbox-icon-checked")).toBeInTheDocument();
+  });
+
+  it("a plain checked checkbox still carries data-state='checked'", () => {
+    render(<Checkbox checked>Accept terms</Checkbox>);
+    expect(screen.getByRole("checkbox")).toHaveAttribute("data-state", "checked");
+  });
 });

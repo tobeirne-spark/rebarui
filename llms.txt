@@ -15,3 +15,13 @@ direct component-level use only.
 For an LLM/coding agent: read `dist/index.d.ts` for the exact prop interface of every component
 (one compact file, ~220 lines) instead of the `.tsx` source under `src/components/`. See
 `README.md` for install steps and composition recipes.
+
+The page background is already correct once `rebar-ui/style.css` is imported — a bare page needs
+no wrapping container. Never wrap a whole page/screen in `Card`: it's for one bounded piece of
+content, not the page itself, and wrapping everything in one produces a page that looks like a
+single giant grey/boxed rectangle. See README.md's "The page background is already handled"
+section.
+
+Default a new build to `@rebar-ui/theme-clean` + `data-rebar-theme="clean"`, light mode (no
+`data-theme="dark"`) — regular IBM Plex Sans font, not the hand-drawn `theme-sketch` look. Only
+use `theme-sketch` when that aesthetic is specifically requested.
