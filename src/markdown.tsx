@@ -1,17 +1,38 @@
 import type { ReactNode } from "react";
+import { renderBionicChildren } from "./bionic";
+import type { BionicOptions } from "./bionic";
+// Circular with CodeBlock.tsx (CodeBlock imports `renderMarkdown` from here for its own
+// `markdown` toggle; this file imports `CodeBlock` back, to render a fenced code block for real —
+// copy button and language label included — instead of a bare `<pre><code>`). Safe: neither side
+// touches the other's export at module-evaluation time, only inside a function body called later,
+// which is the standard "two components that can nest inside each other" circular-import shape.
+import { CodeBlock } from "./components/CodeBlock";
 
 /**
- * A small, real Markdown-to-React renderer for `CodeBlock`'s `markdown` toggle — headings,
- * paragraphs, ordered/unordered lists, blockquotes, fenced code blocks, and inline
- * bold/italic/code/links. Deliberately not a full CommonMark implementation (no tables, no nested
- * blockquotes/lists, no HTML passthrough) — the same "the real shape, not exhaustive edge-case
- * coverage" philosophy `CodeBlock`'s own doc comment already states for skipping syntax
- * highlighting. Reach for a real markdown library if a caller's content needs more than this covers.
+ * A small, real Markdown-to-React renderer — used by `CodeBlock`'s own `markdown` toggle and by
+ * `ChatThread`'s message content (real LLM responses, Claude/Qwen included, default to Markdown
+ * prose) — headings, paragraphs, ordered/unordered lists, blockquotes, fenced code blocks (real
+ * `CodeBlock`s, not bare `<pre>`, so an embedded snippet gets the same copy button and language
+ * label a hand-authored one would), and inline bold/italic/code/links. Deliberately not a full
+ * CommonMark implementation (no tables, no nested blockquotes/lists, no HTML passthrough) — the
+ * same "the real shape, not exhaustive edge-case coverage" philosophy `CodeBlock`'s own doc
+ * comment already states for skipping syntax highlighting. Reach for a real markdown library if a
+ * caller's content needs more than this covers.
  */
 
 const INLINE_MARKUP = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*/g;
 
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
+export interface RenderMarkdownOptions {
+  /** Applies bionic-reading formatting to plain-text runs (never inside `<strong>`/`<code>`/`<a>`
+   * spans) — same convention as `useBionicChildren` elsewhere, just threaded through per inline
+   * run instead of the whole content at once, since a markdown document's content isn't one flat
+   * string. Off by default (matches `CodeBlock`'s own pre-existing behavior for its `markdown`
+   * toggle, unchanged unless a caller opts in). */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
+}
+
+function renderInline(text: string, keyPrefix: string, options?: RenderMarkdownOptions): ReactNode[] {
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -35,16 +56,16 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     lastIndex = INLINE_MARKUP.lastIndex;
   }
   if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
-  return nodes;
+  return renderBionicChildren(nodes, options?.bionic ?? false, options?.bionicOptions) as ReactNode[];
 }
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const ORDERED_ITEM_RE = /^\s*\d+\.\s+(.*)$/;
 const UNORDERED_ITEM_RE = /^\s*[-*]\s+(.*)$/;
 const BLOCKQUOTE_RE = /^>\s?(.*)$/;
-const FENCE_RE = /^```/;
+const FENCE_RE = /^```(\w*)/;
 
-export function renderMarkdown(source: string): ReactNode {
+export function renderMarkdown(source: string, options?: RenderMarkdownOptions): ReactNode {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let i = 0;
@@ -59,6 +80,7 @@ export function renderMarkdown(source: string): ReactNode {
     }
 
     if (FENCE_RE.test(line)) {
+      const language = FENCE_RE.exec(line)?.[1] || undefined;
       const fenceLines: string[] = [];
       i++;
       while (i < lines.length && !FENCE_RE.test(lines[i] ?? "")) {
@@ -67,9 +89,7 @@ export function renderMarkdown(source: string): ReactNode {
       }
       i++; // skip closing fence
       blocks.push(
-        <pre key={blockKey++} className="rebar-markdown-code">
-          <code>{fenceLines.join("\n")}</code>
-        </pre>,
+        <CodeBlock key={blockKey++} className="rebar-markdown-code" code={fenceLines.join("\n")} language={language} />,
       );
       continue;
     }
@@ -80,7 +100,7 @@ export function renderMarkdown(source: string): ReactNode {
       const HeadingTag = `h${Math.min(level, 6)}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
       blocks.push(
         <HeadingTag key={blockKey++} className="rebar-markdown-heading">
-          {renderInline(heading[2] ?? "", `h${blockKey}`)}
+          {renderInline(heading[2] ?? "", `h${blockKey}`, options)}
         </HeadingTag>,
       );
       i++;
@@ -95,7 +115,7 @@ export function renderMarkdown(source: string): ReactNode {
       }
       blocks.push(
         <blockquote key={blockKey++} className="rebar-markdown-blockquote">
-          {renderInline(quoteLines.join(" "), `q${blockKey}`)}
+          {renderInline(quoteLines.join(" "), `q${blockKey}`, options)}
         </blockquote>,
       );
       continue;
@@ -113,7 +133,7 @@ export function renderMarkdown(source: string): ReactNode {
       blocks.push(
         <ListTag key={blockKey++} className="rebar-markdown-list">
           {items.map((item, itemIndex) => (
-            <li key={itemIndex}>{renderInline(item, `li${blockKey}-${itemIndex}`)}</li>
+            <li key={itemIndex}>{renderInline(item, `li${blockKey}-${itemIndex}`, options)}</li>
           ))}
         </ListTag>,
       );
@@ -137,7 +157,7 @@ export function renderMarkdown(source: string): ReactNode {
     }
     blocks.push(
       <p key={blockKey++} className="rebar-markdown-paragraph">
-        {renderInline(paragraphLines.join(" "), `p${blockKey}`)}
+        {renderInline(paragraphLines.join(" "), `p${blockKey}`, options)}
       </p>,
     );
   }

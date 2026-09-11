@@ -1,8 +1,9 @@
 import { forwardRef, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
-import { useBionicChildren } from "../bionic";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { renderMarkdown } from "../markdown";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { Empty } from "./Empty";
@@ -40,6 +41,13 @@ export interface ChatThreadProps extends ComponentPropsWithoutRef<"div"> {
   /** Shown instead of the message list when `messages` is empty. Defaults to "Start the
    * conversation" via the real `Empty` component, not a blank scroll area. */
   emptyMessage?: string;
+  /** Renders each message's `content` as styled Markdown (headings, lists, blockquotes, fenced
+   * code — as a real, embedded `CodeBlock` with its own copy button and language label — and
+   * inline bold/italic/code/links) instead of plain text. On by default: real LLM responses
+   * (Claude, Qwen, and most others) default to Markdown prose, so this is the common case, not
+   * the exception. Set `false` for a transcript that's genuinely plain text (e.g. a support
+   * ticket log) where literal `*`/`#`/backtick characters shouldn't be interpreted as markup. */
+  markdown?: boolean;
   /** Force bionic reading on/off for every message's content, overriding the ambient
    * data-rebar-bionic setting. */
   bionic?: boolean;
@@ -98,13 +106,22 @@ function MessageBubble({
   onRetry,
   bionic,
   bionicOptions,
+  markdown = true,
 }: {
   message: ChatMessage;
   onRetry?: (message: ChatMessage) => void;
   bionic?: boolean;
   bionicOptions?: BionicOptions;
+  markdown?: boolean;
 }) {
-  const content = useBionicChildren(message.content, bionic, bionicOptions);
+  // Called unconditionally (a real hook — state/effects inside) regardless of whether `bionic`
+  // ends up overriding it below; short-circuiting this call would violate the rules of hooks.
+  const ambientBionic = useAmbientBionic();
+  // One resolved boolean shared by both rendering paths below — `renderMarkdown` has no
+  // ambient-attribute awareness of its own, so it needs this resolved explicitly rather than a
+  // raw, possibly-undefined `bionic` prop.
+  const bionicEnabled = bionic ?? ambientBionic;
+  const plainContent = renderBionicChildren(message.content, bionicEnabled, bionicOptions);
   const status = message.status ?? "sent";
   const isError = status === "error";
 
@@ -116,9 +133,15 @@ function MessageBubble({
       data-rebar-status={status}
     >
       <div className="rebar-chat-message-bubble" data-rebar-part="bubble">
-        <span className="rebar-chat-message-content" data-rebar-part="content">
-          {content}
-        </span>
+        {markdown ? (
+          <div className="rebar-chat-message-content" data-rebar-part="content">
+            {renderMarkdown(message.content, { bionic: bionicEnabled, bionicOptions })}
+          </div>
+        ) : (
+          <span className="rebar-chat-message-content" data-rebar-part="content">
+            {plainContent}
+          </span>
+        )}
         {status === "streaming" ? (
           <span className="rebar-chat-message-cursor" data-rebar-part="cursor" aria-hidden="true" />
         ) : null}
@@ -193,7 +216,7 @@ function MessageBubble({
  * button, which itself scrolls to bottom and resumes auto-scroll on click.
  */
 export const ChatThread = forwardRef<HTMLDivElement, ChatThreadProps>(function ChatThread(
-  { messages, isTyping, onRetry, emptyMessage, bionic, bionicOptions, className, ...props },
+  { messages, isTyping, onRetry, emptyMessage, bionic, bionicOptions, markdown = true, className, ...props },
   ref,
 ) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -250,6 +273,7 @@ export const ChatThread = forwardRef<HTMLDivElement, ChatThreadProps>(function C
                 onRetry={onRetry}
                 bionic={bionic}
                 bionicOptions={bionicOptions}
+                markdown={markdown}
               />
             ))}
             {isTyping ? <TypingIndicator /> : null}

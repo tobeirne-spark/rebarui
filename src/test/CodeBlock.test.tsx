@@ -68,11 +68,15 @@ describe("CodeBlock", () => {
     expect(container.querySelectorAll(".rebar-markdown-list li")).toHaveLength(2);
   });
 
-  it("markdown mode renders a fenced code block as a real nested pre/code", () => {
-    const { container } = render(<CodeBlock markdown code={"```\nconst x = 1;\n```"} />);
+  it("markdown mode renders a fenced code block as a real, nested CodeBlock — copy button and language label included", () => {
+    const { container } = render(<CodeBlock markdown code={"```tsx\nconst x = 1;\n```"} />);
+    const fences = container.querySelectorAll('[data-rebar-component="code-block"]');
+    // The outer CodeBlock itself, plus the one nested fence — not the same element.
+    expect(fences).toHaveLength(2);
     const fence = container.querySelector(".rebar-markdown-code");
-    expect(fence?.tagName.toLowerCase()).toBe("pre");
     expect(fence).toHaveTextContent("const x = 1;");
+    expect(fence).toHaveTextContent("tsx");
+    expect(fence?.querySelector('[data-rebar-part="copy-button"]')).toBeInTheDocument();
   });
 
   it("markdown mode omits the language label (it doesn't apply to rendered Markdown)", () => {

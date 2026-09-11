@@ -52,4 +52,15 @@ describe("ErrorBlock", () => {
     const { container } = render(<ErrorBlock fullPage />);
     expect(container.querySelector(".rebar-error-block-full-page")).toBeInTheDocument();
   });
+
+  it("forwards arbitrary data-* props onto the root, for both the empty and non-empty render paths", () => {
+    const { container, rerender } = render(<ErrorBlock data-testid="err" />);
+    expect(container.querySelector('[data-rebar-component="error-block"]')).toHaveAttribute("data-testid", "err");
+
+    rerender(<ErrorBlock status="empty" data-testid="err-empty" />);
+    expect(container.querySelector('[data-rebar-component="error-block"]')).toHaveAttribute(
+      "data-testid",
+      "err-empty",
+    );
+  });
 });

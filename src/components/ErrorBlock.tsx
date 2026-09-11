@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
@@ -8,7 +8,7 @@ import { ErrorWarningIcon, TimeIcon, WifiOffIcon } from "./icons";
 
 export type ErrorBlockStatus = "default" | "disconnected" | "empty" | "busy";
 
-export interface ErrorBlockProps {
+export interface ErrorBlockProps extends Omit<ComponentPropsWithoutRef<"div">, "title" | "children"> {
   /** Which failure state this is — each has its own default icon/title/description, all
    * overridable. Default `"default"`. */
   status?: ErrorBlockStatus;
@@ -54,7 +54,7 @@ const DEFAULT_ICON: Record<Exclude<ErrorBlockStatus, "empty">, ReactNode> = {
  * non-illustrated state (`Alert`, `Result`) already looks here.
  */
 export const ErrorBlock = forwardRef<HTMLDivElement, ErrorBlockProps>(function ErrorBlock(
-  { status = "default", title, description, icon, fullPage = false, children, className, bionic, bionicOptions },
+  { status = "default", title, description, icon, fullPage = false, children, className, bionic, bionicOptions, ...rest },
   ref,
 ) {
   const titleContent = useBionicChildren(
@@ -75,6 +75,7 @@ export const ErrorBlock = forwardRef<HTMLDivElement, ErrorBlockProps>(function E
         className={clsx("rebar-error-block", fullPage && "rebar-error-block-full-page", className)}
         data-rebar-component="error-block"
         data-rebar-status={status}
+        {...rest}
       >
         <Empty description={description ?? "No data"} bionic={bionic} bionicOptions={bionicOptions}>
           {children}
@@ -89,6 +90,7 @@ export const ErrorBlock = forwardRef<HTMLDivElement, ErrorBlockProps>(function E
       className={clsx("rebar-error-block", fullPage && "rebar-error-block-full-page", className)}
       data-rebar-component="error-block"
       data-rebar-status={status}
+      {...rest}
     >
       <div className="rebar-error-block-icon" data-rebar-part="icon" aria-hidden="true">
         {icon ?? DEFAULT_ICON[status]}

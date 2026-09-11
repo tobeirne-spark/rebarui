@@ -335,4 +335,55 @@ describe("ChatThread", () => {
       );
     });
   });
+
+  describe("markdown rendering (on by default — real Claude/Qwen responses default to Markdown prose)", () => {
+    it("renders headings, bold/italic/inline-code, and lists as real elements, not literal markdown syntax", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[
+            {
+              id: "1",
+              role: "assistant",
+              content: "# Title\n\nA **bold** and *italic* word, plus `inline code`.\n\n- one\n- two",
+            },
+          ]}
+        />,
+      );
+      expect(screen.getByRole("heading", { level: 1, name: "Title" })).toBeInTheDocument();
+      const bubble = container.querySelector('[data-rebar-part="content"]')!;
+      expect(bubble.querySelector("strong")).toHaveTextContent("bold");
+      expect(bubble.querySelector("em")).toHaveTextContent("italic");
+      expect(bubble.querySelector("code")).toHaveTextContent("inline code");
+      expect(bubble.querySelectorAll("li")).toHaveLength(2);
+      expect(container.textContent).not.toContain("**bold**");
+      expect(container.textContent).not.toContain("# Title");
+    });
+
+    it("renders a fenced code block as a real, embedded CodeBlock with its own copy button and language label", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[{ id: "1", role: "assistant", content: "Here:\n\n```tsx\nconst x = 1;\n```" }]}
+        />,
+      );
+      const fence = container.querySelector('[data-rebar-part="content"] [data-rebar-component="code-block"]');
+      expect(fence).toBeInTheDocument();
+      expect(fence).toHaveTextContent("const x = 1;");
+      expect(fence).toHaveTextContent("tsx");
+      expect(fence?.querySelector('[data-rebar-part="copy-button"]')).toBeInTheDocument();
+    });
+
+    it("markdown={false} falls back to plain text — literal markup characters render as-is", () => {
+      const { container } = render(
+        <ChatThread messages={[{ id: "1", role: "assistant", content: "**not bold**" }]} markdown={false} />,
+      );
+      expect(screen.getByText("**not bold**")).toBeInTheDocument();
+      expect(container.querySelector("strong")).not.toBeInTheDocument();
+    });
+
+    it("plain user/assistant text with no special syntax still renders correctly under markdown mode", () => {
+      render(<ChatThread messages={BASE_MESSAGES} />);
+      expect(screen.getByText("Hello there")).toBeInTheDocument();
+      expect(screen.getByText("Hi, how can I help?")).toBeInTheDocument();
+    });
+  });
 });

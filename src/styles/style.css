@@ -2509,16 +2509,11 @@ body {
   padding: 0.1em 0.35em;
   font-size: 0.9em;
 }
+/* A fenced code block within rendered Markdown is a real, embedded CodeBlock (see markdown.tsx) —
+   this only adds the bottom spacing every other Markdown block type already has; CodeBlock's own
+   base styles (border, radius, header, background) are untouched. */
 .rebar-markdown-code {
   margin: 0 0 var(--rebar-space-sm, 8px);
-  padding: var(--rebar-space-sm, 8px) var(--rebar-space-md, 16px);
-  background: var(--rebar-color-bg-secondary, #f5f5f5);
-  border-radius: 4px;
-  overflow-x: auto;
-}
-.rebar-markdown-code code {
-  background: none;
-  padding: 0;
 }
 
 /* Kanban */
@@ -4577,6 +4572,12 @@ body {
   color: var(--rebar-color-text-primary, #212121);
 }
 .rebar-chat-message[data-rebar-status="error"] .rebar-chat-message-bubble { border-color: var(--rebar-color-danger, #d32f2f); }
+/* Markdown-rendered content (ChatThread's default `markdown` mode) is real block elements
+   (p/h1-6/ul/ol/blockquote/a nested CodeBlock) with their own margins — same first/last-child
+   margin-collapse fix CodeBlock's own markdown mode already uses, so the bubble's own padding
+   isn't doubled up against a block's leading/trailing margin. */
+div.rebar-chat-message-content > *:first-child { margin-top: 0; }
+div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-chat-message-cursor {
   display: inline-block;
   width: 2px;

@@ -206,7 +206,7 @@ standalone export.
   drag targets and a double-click-gated edit modal that its `Card`/`Kanban` pieces don't impose by
   themselves), so check it again at the block level, not only inside each component it calls.
 
-Current block catalog (37 types — see `schema.ts` for exact field shapes):
+Current block catalog (39 types — see `schema.ts` for exact field shapes):
 
 `header`, `nav-bar`, `site-header` (a real site nav bar — logo, a `NavBar` capped at half the
 header's width per the "Nav overflow" heuristic, and optional trailing content: a version string,
@@ -238,6 +238,14 @@ and/or a nested live `Block[]` example; carries its own stable `id` rather than 
 `title`, since existing cross-references and a `page-index` block's own `sections` list may already
 point at a specific hand-picked id), `spin-card` (a small, centered card showing a real `Spin`
 loading overlay over a few lines of content — for demonstrating a loading state, not real data),
+`error-block` (a whole-page failure/empty state wrapping `rebar-ui`'s `ErrorBlock` — `status`
+picks a sensible default icon/title/description, `action` renders a real retry button the same
+small-secondary way `banner`/`header`/`callout` do, `fullPage` defaults `true` here since the
+block's whole point is the whole-page case; this project's first genuinely Mobile-only block, see
+"Which blocks are for a wide page vs. a narrow one" below), `footer` (page-bottom chrome wrapping
+`rebar-ui`'s `Footer` — a "no more results" label, plain content, links, chips — mirroring how
+`site-header` wraps `NavBar` for the top of a page; the second Mobile block, no `onLinkClick`/
+`onChipClick` in the schema since a handler isn't serializable `Block[]` data),
 `scatter-chart`, `line-chart`, `stacked-bar-chart` (wrap the real `rebar-ui` chart components of the
 same names — promoted from hand-drawn, one-off SVG helpers this project's own `/benchmarks` pages
 used to keep locally; each has an optional but recommended `title`, rendered as a real visible
@@ -282,6 +290,27 @@ parameterized by `variant`.
 `page-index` takes no `sections` prop — `BlockRenderer` derives them by scanning the document's
 own top-level `doc-section` blocks for a heading and slugifying each into an anchor id. Place one,
 get an index of whatever headings exist; nothing to keep in sync by hand.
+
+### Which blocks are for a wide page vs. a narrow one
+
+Full rationale and Ant-Design-sourced reference values (color/layout/font/dark-mode/shadow/
+data-format) in `ref/BLOCKS.md` — this is the compressed version, for picking a block fast:
+
+- **Global** (no viewport/platform assumption — fine on a wide desktop page or a narrow mobile
+  one): `header`, `banner`, `checklist`, `callout`, `form`, `data-list`, `filter-bar`, `tabs`,
+  `modal`, `wizard`, `doc-section`, `spin-card`, `scatter-chart`, `line-chart`,
+  `stacked-bar-chart`, `gallery`, `goal-tracker`, `ai-chat`.
+- **Web** (assumes a wide viewport, a desktop interaction pattern, or is specific to this project's
+  own docs/marketing site): `nav-bar`, `site-header`, `nav-index`, `page-index`, `side-panel`,
+  `hero`, `section-header`, `feature-grid`, `pillar-grid`, `card-grid`, `persona-card`,
+  `card-kanban`, `sticky-kanban`, `table`, `comparison`, `iframe`, `props-table`, `stats-table`,
+  `heuristic`. `data-list` is the Global, narrow-viewport-friendly counterpart to `table`.
+- **Mobile**: `error-block`, `footer` — see their own entries above. Every *other*
+  antd-mobile-derived pattern shipped so far (`NoticeBar`, `Selector`, `NumberKeyboard`,
+  `ProgressCircle`, `IndexBar`, `ScrollMask`, `Ellipsis`, `FloatingBubble`, `FloatingPanel`) still
+  landed as a `packages/core` component only, not yet promoted into a block the way
+  `nav-bar`/`hero`/`card-kanban` were for Web — see `ref/BLOCKS.md` for the one remaining named
+  candidate (a numeric-entry/checkout-flow block).
 
 ## Using the Packer to build a page
 
@@ -800,8 +829,13 @@ straight through, the same thin-wrapper shape `BottomSheet` uses), `ChatThread` 
 transcript — the caller owns all networking/streaming state, same controlled-presentation
 convention as `FileUpload`/`Toast`; the one real behavior it owns is auto-scroll-vs.-leave-the-user-
 alone, decided off a ref read synchronously the instant new content lands rather than React state,
-which would re-render one tick too late — see `TodoItem` below for the sibling `GoalTracker`
-reclassification this component pairs with for a full AI-chat surface), `WaveformAudioPlayer` (a
+which would re-render one tick too late; `content` renders as real Markdown by default via the
+shared `markdown.tsx` renderer — headings/lists/blockquotes/inline formatting, and a fenced code
+block as a real nested `CodeBlock` with its own copy button and language label, not a bare
+`<pre>` — since real assistant responses (Claude, Qwen, most others) default to Markdown prose;
+`markdown={false}` opts out for a genuinely-plain-text transcript — see `TodoItem` below for the
+sibling `GoalTracker` reclassification this component pairs with for a full AI-chat surface),
+`WaveformAudioPlayer` (a
 real `<audio>`-backed transport control with a purely decorative but deterministic bar waveform —
 seeded per-`src` hash, not `Math.random` — that doubles as a real keyboard-operable `role="slider"`
 scrub bar, not a drag-only control), `UploadQueue` (a persistent, portal-rendered app-wide upload
