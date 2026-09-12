@@ -511,6 +511,12 @@ non-obvious situation. This is the fast-recall version, not a replacement for th
 46. A beacon out of view gets a directional hint that reacts to motion, and the scroll that follows it eases rather than snaps
 47. A drop zone expands as a compatible drag nears it, to push a successful placement toward 100%
 48. Every mouse-only interaction needs a real touch equivalent — long-press for double-click, native scroll never blocked
+49. A heuristic's default mechanism is a means, not the goal — when it costs more real user effort than the problem it solves, prefer the lower-effort presentation instead
+50. A variant-switching control (theme, locale, mode) never exposes a state with nothing loaded behind it — installing/importing every variant it can reach is part of offering the switch
+51. A frequently-recurring compound UI shape (app-shell nav+header+footer) belongs in the library as one composed unit, not left for every consumer to hand-assemble from primitives
+52. Loading indicators need a minimum-display or show-delay guard (`useDelayedLoading`, wired into `Table`'s `loadingDelayMs`/`loadingMinDurationMs` and `Spin`'s `delayMs`/`minDurationMs`) — a raw boolean flashes a skeleton/spinner for one frame on a near-instant load
+53. A searchable/filterable list defaults to its full (paginated) content; search narrows what's already visible, it never gates initial visibility
+54. A displayed count/aggregate that names a browsable set elsewhere in the same app defaults to a drill-down link into that set, not inert text
 
 ## Shipped component catalog (`rebar-ui`, `packages/core`)
 
