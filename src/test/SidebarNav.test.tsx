@@ -169,6 +169,27 @@ describe("SidebarNav", () => {
     expect(container.querySelector(".rebar-sidebar-nav-list-grid")).not.toBeInTheDocument();
   });
 
+  it("logo swaps between full and compact automatically with the collapsed state", () => {
+    const { rerender } = render(
+      <SidebarNav
+        items={ITEMS}
+        logo={{ full: <span>Wide Wordmark</span>, compact: <span>Square Mark</span> }}
+      />,
+    );
+    expect(screen.getByText("Wide Wordmark")).toBeInTheDocument();
+    expect(screen.queryByText("Square Mark")).not.toBeInTheDocument();
+
+    rerender(
+      <SidebarNav
+        items={ITEMS}
+        collapsed
+        logo={{ full: <span>Wide Wordmark</span>, compact: <span>Square Mark</span> }}
+      />,
+    );
+    expect(screen.getByText("Square Mark")).toBeInTheDocument();
+    expect(screen.queryByText("Wide Wordmark")).not.toBeInTheDocument();
+  });
+
   it("a workspace switcher renders label, description, and responds to click", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();

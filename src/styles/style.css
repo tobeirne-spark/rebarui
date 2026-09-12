@@ -745,10 +745,22 @@ body {
 .rebar-sidebar-nav[data-rebar-collapsed] {
   width: 64px;
 }
+.rebar-sidebar-nav-logo,
 .rebar-sidebar-nav-header {
   flex-shrink: 0;
   padding-bottom: var(--rebar-space-sm, 8px);
   border-bottom: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+.rebar-sidebar-nav-logo {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.rebar-sidebar-nav-logo img,
+.rebar-sidebar-nav-logo svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 .rebar-sidebar-nav-panel,
 .rebar-sidebar-nav-footer {

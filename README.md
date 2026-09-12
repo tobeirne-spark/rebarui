@@ -144,9 +144,14 @@ inside it, and `Stack`'s `justify="between"` handles the split without a manual 
 </Stack>
 ```
 
-**An icon + label row** — prefer a plain inline SVG or a Unicode glyph (`×`, `✓`, `⏳` are used
-internally, e.g. `Button`'s loading state) over adding an icon package; reach for a real icon
-library only if visual fidelity genuinely demands it.
+**An icon + label row** — reach for this package's own shipped icon set first
+(`import { HomeIcon, SettingsIcon, SearchIcon, ... } from "rebar-ui"` — a small, curated,
+RemixIcon-sourced set, real components, not raw markup to copy-paste). It's exported specifically
+so real content (nav items, buttons, demo data) doesn't fall back to plain emoji glyphs, which
+render inconsistently across platforms/fonts and look inconsistent next to every other shipped
+component's iconography. Only reach outside it — a plain inline SVG, or a real external icon
+library — when the set doesn't have what a specific use case needs; never emoji as a substitute
+icon.
 
 ## Don't fine-tune visual styling here
 

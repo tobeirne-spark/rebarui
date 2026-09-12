@@ -48,6 +48,17 @@ function isDividerEntry(entry: SidebarNavEntry): entry is SidebarNavDivider {
   return (entry as SidebarNavDivider).type === "divider";
 }
 
+/** A brand mark that swaps automatically with the collapsed state — `full` (typically a wide
+ * wordmark/logo) while expanded, `compact` (typically a square 1:1 icon mark) while collapsed.
+ * Native swap-on-collapse support, rather than requiring every consumer to hand-write the same
+ * `collapsed ? compact : full` ternary themselves via the generic `header` slot. */
+export interface SidebarNavLogo {
+  /** Shown while the sidebar is expanded — typically a wide wordmark. */
+  full: ReactNode;
+  /** Shown while the sidebar is collapsed — typically a square 1:1 icon mark. */
+  compact: ReactNode;
+}
+
 /** A workspace/account switcher row, rendered as one real styled control (icon/avatar + label +
  * optional description + a trailing switch affordance) rather than a bare slot a consumer has to
  * build from scratch — the ready-made "Saleshouse / general team ⇅" pattern several real dashboard
@@ -89,10 +100,14 @@ export interface SidebarNavProps extends Omit<ComponentPropsWithoutRef<"nav">, "
   /** Hides the built-in collapse/expand toggle button — for a caller driving `collapsed` from its
    * own UI elsewhere (a header button, a keyboard shortcut) instead. Default `false`. */
   hideCollapseToggle?: boolean;
-  /** Rendered above the item list, below the top edge — a logo/wordmark, a workspace switcher, a
-   * profile block, whatever a given app-shell needs there. A plain slot, not a prescribed
+  /** A brand mark that natively swaps between a wide (`full`) and square (`compact`) asset as the
+   * sidebar collapses — see `SidebarNavLogo`. Rendered above `header`, in its own bordered row. Use
+   * this instead of hand-rolling the same swap inside `header`'s function form. */
+  logo?: SidebarNavLogo;
+  /** Rendered above the item list, below `logo` — a workspace switcher, a tagline, a profile
+   * block, whatever else a given app-shell needs there. A plain slot, not a prescribed
    * sub-component, matching this component's own headless-first convention. Pass a function to
-   * render something different once collapsed (e.g. a bare icon instead of a full wordmark). */
+   * render something different once collapsed. */
   header?: ReactNode | ((ctx: { collapsed: boolean }) => ReactNode);
   /** Rendered between the item list and `footer` — a promo/CTA card, a storage/quota widget,
    * anything that isn't itself navigation. Same slot convention as `header`. */
@@ -175,6 +190,7 @@ export function SidebarNav({
   defaultCollapsed = false,
   onCollapsedChange,
   hideCollapseToggle = false,
+  logo,
   header,
   panel,
   footer,
@@ -293,6 +309,11 @@ export function SidebarNav({
       data-rebar-component="sidebar-nav"
       data-rebar-collapsed={currentCollapsed || undefined}
     >
+      {logo ? (
+        <div className="rebar-sidebar-nav-logo" data-rebar-part="logo">
+          {currentCollapsed ? logo.compact : logo.full}
+        </div>
+      ) : null}
       {header !== undefined ? (
         <div className="rebar-sidebar-nav-header" data-rebar-part="header">
           {resolveSlot(header, currentCollapsed)}
