@@ -145,6 +145,13 @@ body {
   border-radius: var(--rebar-radius, 4px);
   min-height: 40px;
   padding: var(--rebar-space-sm, 8px) var(--rebar-space-md, 12px);
+  /* A plain <input> has no built-in ellipsis for overflowing placeholder/value text — it just
+   * hard-clips at the box edge, which reads as a rendering bug rather than "this box is narrower
+   * than its content." A real Combobox/Input placed in a narrow flex slot (a toolbar KB switcher,
+   * say) needs a graceful truncation, not a clipped word. */
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .rebar-input[data-rebar-size="sm"] {
