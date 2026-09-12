@@ -1,6 +1,6 @@
 {
   "name": "rebar-ui",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Headless-first, intentionally low-fidelity React components, built to be re-skinned into a real design system later.",
   "type": "module",
   "main": "./dist/index.cjs",

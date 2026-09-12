@@ -322,6 +322,98 @@ data-format) in `ref/BLOCKS.md` — this is the compressed version, for picking 
   `nav-bar`/`hero`/`card-kanban` were for Web — see `ref/BLOCKS.md` for the one remaining named
   candidate (a numeric-entry/checkout-flow block).
 
+## The four tiers: Imitations → Synthetics → Opinions → Orders
+
+A second axis, orthogonal to both the component/block split above and to Web/Mobile/Diagram
+(components) / Global/Web/Mobile (blocks) — classifies *every* component and block by where it
+sits in a build lifecycle. Full rationale, the "delegated-state exception" worked examples, and the
+six "rolled up" case verdicts live in `ref/TIERS.md`; this is the compressed version.
+
+- **Imitations** — static, standalone primitives. No composition of other named components, no
+  real state machine beyond mirroring one caller-controlled value for the controlled/uncontrolled
+  convention (a checkbox mirroring one boolean stays here). Components only — a block is always at
+  least a fixed composition, so Imitation never applies to one.
+- **Synthetics** — static compositions/groupings of primitives with a unified purpose, but still no
+  real dynamism. Most blocks land here.
+- **Opinions** — real internal state: validation, morphing, multi-step flow, drag/reorder,
+  search-and-filter, open/closed with focus management. **The delegated-state exception**: several
+  components below show zero own `useState` in their own file because they delegate their entire
+  state machine to a wrapped Radix primitive, a shared chart hook, or another Opinion-tier
+  component — they're still Opinions; you cannot determine tier by grepping for state alone. For a
+  **block**, Opinion is mechanical, not a judgment call: a block *is* an Opinion iff its schema type
+  declares a `source`/`onX` live-data-binding field (`packages/placement/src/opinions.ts`).
+- **Orders** — macro/page-level structural governance of other things (nav, sidebars, tab strips
+  that swap whole panels, page-level overlay/panel systems, page indexes) — judged by page-structural
+  *role*, not by whether the thing itself happens to hold real state (`SectionNav`/`NavIndex` have
+  real scroll-spy/search state and are still Orders). Read literally against
+  Imitation→Synthetic→Opinion, this looks like a fourth rung of the same complexity ladder; tested
+  against the real 39-block catalog it isn't — only ~8 blocks are genuine Orders, not all 39. See
+  `ref/ARCHITECTURE.md` for the fuller statement of that nuance.
+
+**Sequencing is encouraged, not enforced.** When building something new, ask in order: (1) could
+this be a standalone Imitation? (2) if it needs to combine with others, can it stay a static
+Synthetic? (3) does it genuinely need state, making it an Opinion? (4) does it need to govern
+page/app-level arrangement, making it an Order? Shipping an Opinion or Order with nothing beneath it
+first is completely normal — the value of asking in order is surfacing a static sub-piece worth
+extracting (`GoalTracker` → `TodoItem`) or catching a block whose "just data" schema is secretly
+smuggling in real state (the nine Opinion blocks below).
+
+**Components, by tier:**
+
+- *Imitation*: `AiChatInput`, `Avatar`, `Badge`, `Barcode`, `Box`, `Button`, `Carousel`, `Checkbox`,
+  `Divider`, `Heading`, `Iframe`, `Input`, `NumberInput`, `Pagination`, `PinInput`, `Progress`,
+  `ProgressCircle`, `QRCode`, `Radio`, `RadioGroup`, `Rate`, `ScrollArea`, `SegmentedControl`,
+  `Selector`, `Skeleton`, `Slider`, `Spin`, `Stack`, `Statistic`, `Switch`, `Tag`, `Text`, `Toggle`,
+  `ToggleGroup`, `Watermark`.
+- *Synthetic*: `AccordionItem`, `Affix`, `Alert`, `AspectRatio`, `AvatarGroup`, `BackTop`,
+  `BarChart`, `BulletGraph`, `ButtonGroup`, `CandlestickChart`, `Card` (default config — see
+  "rolled up" below), `ChatThread`, `CodeBlock`, `Descriptions`, `DiagramMinimap`, `Empty`,
+  `ErrorBlock`, `FormItem`, `FunnelChart`, `GanttChart`, `GaugeChart`, `GeoChart`, `GitGraph`,
+  `InfiniteScrollGrid`, `Masonry`, `NoticeBar`, `PieChart`, `PivotTable`, `Result`, `SankeyDiagram`,
+  `ScrollMask`, `Sparkline`, `SteppedBarChart`, `Steps`, `Sticky`, `Tab`, `TabList`, `TabPanel`,
+  `Timeline`, `ToastProvider`, `Treemap`, `WaterfallChart`, `WaybackSlider`, `WordCloud`.
+- *Opinion*: `Accordion`, `ActionSheet`, `AreaChart`, `BottomSheet`, `BoxPlot`, `BubbleChart`,
+  `Calendar`, `CalendarHeatmap`, `Cascader`, `Collapsible`, `ColorPicker`, `Combobox`,
+  `CommandPalette`, `ContextMenu`, `DataGrid`, `DatePicker`, `Dialog`, `DistributionChart`,
+  `Drawer`, `Dropdown`, `Editable`, `Ellipsis`, `FileManager`, `FileUpload`, `FloatingBubble`,
+  `FloatingPanel`, `FloatingSelectionToolbar`, `Flowchart`, `Form`, `GraphExplorer`, `Heatmap`,
+  `Histogram`, `HoverCard`, `Image`, `IndexBar`, `IndexChart`, `Kanban`, `LayersPanel`, `Lightbox`,
+  `LineChart`, `Mentions`, `Menubar`, `MindMap`, `MultiSelect`, `NodeLinkGraph`, `NumberKeyboard`,
+  `OrgChart`, `PackedBubbleChart`, `PertChart`, `PickerWheel`, `Popconfirm`, `Popover`,
+  `PullToRefresh`, `RadarChart`, `ResizablePanels`, `RibbonChart`, `RichTextEditor`, `ScatterChart`,
+  `Select`, `ShapeGallery`, `SlashCommandMenu`, `SpeedDial`, `SplitButton`, `StackedAreaChart`,
+  `StackedBarChart`, `StackedLineChart`, `StepChart`, `SwipeActions`, `Table`, `Tabs`,
+  `TextToSpeechBar`, `ThemeToggle`, `TimePicker`, `Toast`, `TodoItem`, `Tooltip`, `Tour`,
+  `Transfer`, `TreeSelect`, `TreeView`, `UMAPPlot`, `UploadQueue`, `VersionHistory`,
+  `VoiceComposer`, `WaveformAudioPlayer`, `Wizard`, and `Card` (`editable` — see "rolled up" below).
+- *Order*: `Breadcrumb`, `Footer`, `MobileTabBar`, `NavBar`, `NavIndex`, `SectionNav`, `SidePanel`,
+  `SidebarNav`.
+
+**Blocks, by tier** (39 total):
+
+- *Order* (8): `site-header`, `nav-bar`, `nav-index`, `page-index`, `side-panel`, `tabs`, `modal`,
+  `comparison`.
+- *Opinion* (9) — mechanically true because each declares a `source`/`onX` field
+  (`packages/placement/src/opinions.ts`): `ai-chat`, `table`, `goal-tracker`, `card-kanban`,
+  `sticky-kanban`, `wizard`, `scatter-chart`, `line-chart`, `stacked-bar-chart`.
+- *Synthetic* (22, everything else): `header`, `banner`, `checklist`, `callout`, `spin-card`,
+  `error-block`, `footer`, `feature-grid`, `pillar-grid`, `hero`, `section-header`, `card-grid`,
+  `persona-card`, `data-list`, `filter-bar`, `form`, `doc-section`, `props-table`, `heuristic`,
+  `iframe`, `stats-table`, `gallery`.
+
+**Rolled-up cases** (spanning two tiers, or duplicated across the component/block boundary — see
+`ref/TIERS.md` for the full per-case reasoning): only `Card` genuinely needs two catalog rows over
+one artifact (default config Synthetic, `editable` Opinion — a prop-level variant, not a second
+component). `NavBar`/`nav-bar`/`site-header`, `Kanban`/`card-kanban`/`sticky-kanban`, and
+`ChatThread`+`AiChatInput`/`ai-chat` are each several already-distinct, same-tier artifacts, not
+gaps. `Wizard`/`wizard` are both Opinion. `Table`/`DataGrid`/`table` are Opinion while `stats-table`
+is Synthetic — the same real `Table` component underneath, but `stats-table` exposes none of its
+stateful props by design; the clearest proof tier tracks the exposed authoring surface, not the
+implementation underneath.
+
+Live, browsable catalogs: `/imitations`, `/synthetics`, `/opinions`, `/orders`; how the tiers relate
+to each other and to the other two axes: `/tiers`.
+
 ## Using the Packer to build a page
 
 ```tsx
