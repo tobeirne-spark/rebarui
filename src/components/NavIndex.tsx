@@ -131,7 +131,13 @@ export function NavIndex({
     });
   }, [filterableItems, query, activeCategories, activeStatuses]);
 
-  const showFilterUI = items.length > FILTER_UI_THRESHOLD;
+  // Also requires at least one real filterable (categorized) item — a list where every item is
+  // "overview" (no category on any of them, e.g. apps/docs's own /docs sidebar, which isn't
+  // categorized by web/mobile/diagram the way a component list is) has nothing for search/category
+  // chrome to act on: `filtered` would always be empty regardless of query, so a bare item-count
+  // check alone renders a non-functional search box plus a permanent, wrong "No matches." caption
+  // sitting under a fully-populated overview list. Real bug, caught live on /docs.
+  const showFilterUI = items.length > FILTER_UI_THRESHOLD && filterableItems.length > 0;
 
   return (
     <nav
