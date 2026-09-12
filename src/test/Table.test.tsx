@@ -83,6 +83,27 @@ describe("Table", () => {
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
   });
 
+  it("warns in dev when a count-like column has no render (ref/HEURISTICS.md #54)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const countColumns: TableColumn<Row>[] = [
+      { key: "name", header: "Name" },
+      { key: "chunk_count", header: "Chunks" },
+    ];
+    render(<Table columns={countColumns} data={rows} rowKey={(r) => r.id} />);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('column "Chunks"'));
+    warn.mockRestore();
+  });
+
+  it("does not warn for a count-like column that already has a render", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const countColumns: TableColumn<Row>[] = [
+      { key: "count", header: "Total", render: (v) => String(v) },
+    ];
+    render(<Table columns={countColumns} data={rows} rowKey={(r) => r.id} />);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("renders skeleton rows when loading, not the empty state", () => {
     const { container } = render(<Table columns={columns} data={[]} rowKey={(r) => r.id} loading />);
     expect(screen.queryByText("No data.")).not.toBeInTheDocument();

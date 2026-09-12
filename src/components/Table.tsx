@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Checkbox } from "./Checkbox";
 import { Empty } from "./Empty";
@@ -88,6 +88,27 @@ function compareValues(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b));
 }
 
+// A soft, dev-only nudge toward ref/HEURISTICS.md #54 (a count/aggregate that names a browsable
+// set elsewhere defaults to a drill-down link, not inert text) — this can't be genuinely enforced
+// (there's no way to know whether a matching detail view actually exists), so it's a console
+// suggestion, never a block: a column whose own key/header reads like a count with no `render` at
+// all is exactly the shape that heuristic is about, common enough (chunk_count, item count, total)
+// to be worth flagging even at the cost of an occasional false positive on a genuinely
+// non-linkable count.
+const AGGREGATE_COLUMN_HINT = /count|total/i;
+
+function warnIfLikelyDrillDownColumn<T>(column: TableColumn<T>): void {
+  if (column.render || process.env.NODE_ENV === "production") return;
+  if (AGGREGATE_COLUMN_HINT.test(column.key) || AGGREGATE_COLUMN_HINT.test(column.header)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[rebar-ui] Table column "${column.header}" (key: "${column.key}") looks like a count/aggregate rendered as plain text. ` +
+        "If it names a set of items browsable elsewhere in this app, consider a `render` that links to that view instead " +
+        "(ref/HEURISTICS.md #54) — pass a `render` returning the plain value unchanged to silence this for a genuinely non-linkable count.",
+    );
+  }
+}
+
 /**
  * A real, read-only data table — sortable columns (click a sortable header, cycles
  * asc → desc → unsorted), a sticky header over a bounded, independently-scrollable body, optional
@@ -128,6 +149,14 @@ export function Table<T>({
     minDurationMs: loadingMinDurationMs,
   });
   const loading = hasLoadingDelayConfig ? delayedLoading : loadingProp;
+
+  useEffect(() => {
+    columns.forEach((column) => warnIfLikelyDrillDownColumn(column));
+    // Only re-check when the column *set* actually changes, not on every render — columns are
+    // typically a stable, module-level or memoized array, so this rarely re-runs at all.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columns]);
+
   const captionContent = useBionicChildren(caption, bionic, bionicOptions);
   const ambientBionic = useAmbientBionic();
   const bionicEnabled = bionic ?? ambientBionic;

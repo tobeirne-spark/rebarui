@@ -516,7 +516,9 @@ non-obvious situation. This is the fast-recall version, not a replacement for th
 51. A frequently-recurring compound UI shape (app-shell nav+header+footer) belongs in the library as one composed unit, not left for every consumer to hand-assemble from primitives
 52. Loading indicators need a minimum-display or show-delay guard (`useDelayedLoading`, wired into `Table`'s `loadingDelayMs`/`loadingMinDurationMs` and `Spin`'s `delayMs`/`minDurationMs`) — a raw boolean flashes a skeleton/spinner for one frame on a near-instant load
 53. A searchable/filterable list defaults to its full (paginated) content; search narrows what's already visible, it never gates initial visibility
-54. A displayed count/aggregate that names a browsable set elsewhere in the same app defaults to a drill-down link into that set, not inert text
+54. A displayed count/aggregate that names a browsable set elsewhere in the same app defaults to a drill-down link into that set, not inert text (`Table` warns in dev when a no-`render` column looks like one)
+55. A prop that swaps content by display mode (collapsed/expanded, light/dark) requires every mode's variant — never optional (see `SidebarNav`'s `logo`)
+56. A chat/messaging component spans the full width of its own container by default — `ChatThread`/`AiChatInput` set no max-width of their own
 
 ## Shipped component catalog (`rebar-ui`, `packages/core`)
 
