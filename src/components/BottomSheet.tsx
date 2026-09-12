@@ -1,7 +1,7 @@
 import { DrawerPanel } from "./Drawer";
 import type { DrawerProps } from "./Drawer";
 
-export interface BottomSheetProps extends Omit<DrawerProps, "side"> {}
+export type BottomSheetProps = Omit<DrawerProps, "side">;
 
 /**
  * `Drawer` fixed to `side="bottom"`, plus a real drag-to-dismiss handle — a small pill/bar at the

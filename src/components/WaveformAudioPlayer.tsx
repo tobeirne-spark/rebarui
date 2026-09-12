@@ -176,7 +176,6 @@ export function WaveformAudioPlayer({
       aria-label={ariaLabel}
       {...props}
     >
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- decorative voice/audio transport, no track content to caption */}
       <audio
         ref={audioRef}
         src={src}

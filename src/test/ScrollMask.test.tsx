@@ -14,7 +14,6 @@ describe("ScrollMask", () => {
     const ref = createRef<HTMLDivElement>();
     const track = document.createElement("div");
     mockScrollBox(track, { scrollWidth: 100, clientWidth: 100 });
-    // @ts-expect-error -- assigning a plain element to a ref for the test
     ref.current = track;
 
     const { container } = render(<ScrollMask scrollTrackRef={ref} />);
@@ -26,7 +25,6 @@ describe("ScrollMask", () => {
     const ref = createRef<HTMLDivElement>();
     const track = document.createElement("div");
     mockScrollBox(track, { scrollLeft: 0, scrollWidth: 300, clientWidth: 100 });
-    // @ts-expect-error -- assigning a plain element to a ref for the test
     ref.current = track;
 
     const { container } = render(<ScrollMask scrollTrackRef={ref} />);
@@ -38,7 +36,6 @@ describe("ScrollMask", () => {
     const ref = createRef<HTMLDivElement>();
     const track = document.createElement("div");
     mockScrollBox(track, { scrollLeft: 200, scrollWidth: 300, clientWidth: 100 });
-    // @ts-expect-error -- assigning a plain element to a ref for the test
     ref.current = track;
 
     const { container } = render(<ScrollMask scrollTrackRef={ref} />);
@@ -50,7 +47,6 @@ describe("ScrollMask", () => {
     const ref = createRef<HTMLDivElement>();
     const track = document.createElement("div");
     mockScrollBox(track, { scrollLeft: 100, scrollWidth: 300, clientWidth: 100 });
-    // @ts-expect-error -- assigning a plain element to a ref for the test
     ref.current = track;
 
     const { container } = render(<ScrollMask scrollTrackRef={ref} />);
@@ -62,7 +58,6 @@ describe("ScrollMask", () => {
     const ref = createRef<HTMLDivElement>();
     const track = document.createElement("div");
     mockScrollBox(track);
-    // @ts-expect-error -- assigning a plain element to a ref for the test
     ref.current = track;
 
     const { container } = render(<ScrollMask scrollTrackRef={ref} />);

@@ -130,7 +130,6 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
     setStatus(img.naturalWidth > 0 ? "loaded" : "error");
     // Only re-checking when `src` changes (not on every render) mirrors the render-time guard
     // above — this is the mount/src-change reconciliation, not a per-render assertion.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
   const handleLoad = (event: SyntheticEvent<HTMLImageElement>) => {

@@ -273,7 +273,7 @@ export function SidebarNav({
     });
   };
 
-  const renderItem = (item: SidebarNavItem, key: string) => {
+  const renderItem = (item: SidebarNavItem) => {
     const content = (
       <>
         {renderIconSlot(item.icon, item.label, currentCollapsed)}
@@ -439,14 +439,14 @@ export function SidebarNav({
                     <ul className="rebar-sidebar-nav-sublist" data-rebar-part="sublist">
                       {(visibleChildren ?? []).map((child, j) => (
                         <li key={`${key}-${child.label}-${j}`} className="rebar-sidebar-nav-subitem" data-rebar-part="subitem">
-                          {renderItem(child, `${key}-${j}`)}
+                          {renderItem(child)}
                         </li>
                       ))}
                     </ul>
                   ) : null}
                 </div>
               ) : (
-                renderItem(item, key)
+                renderItem(item)
               )}
             </li>
           );

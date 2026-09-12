@@ -8,7 +8,7 @@ import clsx from "clsx";
  * capability directly to a caller who isn't going through the placement layer at all. A label
  * starts visible; toggling it once hides it, toggling again shows it back.
  */
-export function useSeriesFilter(labels: string[]) {
+export function useSeriesFilter(_labels: string[]) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const toggle = (label: string) => {
     setHidden((prev) => {

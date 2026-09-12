@@ -125,7 +125,6 @@ export function InfiniteScrollGrid<T>({
     if (isIntersectingRef.current) {
       tryFireRef.current();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, hasMore]);
 
   const resolvedSkeletonCount = skeletonCount ?? columns;

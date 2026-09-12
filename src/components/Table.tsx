@@ -100,7 +100,6 @@ const AGGREGATE_COLUMN_HINT = /count|total/i;
 function warnIfLikelyDrillDownColumn<T>(column: TableColumn<T>): void {
   if (column.render || process.env.NODE_ENV === "production") return;
   if (AGGREGATE_COLUMN_HINT.test(column.key) || AGGREGATE_COLUMN_HINT.test(column.header)) {
-    // eslint-disable-next-line no-console
     console.warn(
       `[rebar-ui] Table column "${column.header}" (key: "${column.key}") looks like a count/aggregate rendered as plain text. ` +
         "If it names a set of items browsable elsewhere in this app, consider a `render` that links to that view instead " +
@@ -154,7 +153,6 @@ export function Table<T>({
     columns.forEach((column) => warnIfLikelyDrillDownColumn(column));
     // Only re-check when the column *set* actually changes, not on every render — columns are
     // typically a stable, module-level or memoized array, so this rarely re-runs at all.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns]);
 
   const captionContent = useBionicChildren(caption, bionic, bionicOptions);

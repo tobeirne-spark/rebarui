@@ -18,7 +18,7 @@ function mockContainerGeometry(
   initial: { scrollTop?: number; clientHeight: number; scrollHeight: number },
 ) {
   let scrollTop = initial.scrollTop ?? 0;
-  let clientHeight = initial.clientHeight;
+  const clientHeight = initial.clientHeight;
   let scrollHeight = initial.scrollHeight;
 
   Object.defineProperty(el, "scrollTop", {

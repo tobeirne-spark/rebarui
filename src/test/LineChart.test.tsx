@@ -48,7 +48,7 @@ describe("LineChart", () => {
   });
 
   it("renders a crossover marker and label when crossoverIndex is set, omits it otherwise", () => {
-    const { container, rerender } = render(
+    const { rerender } = render(
       <LineChart series={series} xLabels={xLabels} title="Cumulative cost" crossoverIndex={1} />,
     );
     expect(screen.getByText("crossover")).toBeInTheDocument();

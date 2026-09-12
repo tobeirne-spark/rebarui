@@ -313,7 +313,7 @@ export function Kanban({ columns, cards, onChange, search = "", cardVariant = "d
                           isDragOverThis && "rebar-kanban-section-cards-active rebar-active-border",
                         )}
                         data-rebar-part="section-cards"
-                        onDragEnter={(e: DragEvent) => {
+                        onDragEnter={(_e: DragEvent) => {
                           if (!dragCard) return;
                           if (canAcceptDrop(column.id, section.id)) setDragOverSection({ columnId: column.id, sectionId: section.id });
                         }}
