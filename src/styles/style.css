@@ -976,6 +976,17 @@ body {
   flex-shrink: 0;
   font-size: 1.2em;
 }
+.rebar-sidebar-nav-icon-fallback {
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  border-radius: var(--rebar-radius, 4px);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  font-size: 0.7em;
+  font-weight: var(--rebar-font-weight-medium, 500);
+  line-height: 1;
+}
 .rebar-sidebar-nav-label {
   flex: 1;
   overflow: hidden;

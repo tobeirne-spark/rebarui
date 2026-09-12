@@ -149,6 +149,27 @@ export interface SidebarNavProps extends Omit<ComponentPropsWithoutRef<"nav">, "
   bionicOptions?: BionicOptions;
 }
 
+/** A collapsed rail with no icon renders a totally blank row — indistinguishable from a broken or
+ * unstyled control, easy to mistake for a missing dependency. Falls back to the label's own first
+ * letter (the same "monogram" convention `Avatar` already uses for a missing image) whenever the
+ * sidebar is collapsed and no real icon was given; renders nothing extra while expanded, since a
+ * missing icon there is just a label-only row, not a blank one. */
+function renderIconSlot(icon: ReactNode | undefined, label: string, collapsed: boolean) {
+  if (icon) {
+    return (
+      <span className="rebar-sidebar-nav-icon" aria-hidden="true">
+        {icon}
+      </span>
+    );
+  }
+  if (!collapsed) return null;
+  return (
+    <span className="rebar-sidebar-nav-icon rebar-sidebar-nav-icon-fallback" aria-hidden="true">
+      {label.trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 function resolveSlot(
   slot: ReactNode | ((ctx: { collapsed: boolean }) => ReactNode) | undefined,
   collapsed: boolean,
@@ -255,11 +276,7 @@ export function SidebarNav({
   const renderItem = (item: SidebarNavItem, key: string) => {
     const content = (
       <>
-        {item.icon ? (
-          <span className="rebar-sidebar-nav-icon" aria-hidden="true">
-            {item.icon}
-          </span>
-        ) : null}
+        {renderIconSlot(item.icon, item.label, currentCollapsed)}
         {currentCollapsed ? null : <span className="rebar-sidebar-nav-label">{renderLabel(item.label)}</span>}
         {item.badge != null && !currentCollapsed ? (
           <span className="rebar-sidebar-nav-badge" data-rebar-part="badge">
@@ -407,11 +424,7 @@ export function SidebarNav({
                     aria-label={currentCollapsed ? item.label : undefined}
                     title={currentCollapsed ? item.label : undefined}
                   >
-                    {item.icon ? (
-                      <span className="rebar-sidebar-nav-icon" aria-hidden="true">
-                        {item.icon}
-                      </span>
-                    ) : null}
+                    {renderIconSlot(item.icon, item.label, currentCollapsed)}
                     {currentCollapsed ? null : (
                       <>
                         <span className="rebar-sidebar-nav-label">{renderLabel(item.label)}</span>

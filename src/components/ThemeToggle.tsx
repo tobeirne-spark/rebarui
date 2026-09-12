@@ -9,6 +9,11 @@ import { Text } from "./Text";
 export interface ThemeToggleProps {
   /** Label on the trigger button. */
   label?: string;
+  /** Trigger button size — match whatever else sits beside it in a toolbar/header (a plain
+   * `Button` with no `size` set defaults to `"md"`; this defaults to `"sm"` for a more compact
+   * header control, so set this explicitly to `"md"` when it's placed next to default-sized
+   * buttons rather than leaving the two visibly mismatched). */
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -29,7 +34,7 @@ export interface ThemeToggleProps {
  * (or "clean") state silently has nothing to switch to — indistinguishable from a broken control,
  * since nothing on screen indicates the missing half. See `ref/HEURISTICS.md` #50.
  */
-export function ThemeToggle({ label = "Theme", className }: ThemeToggleProps) {
+export function ThemeToggle({ label = "Theme", size = "sm", className }: ThemeToggleProps) {
   const [style, setStyle] = useState<"sketch" | "clean">(() =>
     typeof document !== "undefined" && document.documentElement.getAttribute("data-rebar-theme") === "clean"
       ? "clean"
@@ -60,7 +65,7 @@ export function ThemeToggle({ label = "Theme", className }: ThemeToggleProps) {
 
   return (
     <span className={className} style={{ flexShrink: 0 }} data-rebar-component="theme-toggle">
-      <Popover trigger={<Button variant="secondary" size="sm">{label}</Button>}>
+      <Popover trigger={<Button variant="secondary" size={size}>{label}</Button>}>
         <Stack gap="md" style={{ minWidth: 160 }}>
           <Stack gap="xs">
             <Text size="xs" color="secondary">

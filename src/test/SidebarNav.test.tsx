@@ -232,6 +232,23 @@ describe("SidebarNav", () => {
     expect(container.querySelector('[data-rebar-part="search"]')).toBeInTheDocument();
   });
 
+  it("collapsed with no icon falls back to the label's first letter, rather than a blank row", () => {
+    const { container, rerender } = render(<SidebarNav items={[{ label: "Chat", href: "#chat" }]} />);
+    expect(container.querySelector(".rebar-sidebar-nav-icon-fallback")).not.toBeInTheDocument();
+
+    rerender(<SidebarNav items={[{ label: "Chat", href: "#chat" }]} collapsed />);
+    const fallback = container.querySelector(".rebar-sidebar-nav-icon-fallback");
+    expect(fallback).toHaveTextContent("C");
+  });
+
+  it("collapsed with a real icon never shows the fallback letter", () => {
+    const { container } = render(
+      <SidebarNav items={[{ label: "Chat", href: "#chat", icon: <span data-testid="real-icon" /> }]} collapsed />,
+    );
+    expect(container.querySelector(".rebar-sidebar-nav-icon-fallback")).not.toBeInTheDocument();
+    expect(screen.getByTestId("real-icon")).toBeInTheDocument();
+  });
+
   it("activeStyle applies the matching modifier class to the active item", () => {
     const { container, rerender } = render(<SidebarNav items={ITEMS} activeStyle="bar" />);
     expect(container.querySelector(".rebar-sidebar-nav-active-bar")).toBeInTheDocument();
