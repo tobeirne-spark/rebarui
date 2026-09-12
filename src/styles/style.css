@@ -627,7 +627,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--rebar-space-sm, 8px);
-  min-height: 40px;
+  box-sizing: border-box;
+  min-height: 44px;
   padding: var(--rebar-space-sm, 8px) var(--rebar-space-md, 12px);
   border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
   border-radius: var(--rebar-radius, 4px);
@@ -637,6 +638,9 @@ body {
   font-size: var(--rebar-font-size-sm, 14px);
   min-width: 160px;
 }
+/* Matches Button's own [data-rebar-size] scale exactly (32/44/48) — see SelectProps.size. */
+.rebar-select-trigger[data-rebar-size="sm"] { min-height: 32px; padding: 0 var(--rebar-space-sm, 8px); }
+.rebar-select-trigger[data-rebar-size="lg"] { min-height: 48px; padding: 0 var(--rebar-space-lg, 24px); }
 
 .rebar-select-icon {
   color: var(--rebar-color-text-secondary, #757575);
@@ -748,6 +752,11 @@ body {
 .rebar-sidebar-nav-logo,
 .rebar-sidebar-nav-header {
   flex-shrink: 0;
+  box-sizing: border-box;
+  /* Shared with whatever the app's own main-content header uses for its own height (set this
+   * same custom property there, or match the 64px fallback by hand) so the two read as one
+   * contiguous bar instead of two independently-sized ones — see ref/HEURISTICS.md #58. */
+  min-height: var(--rebar-app-shell-header-height, 64px);
   padding-bottom: var(--rebar-space-sm, 8px);
   border-bottom: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
 }
@@ -4806,6 +4815,11 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 }
 @keyframes rebar-chat-cursor-blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rebar-chat-message-cursor { animation: none; } }
+.rebar-chat-message-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rebar-space-xs, 4px);
+}
 .rebar-chat-message-meta {
   display: flex;
   align-items: center;

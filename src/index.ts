@@ -6,7 +6,7 @@
  * consumer's real app — carries a real, inspectable record of which version built it, without the
  * consumer having to wire anything up. `RebarDevTools` reads this same attribute to display it.
  */
-export const REBAR_UI_VERSION = "0.5.0";
+export const REBAR_UI_VERSION = "0.6.0";
 
 if (typeof document !== "undefined") {
   document.documentElement.setAttribute("data-rebar-ui-version", REBAR_UI_VERSION);

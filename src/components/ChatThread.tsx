@@ -34,7 +34,12 @@ export interface ChatThreadProps extends ComponentPropsWithoutRef<"div"> {
    * in place on the same `id` as streamed chunks arrive, same convention as `FileUpload`
    * (no upload) and `Toast` (no timing) owning none of the async work themselves. */
   messages: ChatMessage[];
-  /** Shows a typing indicator bubble (three animated dots) below the last message. */
+  /** Shows a typing indicator bubble (three animated dots) below the last message, for the case
+   * where no assistant message object exists yet at all. If you've already appended an empty
+   * `status: "streaming"` placeholder message (the common pattern — append it immediately, fill
+   * `content` as tokens arrive), don't also set this: that placeholder already shows its own
+   * bouncing-dots wait state until `content` is non-empty, then swaps to a trailing cursor on its
+   * own — setting both renders two waiting indicators at once. */
   isTyping?: boolean;
   /** Fires when the retry affordance on an errored message (`status: "error"`) is clicked. */
   onRetry?: (message: ChatMessage) => void;
@@ -143,7 +148,26 @@ function MessageBubble({
           </span>
         )}
         {status === "streaming" ? (
-          <span className="rebar-chat-message-cursor" data-rebar-part="cursor" aria-hidden="true" />
+          message.content.length === 0 ? (
+            // Waiting for the first token — bouncing dots, the same "something is about to
+            // happen" signal `TypingIndicator` uses, not the trailing blink cursor below (that
+            // one belongs *after real content*, not standing in for its total absence). See
+            // ref/HEURISTICS.md's chat heuristics: a streaming message owns this swap itself so a
+            // caller's own `isTyping` (for the different case — no message object at all yet)
+            // never ends up doubled up with it.
+            <span
+              className="rebar-chat-message-waiting"
+              data-rebar-part="waiting"
+              role="status"
+              aria-label="Waiting for a response"
+            >
+              <span className="rebar-chat-typing-dot" />
+              <span className="rebar-chat-typing-dot" />
+              <span className="rebar-chat-typing-dot" />
+            </span>
+          ) : (
+            <span className="rebar-chat-message-cursor" data-rebar-part="cursor" aria-hidden="true" />
+          )
         ) : null}
       </div>
       <div className="rebar-chat-message-meta" data-rebar-part="meta">

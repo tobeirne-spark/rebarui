@@ -611,6 +611,10 @@ non-obvious situation. This is the fast-recall version, not a replacement for th
 54. A displayed count/aggregate that names a browsable set elsewhere in the same app defaults to a drill-down link into that set, not inert text (`Table` warns in dev when a no-`render` column looks like one)
 55. A prop that swaps content by display mode (collapsed/expanded, light/dark) requires every mode's variant — never optional (see `SidebarNav`'s `logo`)
 56. A chat/messaging component spans the full width of its own container by default — `ChatThread`/`AiChatInput` set no max-width of their own
+57. A streaming chat message owns its own loading-to-streaming swap (bouncing dots until content arrives, then a trailing cursor) — never pair it with a separate `isTyping` bubble for the same message
+58. A sidebar's header and the main content area's own header default to the same height (`--rebar-app-shell-header-height`, 64px) so the two read as one contiguous bar
+59. Any entity a user can create needs a real CRUD view (list/edit/delete), not just a create-and-select control
+60. Form controls share one consistent size scale by default — `Select` now matches `Button`'s exact sm/md/lg heights; any other input-shaped control found not to is the same bug
 
 ## Shipped component catalog (`rebar-ui`, `packages/core`)
 
