@@ -66,6 +66,41 @@ Framework Rules below; the Heuristics checklist follows the rest of this file.
 - **No favicon of your own? Use `node_modules/rebar-ui/assets/favicon.svg`** — a real,
   theme-adaptive "R" mark shipped in the package (reacts to `prefers-color-scheme`, no JS). Copy it
   into the build's `public/` directory and link it, rather than shipping with none.
+- **Challenge a component's default CSS/behavior against the actual layout context before accepting
+  it.** A demo's documented defaults (e.g., `height: 480` on `ai-chat`, `Card` for a list of
+  records) are not a contract — they're one possible fit for one possible context. Before plugging
+  in a component or block, evaluate: (1) what's the anticipated layout order (what fills the
+  viewport, what's nested inside what), (2) does this component's default CSS/behavior fit that
+  layout, (3) if not, what needs to change. Real failure modes caught: a chat block with a
+  hardcoded pixel height inside a content area that should fill the viewport (should be
+  `height: "100%"` or flex-based); a `Card` used for tabular data, naturally splitting
+  title/subtitle from children into separate regions when a `Table` with uniform columns would
+  have been the right fit. The test: if you copied a demo's CSS/layout values verbatim without
+  asking "does this fit *my* layout?", you pattern-matched instead of evaluated.
+- **Layout-first workflow: sketch the layout before selecting components.** Don't start by picking
+  components and hoping they fit. Start by sketching the layout in plain language: (1) what fills
+  the viewport (an `AppShell` with sidebar/top-nav/bare variant), (2) what goes in the content
+  area (a `BlockRenderer` with a `Block[]` document, or hand-authored JSX), (3) for each block or
+  component, what's its role (navigation, data display, form, etc.). Once the layout is sketched,
+  *then* select components and evaluate their default CSS against that sketch. The expected
+  architecture for a full-viewport app is `AppShell` (structural frame) + `BlockRenderer` (content
+  within the frame) — they compose by design, not as a special case. If you find yourself building
+  a hand-rolled shell with `Stack` + `Box` instead of reaching for `AppShell`, you're reinventing
+  the frame instead of using the one that's already there.
+- **Component evaluation template: document the fit before plugging in.** When selecting a
+  component or block, fill out this evaluation (in your reasoning, not necessarily in code
+  comments):
+  - **Layout context:** What fills the viewport? What's the parent container? What's the expected
+    size/behavior of the content area?
+  - **Component's default CSS:** What are the hardcoded dimensions, overflow behavior, flex
+    properties, positioning? (Check the component's source or demo, not just the docs.)
+  - **Fit evaluation:** Does the default CSS fit the layout context? If not, what needs to change
+    (override props, wrapper styles, different component)?
+  - **Real failure modes:** A chat block with `height: 480` inside a content area that should fill
+    the viewport → needs `height: "100%"` or flex-based sizing. A `Card` for tabular data → splits
+    title/subtitle from children, should be a `Table` with uniform columns.
+  - **The test:** If you can't articulate the layout context and the component's default CSS, you
+    haven't evaluated — you've pattern-matched.
 - **Every component carries `data-rebar-component="<kebab-name>"`** on its root, and
   `data-rebar-part="<part>"` on each internal structural piece (header, body, item, ...) — the
   hook both Playwright tests and a consuming migration script rely on.
@@ -179,6 +214,53 @@ Checklist for a new component:
 A block is a **named, pre-decided layout of real components** — the unit an agent (or a document
 author) picks when composing a page, supplying only content, never markup or layout properties
 (no direction, gap, or nesting decisions belong in a `Block[]` document).
+
+### Mandatory layout evaluation workflow (required before implementing any page or view)
+
+**This is not guidance — it's a required process with mandatory output and verification.**
+
+When building a page, view, or any full-viewport layout, you must complete this workflow *before*
+writing any component code. The output must be visible (in code comments, in a design doc, in the
+PR description) — not just internal reasoning.
+
+**Step 1: Sketch the layout in plain language.**
+- What fills the viewport? (An `AppShell` with sidebar/top-nav/bare variant, or something else?)
+- What goes in the content area? (A `BlockRenderer` with a `Block[]` document, or hand-authored
+  JSX?)
+- For each block or component, what's its role? (Navigation, data display, form, etc.)
+
+**Step 2: For each component or block you plan to use, complete this evaluation:**
+- **Layout context:** What fills the viewport? What's the parent container? What's the expected
+  size/behavior of the content area?
+- **Component's default CSS:** What are the hardcoded dimensions, overflow behavior, flex
+  properties, positioning? (Check the component's source or demo, not just the docs.)
+- **Fit evaluation:** Does the default CSS fit the layout context? If not, what needs to change
+  (override props, wrapper styles, different component)?
+- **Real failure modes to check:** A chat block with `height: 480` inside a content area that
+  should fill the viewport → needs `height: "100%"` or flex-based sizing. A `Card` for tabular
+  data → splits title/subtitle from children, should be a `Table` with uniform columns.
+
+**Step 3: Verification — answer these questions explicitly:**
+- Can you articulate the layout context (what fills the viewport, what's nested inside what)?
+- Can you articulate each component's default CSS (hardcoded dimensions, overflow, flex)?
+- Did you evaluate the fit, or did you pattern-match from a demo?
+
+**If you cannot answer these questions, you have not evaluated — you have pattern-matched.**
+
+**Step 4: Fast & Simple — select an order first, then use the block renderer.**
+- Pick the structural frame (an `AppShell` variant: sidebar, top-nav, or bare).
+- Use `BlockRenderer` to print content within that frame — don't hand-roll or hand-draw the layout.
+- If you find yourself building a shell with `Stack` + `Box` instead of reaching for `AppShell`,
+  you're reinventing the frame instead of using the one that's already there.
+- If you find yourself writing hand-authored JSX for content that could be a `Block[]` document,
+  you're hand-drawing instead of using the block renderer.
+
+**Required output:** The evaluation must be visible. At minimum, include it as code comments in the
+page/view file. Better: include it in a design doc or PR description. The point is that it's
+reviewable, not just internal reasoning.
+
+**The expected architecture for a full-viewport app:** `AppShell` (structural frame) +
+`BlockRenderer` (content within the frame) — they compose by design, not as a special case.
 
 **The practical test when a new thing is ambiguous between the two:** would an app that adopts
 rebar-ui import this directly as a reusable feature inside its own product (→ component), or is
@@ -386,8 +468,8 @@ smuggling in real state (the nine Opinion blocks below).
   `TextToSpeechBar`, `ThemeToggle`, `TimePicker`, `Toast`, `TodoItem`, `Tooltip`, `Tour`,
   `Transfer`, `TreeSelect`, `TreeView`, `UMAPPlot`, `UploadQueue`, `VersionHistory`,
   `VoiceComposer`, `WaveformAudioPlayer`, `Wizard`, and `Card` (`editable` — see "rolled up" below).
-- *Order*: `Breadcrumb`, `Footer`, `MobileTabBar`, `NavBar`, `NavIndex`, `SectionNav`, `SidePanel`,
-  `SidebarNav`.
+- *Order*: `AppShell`, `Breadcrumb`, `Footer`, `MobileTabBar`, `NavBar`, `NavIndex`, `SectionNav`,
+  `SidePanel`, `SidebarNav`.
 
 **Blocks, by tier** (39 total):
 
@@ -449,6 +531,22 @@ const blocks: Block[] = [
   is exactly what produces a page that looks like one giant grey/boxed rectangle instead of a
   normal page with individually card-shaped pieces on it (`card-grid`/`persona-card`/
   `pillar-grid` already render their own, correctly-scoped `Card`s where that's the real shape).
+
+## When to use `AppShell` vs `BlockRenderer`
+
+`AppShell` and `BlockRenderer` serve different purposes — don't conflate them:
+
+- **`BlockRenderer`** prints static marketing/docs pages from block data. It's the Packer's output
+  mechanism for content-driven pages (the docs site, marketing pages, component reference pages).
+  It renders directly as the page, no wrapper needed.
+
+- **`AppShell`** is for interactive applications with persistent navigation chrome — dashboards,
+  admin panels, SaaS apps. It provides the full-viewport layout with sidebar/top-nav/main-content
+  regions. Use it when building a real app, not a static page.
+
+**Rule of thumb:** If the page is mostly content (docs, marketing, reference pages), use
+`BlockRenderer`. If the page is an interactive app with persistent navigation and multiple views,
+use `AppShell`. They don't nest — pick one based on the page's real purpose.
 
 ## Working on the marketing site (`apps/docs`)
 
