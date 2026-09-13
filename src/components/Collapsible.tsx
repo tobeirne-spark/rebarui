@@ -33,7 +33,7 @@ export interface CollapsibleProps extends ComponentPropsWithoutRef<"div"> {
  * animation, content fully removed from the DOM when collapsed rather than merely hidden) so it
  * reads as the same interaction pattern, just without Radix's Accordion primitive (a single
  * on/off toggle needs no complex interaction logic — plain semantic HTML plus real
- * aria-expanded/aria-controls is enough; see robot.md checklist item 3).
+ * aria-expanded/aria-controls is enough; see agents.md checklist item 3).
  */
 export const Collapsible = forwardRef<HTMLDivElement, CollapsibleProps>(function Collapsible(
   { open, defaultOpen, onOpenChange, trigger, children, disabled, className, bionic, bionicOptions, ...rest },

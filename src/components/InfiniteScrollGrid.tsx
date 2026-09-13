@@ -35,7 +35,7 @@ export interface InfiniteScrollGridProps<T> extends Omit<ComponentPropsWithoutRe
  * `isLoading`); this component only renders what it's given and asks for more via `onLoadMore`
  * once a sentinel near the bottom of the grid becomes visible. Distinct from `Pagination`
  * (page-number based, no scroll detection) and `Table`/`DataGrid` (no infinite-loading concept at
- * all) — see robot.md's component catalog.
+ * all) — see agents.md's component catalog.
  *
  * Uses a real `IntersectionObserver` on a 1px sentinel appended after the last item/skeleton, not
  * a `scroll` listener with manual scrollTop/scrollHeight math — the correct, modern primitive for

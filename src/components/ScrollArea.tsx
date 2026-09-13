@@ -11,7 +11,7 @@ export interface ScrollAreaProps extends ComponentPropsWithoutRef<"div"> {
 
 /**
  * A custom-styled scrollable container: real native scrolling (`overflow: auto`, never `hidden`,
- * on whichever axis is active — see ref/HEURISTICS.md #48/robot.md checklist item 5) with a
+ * on whichever axis is active — see ref/HEURISTICS.md #48/agents.md checklist item 5) with a
  * thinner, theme-aware scrollbar (`scrollbar-width`/`::-webkit-scrollbar`, no JS). Genuinely
  * CSS-only — plain `overflow` styling already solves this, so no scroll-primitive dependency is
  * pulled in for it.

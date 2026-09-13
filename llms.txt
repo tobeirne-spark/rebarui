@@ -3,7 +3,7 @@
 Headless-first, low-fidelity React components (real Radix UI underneath, styled via `--rebar-*`
 CSS custom properties).
 
-Read `robot.md` (ships in this package) first — a single compressed context file covering
+Read `agents.md` (ships in this package) first — a single compressed context file covering
 Framework Rules vs. Heuristics, component/block-authoring conventions, and using
 `@rebar-ui/placement` to build a page. What follows here is a narrower, component-only excerpt.
 

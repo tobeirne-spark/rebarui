@@ -32,7 +32,7 @@ function cellText(value: unknown): string {
 /**
  * A padded, click-forwarding wrapper around `Editable` so the real clickable footprint reaches
  * the 44×44 touch-target minimum even though `Editable`'s own read-mode button is sized to its
- * text content — see robot.md checklist item 5(a): "padding included if the visual element is
+ * text content — see agents.md checklist item 5(a): "padding included if the visual element is
  * smaller". A click landing in that padding (not on the button itself) is forwarded to the real
  * button rather than silently doing nothing.
  */

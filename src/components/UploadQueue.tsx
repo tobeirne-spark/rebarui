@@ -17,7 +17,7 @@ export interface UploadQueueItem {
 
 // `onPause` collides with React's generic `DOMAttributes` media-event handler (present on every
 // element's HTML attributes, not just media elements) — the same "differently-typed prop sharing
-// a native name" trap `Card`'s own `title` hit (see robot.md checklist item 6), so it needs an
+// a native name" trap `Card`'s own `title` hit (see agents.md checklist item 6), so it needs an
 // explicit `Omit` rather than silently shadowing the native one.
 export interface UploadQueueProps extends Omit<ComponentPropsWithoutRef<"div">, "onPause"> {
   /**

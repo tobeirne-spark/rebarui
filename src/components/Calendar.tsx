@@ -74,7 +74,7 @@ function buildMonthGrid(month: Date): GridCell[] {
  * A standalone month-grid display for picking (or just displaying) a date — not wrapped in a
  * popover itself; a future `DatePicker` layers a real `Popover` around this instead of this
  * component reimplementing that shell. Two independent controlled/uncontrolled pairs, per
- * robot.md's pattern: `value`/`onValueChange` (the picked date) and `month`/`onMonthChange`
+ * agents.md's pattern: `value`/`onValueChange` (the picked date) and `month`/`onMonthChange`
  * (which month is displayed) — navigating months never implies picking a date.
  *
  * The header label is a real drill-up control, the standard calendar-widget pattern for jumping

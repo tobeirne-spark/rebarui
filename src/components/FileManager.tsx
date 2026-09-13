@@ -117,7 +117,7 @@ function collectFolderLabels(node: FileManagerNode, map: Map<string, string>): v
  * intent" convention `FileUpload` already established for uploads. The caller re-renders with an
  * updated `root` after applying the change (or after it's confirmed/rejected by a real backend).
  *
- * **Composition notes** (see `packages/core/robot.md`'s composition-first guidance):
+ * **Composition notes** (see `packages/core/agents.md`'s composition-first guidance):
  * - The left folder-navigation panel composes the real `TreeView` directly — expand/collapse,
  *   keyboard nav (arrow keys), and selection are entirely `TreeView`'s own job, not reimplemented
  *   here. This composition is clean for navigation itself. It is NOT fully clean for one specific
