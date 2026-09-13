@@ -18,8 +18,7 @@
     "dist",
     "AGENTS.md",
     "llms.txt",
-    "agents.md",
-    "LLM.MD",
+    "agent.md",
     "assets/favicon.svg"
   ],
   "sideEffects": [
