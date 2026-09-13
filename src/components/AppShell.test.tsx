@@ -17,7 +17,7 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    const shell = screen.getByTestId("app-shell");
+    const shell = document.querySelector('[data-rebar-component="app-shell"]');
     expect(shell).toBeInTheDocument();
     expect(shell).toHaveAttribute("data-rebar-variant", "sidebar");
     expect(screen.getByText("Main content")).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    const shell = screen.getByTestId("app-shell");
+    const shell = document.querySelector('[data-rebar-component="app-shell"]');
     expect(shell).toBeInTheDocument();
     expect(shell).toHaveAttribute("data-rebar-variant", "top-nav");
     expect(screen.getByText("Page content")).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    const shell = screen.getByTestId("app-shell");
+    const shell = document.querySelector('[data-rebar-component="app-shell"]');
     expect(shell).toHaveStyle({ height: "800px" });
   });
 
@@ -68,7 +68,7 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    const shell = screen.getByTestId("app-shell");
+    const shell = document.querySelector('[data-rebar-component="app-shell"]');
     expect(shell).toHaveStyle({ height: "100vh" });
   });
 
@@ -79,7 +79,7 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    const shell = screen.getByTestId("app-shell");
+    const shell = document.querySelector('[data-rebar-component="app-shell"]');
     expect(shell).toHaveAttribute("data-rebar-variant", "bare");
     expect(screen.getByText("Bare content")).toBeInTheDocument();
   });
