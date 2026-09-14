@@ -8,6 +8,15 @@ import type { BionicOptions } from "../bionic";
 export interface NavBarItem {
   label: string;
   href: string;
+  /** When set, this item renders as a dropdown trigger instead of a plain link.
+   * The mega-menu panel renders inside a Popover. */
+  megaMenu?: {
+    columns: {
+      heading: string;
+      items: { label: string; description?: string; href: string; icon?: string; external?: boolean }[];
+    }[];
+    footer?: { label: string; href: string };
+  };
 }
 
 export interface NavBarProps extends Omit<ComponentPropsWithoutRef<"div">, "className"> {
@@ -143,11 +152,107 @@ export function NavBar({
       </div>
 
       <nav aria-label={ariaLabel} style={{ display: "flex", alignItems: "center", gap: GAP_PX, whiteSpace: "nowrap" }}>
-        {items.slice(0, visibleCount).map((item, i) => (
-          <span key={`${item.label}-${i}`}>
-            {renderLink({ href: item.href, children: renderLabel(item.label), className: "rebar-navbar-link" })}
-          </span>
-        ))}
+        {items.slice(0, visibleCount).map((item, i) =>
+          item.megaMenu ? (
+            <Popover
+              key={`${item.label}-${i}`}
+              trigger={
+                <button
+                  type="button"
+                  className="rebar-navbar-link"
+                  data-rebar-part="mega-trigger"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    font: "inherit",
+                    color: "inherit",
+                    padding: 0,
+                  }}
+                >
+                  {renderLabel(item.label)} ▾
+                </button>
+              }
+            >
+              <div
+                data-rebar-part="mega-menu"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${item.megaMenu.columns.length}, 1fr)`,
+                  gap: "var(--rebar-space-xl, 32px)",
+                  padding: "var(--rebar-space-xl, 32px)",
+                  minWidth: item.megaMenu.columns.length * 180,
+                  backgroundColor: "var(--rebar-color-bg, #ffffff)",
+                  border: "1px solid var(--rebar-color-border, #e0e0e0)",
+                  borderRadius: "var(--rebar-radius-md, 8px)",
+                  boxShadow: "var(--rebar-shadow-lg, 0 4px 12px rgba(0,0,0,0.1))",
+                }}
+              >
+                {item.megaMenu.columns.map((col, ci) => (
+                  <div key={ci} style={{ display: "flex", flexDirection: "column", gap: "var(--rebar-space-xs, 4px)" }}>
+                    <span
+                      style={{
+                        fontSize: "var(--rebar-font-size-xs, 12px)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        fontWeight: "var(--rebar-font-weight-semibold, 600)",
+                        color: "var(--rebar-color-text-secondary, #757575)",
+                        marginBottom: "var(--rebar-space-xs, 4px)",
+                      }}
+                    >
+                      {col.heading}
+                    </span>
+                    {col.items.map((mi, mii) => (
+                      <span key={mii} style={{ display: "block" }}>
+                        {renderLink({
+                          href: mi.href,
+                          children: (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "4px 0" }}>
+                              <span style={{ fontSize: "var(--rebar-font-size-sm, 14px)", fontWeight: "var(--rebar-font-weight-medium, 500)" }}>
+                                {mi.label}
+                                {mi.external ? " ↗" : null}
+                              </span>
+                              {mi.description ? (
+                                <span style={{ fontSize: "var(--rebar-font-size-xs, 12px)", color: "var(--rebar-color-text-secondary, #757575)" }}>
+                                  {mi.description}
+                                </span>
+                              ) : null}
+                            </div>
+                          ),
+                          className: "rebar-navbar-mega-link",
+                        })}
+                      </span>
+                    ))}
+                  </div>
+                ))}
+                {item.megaMenu.footer ? (
+                  <div
+                    style={{
+                      gridColumn: `1 / -1`,
+                      borderTop: "1px solid var(--rebar-color-border, #e0e0e0)",
+                      paddingTop: "var(--rebar-space-md, 16px)",
+                      marginTop: "var(--rebar-space-sm, 8px)",
+                    }}
+                  >
+                    {renderLink({
+                      href: item.megaMenu.footer.href,
+                      children: (
+                        <span style={{ fontSize: "var(--rebar-font-size-sm, 14px)" }}>
+                          {item.megaMenu.footer.label} →
+                        </span>
+                      ),
+                      className: "rebar-navbar-mega-link",
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </Popover>
+          ) : (
+            <span key={`${item.label}-${i}`}>
+              {renderLink({ href: item.href, children: renderLabel(item.label), className: "rebar-navbar-link" })}
+            </span>
+          ),
+        )}
         {overflowItems.length > 0 ? (
           <Popover
             trigger={
