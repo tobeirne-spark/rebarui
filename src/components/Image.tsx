@@ -1,7 +1,7 @@
 import { forwardRef, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, MutableRefObject, ReactNode, Ref, SyntheticEvent } from "react";
 import clsx from "clsx";
-import { Spin } from "./Spin";
+import { Skeleton } from "./Skeleton";
 
 // Merges the caller's forwarded ref (if any) with this component's own internal ref, so both
 // receive the same DOM node — needed because `Image` has to inspect the real `<img>` itself (see
@@ -179,7 +179,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
       />
       {status === "loading" ? (
         <span className="rebar-image-loading" data-rebar-part="loading">
-          {loadingIndicator ?? <Spin size="sm" />}
+          {loadingIndicator ?? <Skeleton variant="rect" className="rebar-image-skeleton" />}
         </span>
       ) : null}
       {status === "error" ? (

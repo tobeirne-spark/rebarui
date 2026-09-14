@@ -11,7 +11,7 @@ describe("Image", () => {
   it("shows the loading indicator initially", () => {
     render(<Image src="https://example.com/photo.jpg" alt="A photo" />);
     expect(document.querySelector('[data-rebar-part="loading"]')).not.toBeNull();
-    expect(document.querySelector('[data-rebar-component="spin"]')).not.toBeNull();
+    expect(document.querySelector('[data-rebar-component="skeleton"]')).not.toBeNull();
   });
 
   it("swaps to the loaded image after a real load event", () => {
@@ -43,7 +43,7 @@ describe("Image", () => {
     expect(screen.getByText("Custom fallback")).toBeInTheDocument();
   });
 
-  it("renders a caller-supplied loading indicator instead of the default Spin", () => {
+  it("renders a caller-supplied loading indicator instead of the default Skeleton", () => {
     render(
       <Image
         src="https://example.com/photo.jpg"
@@ -52,7 +52,7 @@ describe("Image", () => {
       />,
     );
     expect(screen.getByText("Custom loading")).toBeInTheDocument();
-    expect(document.querySelector('[data-rebar-component="spin"]')).toBeNull();
+    expect(document.querySelector('[data-rebar-component="skeleton"]')).toBeNull();
   });
 
   it("keeps alt text present in the loading state", () => {
