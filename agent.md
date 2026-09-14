@@ -87,32 +87,22 @@ Browse the construct catalog at `/imitations`, `/synthetics`, `/opinions`, `/ord
 
 **The vast majority of views can be composed entirely from existing constructs.** A hero + checklist + callout + card-grid prints an entire landing page from four lines of data. A site-header + filter-bar + table + modal prints a full CRUD admin screen. Start here.
 
-### 2. If no existing construct fits, create a project-specific construct
+### 2. If no existing construct fits, add a new one to the placement package
 
-When the view needs a pattern that doesn't exist in the shipped catalog, **do not drop to hand-drawn JSX.** Instead, define a new construct type in your project's own construct library:
+When the view needs a pattern that doesn't exist in the shipped catalog, **do not drop to hand-drawn JSX.** Instead, add a new construct type to `@rebar-ui/placement`:
 
-```tsx
-// src/constructs/team-card.ts
-import type { Construct } from "@rebar-ui/placement";
-
-export interface TeamCardProps {
-  type: "team-card";
-  name: string;
-  members: string[];
-  status: "active" | "archived";
-}
-
-// Register it so the Packer can render it
-// (implementation renders using existing rebar-ui constructs: Card + Avatar + Tag + Stack)
-```
+1. Add a new variant to the `Construct` union in `packages/placement/src/schema.ts`
+2. Add a new `case` to the `renderBlock` switch in `packages/placement/src/BlockRenderer.tsx`
+3. If it has live data bindings (`source`/`onX` fields), add it to `OPINION_CONSTRUCT_TYPES` in `packages/placement/src/opinions.ts`
+4. Add its tier assignment to `BLOCK_TIER` in `apps/docs/src/data/blockTier.ts`
 
 This gives you:
-- **Reusability** — the same construct prints every team card across every page
+- **Reusability** — the same construct prints every instance across every page
 - **Consistency** — the Packer handles layout, spacing, and theming deterministically
 - **Migratability** — when you migrate to a real design system, the construct swaps cleanly
-- **Future availability** — the construct can be contributed back to the catalog or reused across projects
+- **Availability for future selections** — it becomes part of the catalog agents can pick from
 
-Project-specific constructs live alongside your app code, not inside `packages/core`. They compose from existing rebar-ui constructs the same way the shipped ones do.
+Alternatively, compose existing constructs into a wrapper component in your project code that renders a fixed `Construct[]` document — this works without modifying the placement package.
 
 ### 3. Hand-drawn JSX is the last resort — and temporary
 
