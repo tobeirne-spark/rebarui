@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import type { DragEvent } from "react";
+import { Fragment, useRef, useState } from "react";
+import type { DragEvent, ReactNode, TouchEvent } from "react";
 import clsx from "clsx";
 import { resolveStickyColor, STICKY_PALETTE } from "../stickyColor";
 import { useLongPress } from "../useLongPress";
@@ -47,6 +47,32 @@ export interface KanbanState {
   cards: Record<string, KanbanCard>;
 }
 
+/** Passed to `renderCard` for every visible card — everything a caller needs to reproduce (or
+ * replace) drag/drop and touch-long-press wiring without reaching into Kanban's own internals. */
+export interface KanbanCardRenderContext {
+  columnId: string;
+  sectionId: string;
+  /** Mirrors the board's own `cardVariant === "sticky"` — lets one `renderCard` branch its output
+   * per variant without the caller re-deriving it from props. */
+  sticky: boolean;
+  dragHandlers: {
+    draggable: boolean;
+    onDragStart: () => void;
+    onDragEnd: () => void;
+    onDragOver: (e: DragEvent) => void;
+    onDrop: (e: DragEvent) => void;
+  };
+  /** Wire these to the rendered card's own touch handlers for the same long-press-opens-edit
+   * parity Kanban's own cards get on touch devices (see the long-press doc comment below) — a
+   * `renderCard` that ignores them simply has no touch equivalent for whatever it opens instead. */
+  touchHandlers: {
+    onTouchStart: (e: TouchEvent) => void;
+    onTouchEnd: () => void;
+    onTouchMove: (e: TouchEvent) => void;
+    onTouchCancel: () => void;
+  };
+}
+
 export interface KanbanProps {
   columns: KanbanColumn[];
   cards: Record<string, KanbanCard>;
@@ -60,6 +86,17 @@ export interface KanbanProps {
    * to it; unset defaults to it) — the same board underneath, not a separate component. Clicking
    * a sticky (not dragging it) opens an edit form for its title/description/tags/color. */
   cardVariant?: "default" | "sticky";
+  /** Replaces the built-in `Card`/`Sticky` rendering (and its double-click/click-opens-edit-modal
+   * behavior) for every visible card, when set — the caller takes full ownership of the card's
+   * face and of whatever click/double-click should do instead, while Kanban still owns column/
+   * section layout, drag-and-drop, limits, sort, and search filtering. Omit to keep today's
+   * built-in `Card`/`Sticky` rendering unchanged. */
+  renderCard?: (card: KanbanCard, ctx: KanbanCardRenderContext) => ReactNode;
+  /** Replaces just the column title text in the column header (the limit badge and sort button
+   * either side of it are unaffected) — for a caller that needs the title itself to be
+   * interactive (e.g. click-to-rename) without rebuilding the whole header. Omit to keep today's
+   * plain-text title. */
+  renderColumnTitle?: (column: KanbanColumn) => ReactNode;
   className?: string;
 }
 
@@ -137,7 +174,16 @@ function insertCard(
  * `TreeView`'s `onSelect`) — the caller re-renders with the updated structure, same as any other
  * derived-state list component in this library.
  */
-export function Kanban({ columns, cards, onChange, search = "", cardVariant = "default", className }: KanbanProps) {
+export function Kanban({
+  columns,
+  cards,
+  onChange,
+  search = "",
+  cardVariant = "default",
+  renderCard,
+  renderColumnTitle,
+  className,
+}: KanbanProps) {
   const sticky = cardVariant === "sticky";
   const [dragCard, setDragCard] = useState<DragCard | null>(null);
   const [dragColumnId, setDragColumnId] = useState<string | null>(null);
@@ -266,7 +312,11 @@ export function Kanban({ columns, cards, onChange, search = "", cardVariant = "d
               onDragStart={() => setDragColumnId(column.id)}
               onDragEnd={() => setDragColumnId(null)}
             >
-              <Text style={{ fontWeight: "var(--rebar-font-weight-semibold, 600)" }}>{column.title}</Text>
+              {renderColumnTitle ? (
+                renderColumnTitle(column)
+              ) : (
+                <Text style={{ fontWeight: "var(--rebar-font-weight-semibold, 600)" }}>{column.title}</Text>
+              )}
               <div className="rebar-kanban-column-header-actions">
                 {columnLimit !== undefined ? (
                   <Text size="xs" color="secondary" data-rebar-part="column-limit">
@@ -357,6 +407,29 @@ export function Kanban({ columns, cards, onChange, search = "", cardVariant = "d
                               handleCardDrop(column.id, section.id, cardId);
                             },
                           };
+                          const touchHandlers = {
+                            onTouchStart: (e: TouchEvent) => {
+                              longPressCardRef.current = card;
+                              longPress.onTouchStart(e);
+                            },
+                            onTouchEnd: longPress.onTouchEnd,
+                            onTouchMove: longPress.onTouchMove,
+                            onTouchCancel: longPress.onTouchCancel,
+                          };
+
+                          if (renderCard) {
+                            return (
+                              <Fragment key={cardId}>
+                                {renderCard(card, {
+                                  columnId: column.id,
+                                  sectionId: section.id,
+                                  sticky,
+                                  dragHandlers,
+                                  touchHandlers,
+                                })}
+                              </Fragment>
+                            );
+                          }
 
                           if (!sticky) {
                             return (
@@ -369,13 +442,7 @@ export function Kanban({ columns, cards, onChange, search = "", cardVariant = "d
                                 labels={card.tags?.map((tag) => ({ label: tag }))}
                                 {...dragHandlers}
                                 onDoubleClick={() => openEdit(card)}
-                                onTouchStart={(e) => {
-                                  longPressCardRef.current = card;
-                                  longPress.onTouchStart(e);
-                                }}
-                                onTouchEnd={longPress.onTouchEnd}
-                                onTouchMove={longPress.onTouchMove}
-                                onTouchCancel={longPress.onTouchCancel}
+                                {...touchHandlers}
                               >
                                 {card.description}
                               </Card>
