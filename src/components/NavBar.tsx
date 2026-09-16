@@ -79,6 +79,7 @@ function MegaMenuTrigger({
           {renderLabel(item.label)} ▾
         </button>
       }
+      sideOffset={8}
     >
       <div
         data-rebar-part="mega-menu"
@@ -88,6 +89,9 @@ function MegaMenuTrigger({
           gap: "var(--rebar-space-xl, 32px)",
           padding: "var(--rebar-space-xl, 32px)",
           minWidth: megaMenu.columns.length * 180,
+          backgroundColor: "var(--rebar-color-bg, #ffffff)",
+          borderRadius: "var(--rebar-radius-sm, 6px)",
+          boxShadow: "var(--rebar-shadow-md, 0 2px 8px rgba(0,0,0,0.08))",
         }}
       >
         {megaMenu.columns.map((col, ci) => (
