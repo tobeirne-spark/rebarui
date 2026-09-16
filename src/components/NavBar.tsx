@@ -165,9 +165,6 @@ export function NavBar({
                     background: "none",
                     border: "none",
                     cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: "inherit",
-                    color: "inherit",
                     padding: 0,
                   }}
                 >
