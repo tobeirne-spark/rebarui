@@ -90,7 +90,7 @@ function MegaMenuTrigger({
           gap: "var(--rebar-space-xl, 32px)",
           padding: "var(--rebar-space-xl, 32px)",
           minWidth: megaMenu.columns.length * 180,
-          backgroundColor: "var(--rebar-color-bg, #ffffff)",
+          backgroundColor: "var(--rebar-color-bg-primary, #ffffff)",
           borderRadius: "var(--rebar-radius-sm, 6px)",
           boxShadow: "var(--rebar-shadow-md, 0 2px 8px rgba(0,0,0,0.08))",
         }}
@@ -107,7 +107,7 @@ function MegaMenuTrigger({
                 marginBottom: "var(--rebar-space-xs, 4px)",
               }}
             >
-              {col.heading}
+              {renderLabel(col.heading)}
             </span>
             {col.items.map((mi, mii) => (
               <span key={mii} style={{ display: "block" }}>
@@ -116,12 +116,12 @@ function MegaMenuTrigger({
                   children: (
                     <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "4px 0" }}>
                       <span style={{ fontSize: "var(--rebar-font-size-sm, 14px)", fontWeight: "var(--rebar-font-weight-medium, 500)" }}>
-                        {mi.label}
+                        {renderLabel(mi.label)}
                         {mi.external ? " ↗" : null}
                       </span>
                       {mi.description ? (
                         <span style={{ fontSize: "var(--rebar-font-size-xs, 12px)", color: "var(--rebar-color-text-secondary, #757575)" }}>
-                          {mi.description}
+                          {renderLabel(mi.description)}
                         </span>
                       ) : null}
                     </div>
@@ -146,7 +146,7 @@ function MegaMenuTrigger({
               href: megaMenu.footer.href,
               children: (
                 <span style={{ fontSize: "var(--rebar-font-size-sm, 14px)" }}>
-                  {megaMenu.footer.label} →
+                  {renderLabel(megaMenu.footer.label)} →
                 </span>
               ),
               className: "rebar-navbar-mega-link",
