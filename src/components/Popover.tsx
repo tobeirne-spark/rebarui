@@ -7,9 +7,10 @@ export interface PopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   sideOffset?: number;
+  contentProps?: Record<string, unknown>;
 }
 
-export function Popover({ trigger, children, open, onOpenChange, sideOffset = 4 }: PopoverProps) {
+export function Popover({ trigger, children, open, onOpenChange, sideOffset = 4, contentProps }: PopoverProps) {
   return (
     <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
       <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
@@ -18,6 +19,7 @@ export function Popover({ trigger, children, open, onOpenChange, sideOffset = 4 
           className="rebar-popover-content"
           data-rebar-component="popover"
           sideOffset={sideOffset}
+          {...contentProps}
         >
           {children}
           <RadixPopover.Arrow className="rebar-popover-arrow" />

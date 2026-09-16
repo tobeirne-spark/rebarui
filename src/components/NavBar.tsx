@@ -80,6 +80,7 @@ function MegaMenuTrigger({
         </button>
       }
       sideOffset={8}
+      contentProps={{ "data-rebar-popover-type": "mega-menu" }}
     >
       <div
         data-rebar-part="mega-menu"

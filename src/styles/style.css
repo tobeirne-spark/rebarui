@@ -1081,6 +1081,13 @@ body {
   z-index: 1100;
 }
 
+/* Mega menu popover — no chrome of its own; the panel inside draws its own shadow/border. */
+.rebar-popover-content[data-rebar-popover-type="mega-menu"] {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 .rebar-popover-arrow {
   fill: var(--rebar-color-bg-primary, #ffffff);
 }
