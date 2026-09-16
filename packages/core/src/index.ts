@@ -177,6 +177,7 @@ export { Kanban } from "./components/Kanban";
 export type {
   KanbanProps,
   KanbanCard,
+  KanbanCardRenderContext,
   KanbanColumn,
   KanbanSection,
   KanbanSortOrder,
