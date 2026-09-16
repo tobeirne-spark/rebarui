@@ -5360,7 +5360,7 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-layers-panel-toggle-button[aria-pressed="true"] { color: var(--rebar-color-primary, #0066cc); }
 
 /* GraphExplorer */
-.rebar-graph-explorer-toolbar { display: flex; align-items: center; gap: var(--rebar-space-md, 16px); flex-wrap: wrap; }
+.rebar-graph-explorer-toolbar { display: flex; align-items: center; gap: var(--rebar-space-lg, 24px); flex-wrap: wrap; }
 .rebar-graph-explorer-search { position: relative; flex: 1 1 280px; min-width: 200px; max-width: 400px; }
 .rebar-graph-explorer-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--rebar-color-text-secondary, #757575); pointer-events: none; }
 .rebar-graph-explorer-search-input {
