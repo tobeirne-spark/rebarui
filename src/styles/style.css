@@ -5411,7 +5411,7 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-graph-explorer-search-results button:focus-visible { background: var(--rebar-color-bg-secondary, #f5f5f5); }
 .rebar-graph-explorer-search-result-category { font-size: var(--rebar-font-size-xs, 12px); color: var(--rebar-color-text-secondary, #757575); }
 .rebar-graph-explorer-zoom { display: flex; align-items: center; gap: var(--rebar-space-xs, 4px); flex-shrink: 0; margin-left: auto; }
-.rebar-graph-explorer-legend { display: flex; flex-wrap: wrap; gap: var(--rebar-space-xs, 8px); align-items: center; }
+.rebar-graph-explorer-legend { display: flex; flex-wrap: wrap; gap: var(--rebar-space-xs, 8px); align-items: center; padding-bottom: var(--rebar-space-md, 16px); }
 .rebar-graph-explorer-legend-chip {
   display: inline-flex;
   align-items: center;
