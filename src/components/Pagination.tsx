@@ -1,5 +1,6 @@
 import { useState } from "react";
 import clsx from "clsx";
+import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
 export interface PaginationProps {
   /** 1-indexed current page. Omit for uncontrolled use via `defaultCurrent`. */
@@ -70,7 +71,7 @@ export function Pagination({
         disabled={disabled || currentPage <= 1}
         onClick={() => setPage(currentPage - 1)}
       >
-        ‹
+        <ChevronLeftIcon />
       </button>
       {pages.map((page, i) =>
         page === null ? (
@@ -101,7 +102,7 @@ export function Pagination({
         disabled={disabled || currentPage >= total}
         onClick={() => setPage(currentPage + 1)}
       >
-        ›
+        <ChevronRightIcon />
       </button>
     </nav>
   );

@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Table } from "./Table";
 import type { TableColumn } from "./Table";
+import type { BionicOptions } from "../bionic";
 
 export type PivotAggregate = "sum" | "count" | "average";
 
@@ -21,6 +22,10 @@ export interface PivotTableProps {
   title?: string;
   className?: string;
   "aria-label"?: string;
+  /** Force bionic reading on/off for the title/column headers, overriding the ambient
+   * data-rebar-bionic setting — forwarded to the underlying `Table`. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 interface PivotRow {
@@ -69,6 +74,8 @@ export function PivotTable({
   title,
   className,
   "aria-label": ariaLabel,
+  bionic,
+  bionicOptions,
 }: PivotTableProps) {
   const rowValues = distinctInOrder(data, rowField);
   const colValues = distinctInOrder(data, colField);
@@ -107,7 +114,15 @@ export function PivotTable({
 
   return (
     <div className={clsx("rebar-pivot-table", className)} data-rebar-component="pivot-table">
-      <Table columns={columns} data={tableData} rowKey="__rowKey" caption={title} aria-label={ariaLabel} />
+      <Table
+        columns={columns}
+        data={tableData}
+        rowKey="__rowKey"
+        caption={title}
+        aria-label={ariaLabel}
+        bionic={bionic}
+        bionicOptions={bionicOptions}
+      />
     </div>
   );
 }

@@ -6,9 +6,11 @@ export interface PopoverProps {
   children: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  sideOffset?: number;
+  contentProps?: Record<string, unknown>;
 }
 
-export function Popover({ trigger, children, open, onOpenChange }: PopoverProps) {
+export function Popover({ trigger, children, open, onOpenChange, sideOffset = 4, contentProps }: PopoverProps) {
   return (
     <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
       <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
@@ -16,7 +18,8 @@ export function Popover({ trigger, children, open, onOpenChange }: PopoverProps)
         <RadixPopover.Content
           className="rebar-popover-content"
           data-rebar-component="popover"
-          sideOffset={4}
+          sideOffset={sideOffset}
+          {...contentProps}
         >
           {children}
           <RadixPopover.Arrow className="rebar-popover-arrow" />

@@ -4,6 +4,8 @@ import clsx from "clsx";
 import { MultiSelect } from "./MultiSelect";
 import { Tag } from "./Tag";
 import type { TagTone } from "./Tag";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface NavIndexItem {
   label: string;
@@ -38,6 +40,9 @@ export interface NavIndexProps extends Omit<ComponentPropsWithoutRef<"nav">, "cl
   /** Renders a link — defaults to a plain `<a href>`. Pass your framework's Link (e.g. Next.js's) for client-side routing, same convention as `NavBar`'s `renderLink` and `@rebar-ui/placement`'s. */
   renderLink?: (props: { href: string; children: ReactNode; className?: string }) => ReactNode;
   className?: string;
+  /** Force bionic reading on/off for item labels, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const defaultRenderLink = ({
@@ -93,9 +98,13 @@ export function NavIndex({
   searchPlaceholder = "Search…",
   renderLink = defaultRenderLink,
   "aria-label": ariaLabel = "Page index",
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: NavIndexProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const [query, setQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [activeStatuses, setActiveStatuses] = useState<string[]>([]);
@@ -122,7 +131,13 @@ export function NavIndex({
     });
   }, [filterableItems, query, activeCategories, activeStatuses]);
 
-  const showFilterUI = items.length > FILTER_UI_THRESHOLD;
+  // Also requires at least one real filterable (categorized) item — a list where every item is
+  // "overview" (no category on any of them, e.g. apps/docs's own /docs sidebar, which isn't
+  // categorized by web/mobile/diagram the way a component list is) has nothing for search/category
+  // chrome to act on: `filtered` would always be empty regardless of query, so a bare item-count
+  // check alone renders a non-functional search box plus a permanent, wrong "No matches." caption
+  // sitting under a fully-populated overview list. Real bug, caught live on /docs.
+  const showFilterUI = items.length > FILTER_UI_THRESHOLD && filterableItems.length > 0;
 
   return (
     <nav
@@ -177,7 +192,7 @@ export function NavIndex({
             {renderLink({
               href: item.href,
               className: "rebar-nav-index-link rebar-nav-index-link-overview",
-              children: item.label,
+              children: renderBionicChildren(item.label, bionicEnabled, bionicOptions),
             })}
           </li>
         ))}
@@ -192,7 +207,7 @@ export function NavIndex({
             {renderLink({
               href: item.href,
               className: "rebar-nav-index-link",
-              children: item.label,
+              children: renderBionicChildren(item.label, bionicEnabled, bionicOptions),
             })}
             {item.status ? (
               <Tag tone={item.statusTone ?? "warning"} className="rebar-nav-index-status">

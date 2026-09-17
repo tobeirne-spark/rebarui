@@ -52,4 +52,13 @@ describe("SplitButton", () => {
     expect(onSelectDelete).not.toHaveBeenCalled();
     expect(onClick).not.toHaveBeenCalled();
   });
+
+  it("supports a destructive variant, applied to both the primary and caret buttons", () => {
+    render(<SplitButton label="Delete" variant="destructive" items={[{ label: "Delete forever" }]} />);
+    expect(screen.getByRole("button", { name: "Delete" })).toHaveAttribute("data-rebar-variant", "destructive");
+    expect(screen.getByRole("button", { name: "More Delete actions" })).toHaveAttribute(
+      "data-rebar-variant",
+      "destructive",
+    );
+  });
 });

@@ -24,7 +24,7 @@ function hashString(value: string): number {
 }
 
 // No real amplitude data exists to visualize (this project's own low-fidelity philosophy, see
-// robot.md — a decorative waveform, not a real audio analysis). A cheap linear congruential
+// agents.md — a decorative waveform, not a real audio analysis). A cheap linear congruential
 // generator advanced from the seed hash gives a deterministic, good-enough-looking spread of bar
 // heights (15%-100%) without pulling in a real FFT/waveform-extraction dependency.
 function generateBarHeights(seed: string, count: number): number[] {
@@ -176,7 +176,6 @@ export function WaveformAudioPlayer({
       aria-label={ariaLabel}
       {...props}
     >
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- decorative voice/audio transport, no track content to caption */}
       <audio
         ref={audioRef}
         src={src}

@@ -2,6 +2,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { Fragment, useEffect, useId, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Empty } from "./Empty";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface SlashCommand {
   key: string;
@@ -20,6 +22,10 @@ export interface SlashCommandMenuProps extends ComponentPropsWithoutRef<"div"> {
    * trigger character or the caret position itself (see the file header comment below). */
   query: string;
   onClose: () => void;
+  /** Force bionic reading on/off for command labels/descriptions and category headings,
+   * overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 interface FlatEntry {
@@ -76,10 +82,14 @@ export function SlashCommandMenu({
   commands,
   query,
   onClose,
+  bionic,
+  bionicOptions,
   className,
   "aria-label": ariaLabel = "Slash commands",
   ...rest
 }: SlashCommandMenuProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const listId = useId();
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
@@ -173,7 +183,7 @@ export function SlashCommandMenu({
                     className="rebar-slash-command-menu-category-heading"
                     data-rebar-part="category-heading"
                   >
-                    {category}
+                    {renderBionicChildren(category, bionicEnabled, bionicOptions)}
                   </div>
                 </li>
               ) : null}
@@ -207,10 +217,12 @@ export function SlashCommandMenu({
                       </span>
                     ) : null}
                     <span className="rebar-slash-command-menu-command-text" data-rebar-part="command-text">
-                      <span className="rebar-slash-command-menu-command-label">{command.label}</span>
+                      <span className="rebar-slash-command-menu-command-label">
+                        {renderBionicChildren(command.label, bionicEnabled, bionicOptions)}
+                      </span>
                       {command.description ? (
                         <span className="rebar-slash-command-menu-command-description">
-                          {command.description}
+                          {renderBionicChildren(command.description, bionicEnabled, bionicOptions)}
                         </span>
                       ) : null}
                     </span>

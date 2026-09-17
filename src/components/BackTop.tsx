@@ -20,7 +20,7 @@ export interface BackTopProps
    * Defaults to `() => window`.
    *
    * This is one of the rare, legitimate exceptions to "avoid function props" (see
-   * `packages/core/robot.md` checklist item 8): there's no serializable way to name "the window
+   * `packages/core/agents.md` checklist item 8): there's no serializable way to name "the window
    * object" or an arbitrary scroll-container element in plain data — a `Block[]` document has no
    * DOM reference to hand this component, so a function is the only way to say "watch and scroll
    * *this* thing" for a caller with a custom scroll container. Passing a non-default `target`

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ScatterChart } from "../components/ScatterChart";
 
 afterEach(cleanup);
@@ -44,5 +44,35 @@ describe("ScatterChart", () => {
     const firstSeriesColor = circles[0]?.getAttribute("fill");
     const secondSeriesColor = circles[3]?.getAttribute("fill");
     expect(firstSeriesColor).not.toBe(secondSeriesColor);
+  });
+
+  it("omits the filter footer entirely unless filterable is set", () => {
+    const { container } = render(<ScatterChart series={series} title="Token cost" />);
+    expect(container.querySelector('[data-rebar-part="chart-filters"]')).not.toBeInTheDocument();
+  });
+
+  it("toggling a series off in the filter footer hides its column and reflows the rest", () => {
+    const { container } = render(<ScatterChart series={series} title="Token cost" filterable />);
+    expect(container.querySelectorAll("circle")).toHaveLength(6);
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    // Only rebar-ui's 3 points remain.
+    expect(container.querySelectorAll("circle")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "antd" })).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    expect(container.querySelectorAll("circle")).toHaveLength(6);
+  });
+
+  it("shows the empty state (with a still-usable filter footer) when every series is toggled off", () => {
+    const { container } = render(<ScatterChart series={series} title="Token cost" filterable />);
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    fireEvent.click(screen.getByRole("button", { name: "rebar-ui" }));
+
+    expect(container.querySelector('[data-rebar-component="empty"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "antd" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "antd" }));
+    expect(container.querySelectorAll("circle").length).toBeGreaterThan(0);
   });
 });

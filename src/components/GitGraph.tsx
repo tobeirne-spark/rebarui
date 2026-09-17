@@ -205,7 +205,7 @@ function buildAccessibleListItem(commit: GitGraphCommit): string {
  * reader user gets the same information a sighted user reads off the graph, not just a headcount.
  *
  * No interactive affordance is added (no click-to-expand, no pan/zoom) — this is a static, read-only
- * diagram by design, so the touch-optimization gate (packages/core/robot.md checklist item 5) has
+ * diagram by design, so the touch-optimization gate (packages/core/agents.md checklist item 5) has
  * nothing to check here; a future interactive feature added to this component would need to clear
  * the real 44×44px touch-target minimum like everywhere else in this codebase.
  */

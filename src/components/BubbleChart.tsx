@@ -1,6 +1,10 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { computeTrendline } from "../chartTrendline";
+import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface BubbleChartPoint {
   x: number;
@@ -30,14 +34,21 @@ export interface BubbleChartProps extends Omit<ComponentPropsWithoutRef<"figure"
   height?: number;
   xFormat?: (v: number) => string;
   yFormat?: (v: number) => string;
+  /** Adds a dashed linear-regression trendline per series, computed over its own real x/y points
+   * (not `size`) — off by default. */
+  trendline?: boolean;
+  /** Force bionic reading on/off for the title and legend labels, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
-  "var(--rebar-color-text-secondary, #757575)",
   "var(--rebar-color-primary, #0066cc)",
   "var(--rebar-color-success, #2e7d32)",
   "var(--rebar-color-warning, #f57c00)",
   "var(--rebar-color-danger, #d32f2f)",
+  "var(--rebar-color-text-secondary, #757575)",
 ];
 
 // Never let a point vanish to an invisible dot or blow up past its neighbors, however extreme the
@@ -63,9 +74,16 @@ export function BubbleChart({
   height = 320,
   xFormat = (v: number) => Math.round(v).toLocaleString(),
   yFormat = (v: number) => Math.round(v).toLocaleString(),
+  trendline,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: BubbleChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
+  const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
   const width = 700;
   const marginLeft = 62;
   const marginRight = 24;
@@ -133,7 +151,9 @@ export function BubbleChart({
         style={{ width: "100%", maxWidth: width, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Bubble chart"}
+        {...backgroundProps}
       >
+        <rect x={0} y={0} width={width} height={height} fill="transparent" data-rebar-part="chart-background" />
         {yTicks.map((t, i) => {
           const y = yScale(t);
           return (
@@ -159,22 +179,70 @@ export function BubbleChart({
         ))}
         {series.map((s, i) => {
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+          const trend = trendline ? computeTrendline(s.points.map((p) => ({ x: p.x, y: p.y }))) : null;
           return (
             <g key={s.label}>
-              {s.points.map((p, j) => (
-                <circle
-                  key={j}
-                  data-rebar-part="bubble"
-                  cx={xScale(p.x)}
-                  cy={yScale(p.y)}
-                  r={radiusFor(p.size)}
-                  fill={color}
-                  opacity={0.65}
-                />
-              ))}
+              {trend
+                ? (() => {
+                    const x1 = Math.min(...s.points.map((p) => p.x));
+                    const x2 = Math.max(...s.points.map((p) => p.x));
+                    return (
+                      <line
+                        x1={xScale(x1)}
+                        y1={yScale(trend.slope * x1 + trend.intercept)}
+                        x2={xScale(x2)}
+                        y2={yScale(trend.slope * x2 + trend.intercept)}
+                        stroke={color}
+                        strokeWidth={1.5}
+                        strokeDasharray="2 4"
+                        opacity={0.6}
+                        data-rebar-part="trendline"
+                      />
+                    );
+                  })()
+                : null}
+              {s.points.map((p, j) => {
+                const key = `${i}:${j}`;
+                const selected = isSelected(key);
+                return (
+                  <circle
+                    key={j}
+                    data-rebar-part="bubble"
+                    cx={xScale(p.x)}
+                    cy={yScale(p.y)}
+                    r={radiusFor(p.size)}
+                    fill={color}
+                    opacity={selected ? 0.9 : 0.65}
+                    stroke={selected ? "var(--rebar-color-bg-primary, #ffffff)" : undefined}
+                    strokeWidth={selected ? 2 : undefined}
+                    style={{ cursor: "pointer" }}
+                    {...getMarkProps(key)}
+                  />
+                );
+              })}
             </g>
           );
         })}
+        {activeKey
+          ? (() => {
+              const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
+              const seriesIndex = Number(seriesIndexStr);
+              const pointIndex = Number(pointIndexStr);
+              const activeSeries = series[seriesIndex];
+              const point = activeSeries?.points[pointIndex];
+              if (!activeSeries || !point) return null;
+              return (
+                <ChartValueTag
+                  x={xScale(point.x)}
+                  y={yScale(point.y)}
+                  viewBoxWidth={width}
+                  viewBoxHeight={height}
+                  accentColor={activeSeries.color ?? DEFAULT_PALETTE[seriesIndex % DEFAULT_PALETTE.length]}
+                  lines={[activeSeries.label, `x: ${xFormat(point.x)}  y: ${yFormat(point.y)}`, `size: ${Math.round(point.size).toLocaleString()}`]}
+                />
+              );
+            })()
+          : null}
       </svg>
       {series.length ? (
         <div
@@ -206,7 +274,7 @@ export function BubbleChart({
                   data-rebar-part="legend-swatch"
                   style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }}
                 />
-                {s.label}
+                {renderBionicChildren(s.label, bionicEnabled, bionicOptions)}
               </span>
             );
           })}
@@ -222,7 +290,7 @@ export function BubbleChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

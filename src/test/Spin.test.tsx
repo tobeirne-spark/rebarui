@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { Spin } from "../components/Spin";
 import { DRUM_ROLL_SPINNER, DRUM_ROLL_SPINNER_DARK } from "../assets/drumRollSpinner";
 import { HOURGLASS_SPINNER, HOURGLASS_SPINNER_DARK } from "../assets/hourglassSpinner";
@@ -83,6 +83,31 @@ describe("Spin", () => {
     );
     expect(screen.getByText("Project list").parentElement).toHaveAttribute("aria-busy", "false");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  describe("delayMs / minDurationMs", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("with delayMs set, a spin that resolves before it elapses never renders", () => {
+      const { container, rerender } = render(<Spin spinning delayMs={200} />);
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      rerender(<Spin spinning={false} delayMs={200} />);
+      act(() => vi.advanceTimersByTime(500));
+      expect(container.querySelector('[data-rebar-component="spin"]')).not.toBeInTheDocument();
+    });
+
+    it("with delayMs set, a spin that outlasts it renders after the delay", () => {
+      render(<Spin spinning delayMs={200} />);
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(200));
+      expect(screen.getByRole("status")).toBeInTheDocument();
+    });
+
+    it("with no delayMs/minDurationMs set, spinning still renders synchronously (unchanged default)", () => {
+      render(<Spin spinning />);
+      expect(screen.getByRole("status")).toBeInTheDocument();
+    });
   });
 
   describe("bionic reading on the tip", () => {

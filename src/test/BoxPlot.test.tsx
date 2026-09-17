@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BoxPlot } from "../components/BoxPlot";
+
+function getHitArea(container: HTMLElement, index: number) {
+  return container.querySelectorAll('[data-rebar-part="box-plot-hit-area"]')[index] as HTMLElement;
+}
+
+function getTagLines(container: HTMLElement) {
+  const tag = container.querySelector('[data-rebar-part="value-tag"]');
+  return Array.from(tag?.querySelectorAll("text") ?? []).map((el) => el.textContent);
+}
 
 afterEach(cleanup);
 
@@ -55,5 +64,49 @@ describe("BoxPlot", () => {
     // Zero interquartile spread collapses to a zero-height box, not a crash or a negative height.
     expect(constantBox).toHaveAttribute("height", "0");
     expect(screen.getByText("Constant")).toBeInTheDocument();
+  });
+
+  it("already draws min-max whiskers per group (a real line, not just the box)", () => {
+    const { container } = render(<BoxPlot groups={groups} title="Response time" />);
+    const whisker = container.querySelector('[data-rebar-part="box-plot-whisker"]');
+    expect(whisker?.tagName.toLowerCase()).toBe("line");
+  });
+
+  it("hovering a group's band shows its statistical summary tag; clicking persists it", () => {
+    const { container } = render(<BoxPlot groups={groups} title="Response time" />);
+    const hitArea = getHitArea(container, 0); // "Control"
+
+    fireEvent.pointerEnter(hitArea);
+    expect(getTagLines(container)).toEqual([
+      "Control (statistical summary)",
+      "Max: 50   Q3: 35",
+      "Median: 28",
+      "Q1: 20   Min: 10",
+    ]);
+    fireEvent.pointerLeave(hitArea);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
+
+    fireEvent.click(hitArea);
+    fireEvent.pointerLeave(hitArea);
+    expect(getTagLines(container)[0]).toBe("Control (statistical summary)");
+  });
+
+  it("clicking a different group's band swaps which summary persists", () => {
+    const { container } = render(<BoxPlot groups={groups} title="Response time" />);
+    fireEvent.click(getHitArea(container, 0));
+    expect(getTagLines(container)[0]).toBe("Control (statistical summary)");
+
+    fireEvent.click(getHitArea(container, 1));
+    expect(getTagLines(container)[0]).toBe("Treatment (statistical summary)");
+  });
+
+  it("a dead click on empty chart space clears the persistent selection", () => {
+    const { container } = render(<BoxPlot groups={groups} title="Response time" />);
+    const background = container.querySelector('[data-rebar-part="chart-background"]') as HTMLElement;
+
+    fireEvent.click(getHitArea(container, 0));
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).toBeInTheDocument();
+    fireEvent.click(background);
+    expect(container.querySelector('[data-rebar-part="value-tag"]')).not.toBeInTheDocument();
   });
 });

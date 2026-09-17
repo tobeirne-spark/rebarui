@@ -3,7 +3,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { Flowchart } from "../components/Flowchart";
 import type { FlowchartStep } from "../components/Flowchart";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.documentElement.removeAttribute("data-rebar-bionic");
+});
 
 function edgeLines(container: HTMLElement) {
   return Array.from(container.querySelectorAll('[data-rebar-part="edge"] line'));
@@ -75,5 +78,25 @@ describe("Flowchart", () => {
     for (const token of points.split(/[\s,]+/).filter(Boolean)) {
       expect(/^-?\d+(\.\d{1,3})?$/.test(token)).toBe(true);
     }
+  });
+
+  it("splits each step's label for bionic reading via SVG tspan when ambient", () => {
+    document.documentElement.setAttribute("data-rebar-bionic", "true");
+    const { container } = render(<Flowchart steps={steps} />);
+    const fixations = container.querySelectorAll("tspan.rebar-bionic-fixation");
+    expect(fixations.length).toBeGreaterThan(0);
+    expect(fixations[0]?.tagName.toLowerCase()).toBe("tspan");
+  });
+
+  it("does not split step labels for bionic reading when not ambient", () => {
+    const { container } = render(<Flowchart steps={steps} />);
+    expect(container.querySelector(".rebar-bionic-fixation")).not.toBeInTheDocument();
+  });
+
+  it("also applies bionic reading to the figcaption title, previously not wired at all", () => {
+    document.documentElement.setAttribute("data-rebar-bionic", "true");
+    const { container } = render(<Flowchart steps={steps} title="Order processing flow" />);
+    const caption = container.querySelector("figcaption");
+    expect(caption?.querySelector(".rebar-bionic-fixation")).toBeInTheDocument();
   });
 });

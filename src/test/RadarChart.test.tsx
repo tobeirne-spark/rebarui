@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { RadarChart } from "../components/RadarChart";
 
 afterEach(cleanup);
@@ -57,5 +57,27 @@ describe("RadarChart", () => {
     // Equal values on every axis produce exactly 3 distinct vertices (a small equilateral triangle).
     const points = polygon?.getAttribute("points")?.trim().split(" ") ?? [];
     expect(points).toHaveLength(3);
+  });
+
+  it("legend items are plain, non-interactive text when filterable is unset", () => {
+    render(<RadarChart axes={axes} series={series} title="Spec comparison" />);
+    const legendItems = screen.getAllByText(/Model [AB]/);
+    for (const item of legendItems) {
+      expect(item.closest("button")).toBeNull();
+    }
+  });
+
+  it("clicking a legend item hides that series' polygon when filterable is set", () => {
+    const { container } = render(<RadarChart axes={axes} series={series} title="Spec comparison" filterable />);
+    expect(container.querySelectorAll('[data-rebar-part="radar-series"]')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: /Model A/ }));
+    expect(container.querySelectorAll('[data-rebar-part="radar-series"]')).toHaveLength(1);
+
+    // The legend item itself stays present (and clickable) so the series can be shown again.
+    const toggledButton = screen.getByRole("button", { name: /Model A/ });
+    expect(toggledButton).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggledButton);
+    expect(container.querySelectorAll('[data-rebar-part="radar-series"]')).toHaveLength(2);
   });
 });

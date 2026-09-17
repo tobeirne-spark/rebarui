@@ -2,6 +2,9 @@ import { forwardRef, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import * as RadixDropdownMenu from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
+import { ChevronDownIcon } from "./icons";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface MultiSelectOption {
   value: string;
@@ -16,6 +19,10 @@ export interface MultiSelectProps extends Omit<ComponentPropsWithoutRef<"button"
   onValuesChange?: (values: string[]) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** Force bionic reading on/off for the trigger summary and option labels, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /**
@@ -37,9 +44,22 @@ export interface MultiSelectProps extends Omit<ComponentPropsWithoutRef<"button"
  * reopening it every time" behavior `Combobox`'s `multiple` mode already has.
  */
 export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(function MultiSelect(
-  { options, values, defaultValues, onValuesChange, placeholder = "Select…", disabled, className, ...props },
+  {
+    options,
+    values,
+    defaultValues,
+    onValuesChange,
+    placeholder = "Select…",
+    disabled,
+    bionic,
+    bionicOptions,
+    className,
+    ...props
+  },
   ref,
 ) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const [internalValues, setInternalValues] = useState<string[]>(defaultValues ?? []);
   const isControlled = values !== undefined;
   const selectedValues = isControlled ? values : internalValues;
@@ -66,6 +86,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(funct
       : selectedLabels.length === 1
         ? selectedLabels[0]
         : `${selectedLabels.length} selected`;
+  const summaryContent = renderBionicChildren(summary, bionicEnabled, bionicOptions);
 
   return (
     // Non-modal: Radix's default (`modal`) traps focus and marks the rest of the page
@@ -84,10 +105,10 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(funct
           {...props}
         >
           <span className="rebar-multi-select-trigger-value" data-rebar-part="value">
-            {summary}
+            {summaryContent}
           </span>
           <span className="rebar-select-icon" aria-hidden="true">
-            ▾
+            <ChevronDownIcon />
           </span>
         </button>
       </RadixDropdownMenu.Trigger>
@@ -112,7 +133,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(funct
                   ✓
                 </RadixDropdownMenu.ItemIndicator>
               </span>
-              {option.label}
+              {renderBionicChildren(option.label, bionicEnabled, bionicOptions)}
             </RadixDropdownMenu.CheckboxItem>
           ))}
         </RadixDropdownMenu.Content>

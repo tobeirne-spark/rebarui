@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { useState } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Descriptions } from "../components/Descriptions";
+import type { DescriptionItem } from "../components/Descriptions";
 
 describe("Descriptions", () => {
   const items = [
@@ -25,5 +28,52 @@ describe("Descriptions", () => {
     const { container } = render(<Descriptions items={items} column={2} />);
     const grid = container.querySelector(".rebar-descriptions-grid") as HTMLElement;
     expect(grid.style.gridTemplateColumns).toBe("repeat(2, 1fr)");
+  });
+
+  it("renders a plain value as static text when editable is unset", () => {
+    render(<Descriptions items={[{ label: "Team", value: "Engineering" }]} />);
+    expect(screen.queryByRole("button", { name: /click to edit/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+  });
+
+  it("makes an editable item a real click-to-edit control, and commits via onItemChange", async () => {
+    const user = userEvent.setup();
+    const onItemChange = vi.fn();
+
+    function Wrapper() {
+      const [items, setItems] = useState<DescriptionItem[]>([
+        { label: "Team", value: "Engineering", editable: true },
+        { label: "Lead", value: "Priya Shah" },
+      ]);
+      return (
+        <Descriptions
+          items={items}
+          onItemChange={(index, newValue) => {
+            onItemChange(index, newValue);
+            setItems((prev) => prev.map((item, i) => (i === index ? { ...item, value: newValue } : item)));
+          }}
+        />
+      );
+    }
+
+    render(<Wrapper />);
+
+    // The editable item is a real button (Editable's read mode), the non-editable one is not.
+    const editButton = screen.getByRole("button", { name: "Team, click to edit" });
+    expect(editButton).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lead, click to edit" })).not.toBeInTheDocument();
+
+    await user.click(editButton);
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "Platform{Enter}");
+
+    expect(onItemChange).toHaveBeenLastCalledWith(0, "Platform");
+  });
+
+  it("leaves a non-string value static even when editable is set (no-op, not a crash)", () => {
+    render(<Descriptions items={[{ label: "Status", value: <strong>Active</strong>, editable: true }]} />);
+    expect(screen.queryByRole("button", { name: /click to edit/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
   });
 });

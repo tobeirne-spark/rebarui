@@ -51,4 +51,31 @@ describe("Tabs", () => {
     );
     expect(screen.getByRole("tabpanel")).toHaveTextContent("Settings content");
   });
+
+  it("size='jumbo' on TabList tags data-rebar-size, and a Tab's description renders and is included in its accessible name", () => {
+    render(
+      <Tabs defaultValue="overview">
+        <TabList aria-label="Sections" size="jumbo">
+          <Tab value="overview" description="See the big picture">
+            Overview
+          </Tab>
+          <Tab value="settings">Settings</Tab>
+        </TabList>
+        <TabPanel value="overview">Overview content</TabPanel>
+        <TabPanel value="settings">Settings content</TabPanel>
+      </Tabs>,
+    );
+    expect(screen.getByRole("tablist")).toHaveAttribute("data-rebar-size", "jumbo");
+    expect(screen.getByText("See the big picture")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Overview See the big picture" })).toBeInTheDocument();
+    // A Tab with no description renders none at all — no empty element, no layout change.
+    const settingsTab = screen.getByRole("tab", { name: "Settings" });
+    expect(settingsTab.querySelector(".rebar-tab-description")).not.toBeInTheDocument();
+  });
+
+  it("default TabList has no data-rebar-size='jumbo' and Tab renders its label normally without description", () => {
+    render(<Sample />);
+    expect(screen.getByRole("tablist")).toHaveAttribute("data-rebar-size", "default");
+    expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
+  });
 });

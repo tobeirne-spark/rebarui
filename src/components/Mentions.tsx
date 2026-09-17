@@ -1,6 +1,8 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ComponentPropsWithoutRef, KeyboardEvent } from "react";
 import clsx from "clsx";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface MentionOption {
   id: string;
@@ -17,6 +19,10 @@ export interface MentionsProps
   options: MentionOption[];
   placeholder?: string;
   rows?: number;
+  /** Force bionic reading on/off for the suggestion list's labels, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 interface ActiveMention {
@@ -54,9 +60,13 @@ export function Mentions({
   options,
   placeholder,
   rows = 3,
+  bionic,
+  bionicOptions,
   className,
   ...rest
 }: MentionsProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue ?? "");
   const current = isControlled ? (value ?? "") : internalValue;
@@ -167,7 +177,7 @@ export function Mentions({
                 selectOption(option);
               }}
             >
-              {option.label}
+              {renderBionicChildren(option.label, bionicEnabled, bionicOptions)}
             </li>
           ))}
         </ul>

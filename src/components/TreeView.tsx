@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import clsx from "clsx";
+import { ChevronDownIcon, ChevronRightIcon } from "./icons";
 
 export interface TreeNode {
   value: string;
@@ -156,7 +157,7 @@ export function TreeView({
                   toggle(entry.node.value, !isOpen);
                 }}
               >
-                {isOpen ? "▾" : "▸"}
+                {isOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
               </button>
             ) : (
               <span className="rebar-tree-view-toggle-spacer" aria-hidden="true" />

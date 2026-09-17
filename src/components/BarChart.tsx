@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { computeTrendline } from "../chartTrendline";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface BarChartBar {
   label: string;
@@ -18,6 +21,13 @@ export interface BarChartProps extends Omit<ComponentPropsWithoutRef<"figure">, 
   /** Falls back to `title` when omitted — the chart's own `role="img"` accessible name. */
   ariaLabel?: string;
   height?: number;
+  /** Adds a dashed linear-regression trendline across the bars (treating each bar's position as
+   * its x value) — off by default. Only meaningful when the bars represent an ordered sequence
+   * (e.g. consecutive months), not an arbitrary unordered category list. */
+  trendline?: boolean;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
@@ -37,9 +47,13 @@ export function BarChart({
   title,
   ariaLabel,
   height = 340,
+  trendline,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: BarChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const width = 700;
   const marginLeft = 74;
   const marginRight = 16;
@@ -132,6 +146,28 @@ export function BarChart({
             </g>
           );
         })}
+        {trendline
+          ? (() => {
+              const trend = computeTrendline(bars.map((bar, i) => ({ x: i, y: bar.value })));
+              if (!trend) return null;
+              const yAt = (x: number) => marginTop + plotHeight - yScale(trend.slope * x + trend.intercept);
+              const x1 = marginLeft + bandWidth * 0.5;
+              const x2 = marginLeft + bandWidth * (bars.length - 0.5);
+              return (
+                <line
+                  x1={x1}
+                  y1={yAt(0)}
+                  x2={x2}
+                  y2={yAt(bars.length - 1)}
+                  stroke="var(--rebar-color-text-secondary, #757575)"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 4"
+                  opacity={0.7}
+                  data-rebar-part="trendline"
+                />
+              );
+            })()
+          : null}
       </svg>
       {title ? (
         <figcaption
@@ -143,7 +179,7 @@ export function BarChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

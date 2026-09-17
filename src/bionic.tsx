@@ -180,3 +180,31 @@ export function useBionicChildren(
   const enabled = bionic ?? ambient;
   return renderBionicChildren(children, enabled, options);
 }
+
+/**
+ * The SVG counterpart to renderBionicChildren/splitStringToNodes above — for a node/edge label
+ * rendered inside an SVG `<text>` element (NodeLinkGraph, MindMap, OrgChart, Flowchart), not a
+ * plain DOM node. SVG's content model doesn't accept an HTML `<span>` as a child of `<text>` at
+ * all (it's invalid there, unlike a plain `<div>`/`<p>`) — the split has to use `<tspan>` instead,
+ * which is why the ordinary hook above can't just be pointed at a diagram label; this is a
+ * genuinely different rendering target, not the same fix reused. A plain function (not a hook),
+ * for the same reason renderBionicChildren is one: diagram labels come from a variable-length
+ * `.map()` over nodes/edges, and calling a hook per-item there would break the rules of hooks —
+ * call `useAmbientBionic()` once at the component's own top level, then this per label.
+ */
+export function renderBionicSvgText(
+  text: string,
+  enabled: boolean,
+  options?: BionicOptions,
+): ReactNode {
+  if (!enabled) return text;
+  return toBionicSegments(text, options).map((segment, i) => {
+    if (segment.style === "plain") return segment.text;
+    const className = segment.style === "fixation" ? "rebar-bionic-fixation" : "rebar-bionic-rest";
+    return (
+      <tspan key={i} className={className}>
+        {segment.text}
+      </tspan>
+    );
+  });
+}

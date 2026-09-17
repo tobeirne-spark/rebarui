@@ -257,7 +257,7 @@ describe("Kanban", () => {
 
     it("does not open the edit form after a drag", () => {
       const onChange = vi.fn();
-      const { container } = render(
+      render(
         <Kanban columns={STICKY_COLUMNS} cards={CARDS} cardVariant="sticky" onChange={onChange} />,
       );
       const card = screen.getByText("Write spec").closest('[data-rebar-part="card"]')!;

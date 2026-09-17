@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
 import { Popover } from "./Popover";
+import { ChevronDownIcon } from "./icons";
 
 export interface SplitButtonItem {
   label: string;
@@ -14,8 +15,9 @@ export interface SplitButtonProps extends Omit<ComponentPropsWithoutRef<"div">, 
   /** The primary action, fired by clicking the main button (never by opening the menu). */
   onClick?: () => void;
   items: SplitButtonItem[];
-  /** Passed through to both the primary and caret Button. */
-  variant?: "primary" | "secondary";
+  /** Passed through to both the primary and caret Button — the full set `Button` itself supports,
+   * e.g. `"destructive"` for a "Delete" + secondary-actions menu. */
+  variant?: "primary" | "secondary" | "tertiary" | "destructive";
   /** Passed through to both the primary and caret Button — matches Button's own size values. */
   size?: "sm" | "md" | "lg";
 }
@@ -63,7 +65,9 @@ export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function
             className="rebar-split-button-trigger"
             data-rebar-part="trigger"
           >
-            <span aria-hidden="true">▾</span>
+            <span aria-hidden="true">
+              <ChevronDownIcon />
+            </span>
           </Button>
         }
       >

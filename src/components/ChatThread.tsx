@@ -1,8 +1,10 @@
 import { forwardRef, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
-import { useBionicChildren } from "../bionic";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { renderMarkdown } from "../markdown";
+import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { Empty } from "./Empty";
 
@@ -17,6 +19,13 @@ export interface ChatMessage {
   content: string;
   status?: ChatMessageStatus;
   timestamp?: string | Date;
+  /** An avatar shown beside this message's bubble — omitted entirely (the message renders exactly
+   * as it did before this field existed, no layout change) unless `avatarFallback` is passed,
+   * matching `Avatar`'s own required `fallback` (used for initials, and — with `avatarPlaceholder`
+   * — deterministic portrait selection, so the same name always gets the same portrait). */
+  avatarFallback?: string;
+  avatarSrc?: string;
+  avatarPlaceholder?: boolean;
 }
 
 export interface ChatThreadProps extends ComponentPropsWithoutRef<"div"> {
@@ -25,13 +34,25 @@ export interface ChatThreadProps extends ComponentPropsWithoutRef<"div"> {
    * in place on the same `id` as streamed chunks arrive, same convention as `FileUpload`
    * (no upload) and `Toast` (no timing) owning none of the async work themselves. */
   messages: ChatMessage[];
-  /** Shows a typing indicator bubble (three animated dots) below the last message. */
+  /** Shows a typing indicator bubble (three animated dots) below the last message, for the case
+   * where no assistant message object exists yet at all. If you've already appended an empty
+   * `status: "streaming"` placeholder message (the common pattern — append it immediately, fill
+   * `content` as tokens arrive), don't also set this: that placeholder already shows its own
+   * bouncing-dots wait state until `content` is non-empty, then swaps to a trailing cursor on its
+   * own — setting both renders two waiting indicators at once. */
   isTyping?: boolean;
   /** Fires when the retry affordance on an errored message (`status: "error"`) is clicked. */
   onRetry?: (message: ChatMessage) => void;
   /** Shown instead of the message list when `messages` is empty. Defaults to "Start the
    * conversation" via the real `Empty` component, not a blank scroll area. */
   emptyMessage?: string;
+  /** Renders each message's `content` as styled Markdown (headings, lists, blockquotes, fenced
+   * code — as a real, embedded `CodeBlock` with its own copy button and language label — and
+   * inline bold/italic/code/links) instead of plain text. On by default: real LLM responses
+   * (Claude, Qwen, and most others) default to Markdown prose, so this is the common case, not
+   * the exception. Set `false` for a transcript that's genuinely plain text (e.g. a support
+   * ticket log) where literal `*`/`#`/backtick characters shouldn't be interpreted as markup. */
+  markdown?: boolean;
   /** Force bionic reading on/off for every message's content, overriding the ambient
    * data-rebar-bionic setting. */
   bionic?: boolean;
@@ -90,17 +111,26 @@ function MessageBubble({
   onRetry,
   bionic,
   bionicOptions,
+  markdown = true,
 }: {
   message: ChatMessage;
   onRetry?: (message: ChatMessage) => void;
   bionic?: boolean;
   bionicOptions?: BionicOptions;
+  markdown?: boolean;
 }) {
-  const content = useBionicChildren(message.content, bionic, bionicOptions);
+  // Called unconditionally (a real hook — state/effects inside) regardless of whether `bionic`
+  // ends up overriding it below; short-circuiting this call would violate the rules of hooks.
+  const ambientBionic = useAmbientBionic();
+  // One resolved boolean shared by both rendering paths below — `renderMarkdown` has no
+  // ambient-attribute awareness of its own, so it needs this resolved explicitly rather than a
+  // raw, possibly-undefined `bionic` prop.
+  const bionicEnabled = bionic ?? ambientBionic;
+  const plainContent = renderBionicChildren(message.content, bionicEnabled, bionicOptions);
   const status = message.status ?? "sent";
   const isError = status === "error";
 
-  return (
+  const bubble = (
     <div
       className={clsx("rebar-chat-message", `rebar-chat-message-${message.role}`)}
       data-rebar-part="message"
@@ -108,11 +138,36 @@ function MessageBubble({
       data-rebar-status={status}
     >
       <div className="rebar-chat-message-bubble" data-rebar-part="bubble">
-        <span className="rebar-chat-message-content" data-rebar-part="content">
-          {content}
-        </span>
+        {markdown ? (
+          <div className="rebar-chat-message-content" data-rebar-part="content">
+            {renderMarkdown(message.content, { bionic: bionicEnabled, bionicOptions })}
+          </div>
+        ) : (
+          <span className="rebar-chat-message-content" data-rebar-part="content">
+            {plainContent}
+          </span>
+        )}
         {status === "streaming" ? (
-          <span className="rebar-chat-message-cursor" data-rebar-part="cursor" aria-hidden="true" />
+          message.content.length === 0 ? (
+            // Waiting for the first token — bouncing dots, the same "something is about to
+            // happen" signal `TypingIndicator` uses, not the trailing blink cursor below (that
+            // one belongs *after real content*, not standing in for its total absence). See
+            // ref/HEURISTICS.md's chat heuristics: a streaming message owns this swap itself so a
+            // caller's own `isTyping` (for the different case — no message object at all yet)
+            // never ends up doubled up with it.
+            <span
+              className="rebar-chat-message-waiting"
+              data-rebar-part="waiting"
+              role="status"
+              aria-label="Waiting for a response"
+            >
+              <span className="rebar-chat-typing-dot" />
+              <span className="rebar-chat-typing-dot" />
+              <span className="rebar-chat-typing-dot" />
+            </span>
+          ) : (
+            <span className="rebar-chat-message-cursor" data-rebar-part="cursor" aria-hidden="true" />
+          )
         ) : null}
       </div>
       <div className="rebar-chat-message-meta" data-rebar-part="meta">
@@ -145,6 +200,27 @@ function MessageBubble({
       ) : null}
     </div>
   );
+
+  // Omitted entirely (no wrapping row, no layout change at all) unless `avatarFallback` is
+  // passed — a transcript with no avatars renders exactly as it did before this field existed.
+  if (!message.avatarFallback) return bubble;
+
+  return (
+    <div
+      className="rebar-chat-message-row"
+      data-rebar-part="message-row"
+      data-rebar-role={message.role}
+    >
+      <Avatar
+        fallback={message.avatarFallback}
+        src={message.avatarSrc}
+        placeholder={message.avatarPlaceholder}
+        size="sm"
+        alt=""
+      />
+      {bubble}
+    </div>
+  );
 }
 
 /**
@@ -164,7 +240,7 @@ function MessageBubble({
  * button, which itself scrolls to bottom and resumes auto-scroll on click.
  */
 export const ChatThread = forwardRef<HTMLDivElement, ChatThreadProps>(function ChatThread(
-  { messages, isTyping, onRetry, emptyMessage, bionic, bionicOptions, className, ...props },
+  { messages, isTyping, onRetry, emptyMessage, bionic, bionicOptions, markdown = true, className, ...props },
   ref,
 ) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -221,6 +297,7 @@ export const ChatThread = forwardRef<HTMLDivElement, ChatThreadProps>(function C
                 onRetry={onRetry}
                 bionic={bionic}
                 bionicOptions={bionicOptions}
+                markdown={markdown}
               />
             ))}
             {isTyping ? <TypingIndicator /> : null}

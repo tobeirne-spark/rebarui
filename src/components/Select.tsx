@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import * as RadixSelect from "@radix-ui/react-select";
 import clsx from "clsx";
+import { ChevronDownIcon } from "./icons";
 
 export interface SelectOption {
   value: string;
@@ -15,12 +16,17 @@ export interface SelectProps {
   onValueChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** Matches `Button`'s own three-tier scale (`sm`=32px, `md`=44px, `lg`=48px) exactly, so a
+   * `Select` placed beside a `Button` in the same toolbar/row lines up by default instead of
+   * needing a one-off height override — see `ref/HEURISTICS.md`'s form-control sizing heuristic.
+   * Default `"md"`. */
+  size?: "sm" | "md" | "lg";
   className?: string;
   "aria-label"?: string;
 }
 
 export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select(
-  { options, value, defaultValue, onValueChange, placeholder, disabled, className, ...props },
+  { options, value, defaultValue, onValueChange, placeholder, disabled, size = "md", className, ...props },
   ref,
 ) {
   return (
@@ -34,11 +40,12 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
         ref={ref}
         className={clsx("rebar-select-trigger", className)}
         data-rebar-component="select"
+        data-rebar-size={size}
         {...props}
       >
         <RadixSelect.Value placeholder={placeholder} />
         <RadixSelect.Icon className="rebar-select-icon" aria-hidden="true">
-          ▾
+          <ChevronDownIcon />
         </RadixSelect.Icon>
       </RadixSelect.Trigger>
       <RadixSelect.Portal>

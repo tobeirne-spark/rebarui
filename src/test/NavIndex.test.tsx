@@ -94,4 +94,22 @@ describe("NavIndex", () => {
     render(<NavIndex items={singleStatusItems} />);
     expect(screen.queryByRole("button", { name: "Filter by status" })).not.toBeInTheDocument();
   });
+
+  it("hides search/filter chrome (and never shows a false 'No matches') for a long list with zero categorized items", () => {
+    // The real shape of apps/docs's own /docs sidebar: more than FILTER_UI_THRESHOLD items, none
+    // of them categorized — every item is "overview," so there's nothing for search/category
+    // chrome to actually filter. Real bug this caught: item count alone triggered the chrome, but
+    // the permanently-empty filterable set meant the search box did nothing and "No matches."
+    // rendered under a fully-populated, always-shown list.
+    const uncategorizedLongList = Array.from({ length: 13 }, (_, i) => ({
+      label: `Doc page ${i}`,
+      href: `/docs/page-${i}`,
+    }));
+    render(<NavIndex items={uncategorizedLongList} />);
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(screen.queryByText("No matches.")).not.toBeInTheDocument();
+    for (const item of uncategorizedLongList) {
+      expect(screen.getByRole("link", { name: item.label })).toBeInTheDocument();
+    }
+  });
 });

@@ -18,7 +18,7 @@ function mockContainerGeometry(
   initial: { scrollTop?: number; clientHeight: number; scrollHeight: number },
 ) {
   let scrollTop = initial.scrollTop ?? 0;
-  let clientHeight = initial.clientHeight;
+  const clientHeight = initial.clientHeight;
   let scrollHeight = initial.scrollHeight;
 
   Object.defineProperty(el, "scrollTop", {
@@ -286,6 +286,104 @@ describe("ChatThread", () => {
         />,
       );
       expect(geometry.getScrollTop()).toBe(900);
+    });
+  });
+
+  describe("per-message avatar", () => {
+    it("omits the avatar row entirely when no message has avatarFallback (no layout change)", () => {
+      const { container } = render(
+        <ChatThread messages={[{ id: "1", role: "user", content: "Hi" }]} />,
+      );
+      expect(container.querySelector('[data-rebar-part="message-row"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-rebar-part="message"]')).toBeInTheDocument();
+    });
+
+    it("renders a real Avatar next to a message that has avatarFallback", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[
+            { id: "1", role: "user", content: "Hi", avatarFallback: "Jane Doe" },
+            { id: "2", role: "assistant", content: "Hello", avatarFallback: "Assistant" },
+          ]}
+        />,
+      );
+      const rows = container.querySelectorAll('[data-rebar-part="message-row"]');
+      expect(rows).toHaveLength(2);
+      expect(container.querySelectorAll('[data-rebar-component="avatar"]')).toHaveLength(2);
+    });
+
+    it("renders the real Avatar fallback initials from avatarFallback (jsdom never loads the placeholder image itself — same documented limitation Avatar's own test suite already established)", () => {
+      render(
+        <ChatThread
+          messages={[
+            { id: "1", role: "assistant", content: "Hi", avatarFallback: "Ada Lovelace", avatarPlaceholder: true },
+          ]}
+        />,
+      );
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
+
+    it("tags the avatar row with the message's role", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[{ id: "1", role: "user", content: "Hi", avatarFallback: "Jane Doe" }]}
+        />,
+      );
+      expect(container.querySelector('[data-rebar-part="message-row"]')).toHaveAttribute(
+        "data-rebar-role",
+        "user",
+      );
+    });
+  });
+
+  describe("markdown rendering (on by default — real Claude/Qwen responses default to Markdown prose)", () => {
+    it("renders headings, bold/italic/inline-code, and lists as real elements, not literal markdown syntax", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[
+            {
+              id: "1",
+              role: "assistant",
+              content: "# Title\n\nA **bold** and *italic* word, plus `inline code`.\n\n- one\n- two",
+            },
+          ]}
+        />,
+      );
+      expect(screen.getByRole("heading", { level: 1, name: "Title" })).toBeInTheDocument();
+      const bubble = container.querySelector('[data-rebar-part="content"]')!;
+      expect(bubble.querySelector("strong")).toHaveTextContent("bold");
+      expect(bubble.querySelector("em")).toHaveTextContent("italic");
+      expect(bubble.querySelector("code")).toHaveTextContent("inline code");
+      expect(bubble.querySelectorAll("li")).toHaveLength(2);
+      expect(container.textContent).not.toContain("**bold**");
+      expect(container.textContent).not.toContain("# Title");
+    });
+
+    it("renders a fenced code block as a real, embedded CodeBlock with its own copy button and language label", () => {
+      const { container } = render(
+        <ChatThread
+          messages={[{ id: "1", role: "assistant", content: "Here:\n\n```tsx\nconst x = 1;\n```" }]}
+        />,
+      );
+      const fence = container.querySelector('[data-rebar-part="content"] [data-rebar-component="code-block"]');
+      expect(fence).toBeInTheDocument();
+      expect(fence).toHaveTextContent("const x = 1;");
+      expect(fence).toHaveTextContent("tsx");
+      expect(fence?.querySelector('[data-rebar-part="copy-button"]')).toBeInTheDocument();
+    });
+
+    it("markdown={false} falls back to plain text — literal markup characters render as-is", () => {
+      const { container } = render(
+        <ChatThread messages={[{ id: "1", role: "assistant", content: "**not bold**" }]} markdown={false} />,
+      );
+      expect(screen.getByText("**not bold**")).toBeInTheDocument();
+      expect(container.querySelector("strong")).not.toBeInTheDocument();
+    });
+
+    it("plain user/assistant text with no special syntax still renders correctly under markdown mode", () => {
+      render(<ChatThread messages={BASE_MESSAGES} />);
+      expect(screen.getByText("Hello there")).toBeInTheDocument();
+      expect(screen.getByText("Hi, how can I help?")).toBeInTheDocument();
     });
   });
 });
