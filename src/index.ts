@@ -105,6 +105,11 @@ export type { BadgeProps, BadgeTone } from "./components/Badge";
 export { Empty } from "./components/Empty";
 export type { EmptyProps, EmptyIcon, EmptyIllustration } from "./components/Empty";
 
+// Exposed standalone (not just via Empty's `illustration="ghost"`) so a consumer can reuse the
+// same hand-drawn "nothing here" ghost as a placeholder image elsewhere -- e.g. an unassigned
+// avatar -- without duplicating the asset.
+export { GHOST_EMPTY_PLACEHOLDER } from "./assets/ghostEmptyPlaceholder";
+
 export { Skeleton } from "./components/Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./components/Skeleton";
 
