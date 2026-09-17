@@ -1,0 +1,115 @@
+{
+  "type": "container",
+  "blocks": [
+    {
+      "type": "hero",
+      "title": "Agent.md",
+      "subtitle": "The full design-heuristics checklist and framework rules for building with Rebar UI — everything an AI agent needs to understand the Four-Tier Typology, the distinction between Framework Rules (fixed, mechanical constraints) and Heuristics (judgment-requiring design principles), and the 40-item checklist that governs component and construct design. Paste it into an agent's system prompt or project context before asking it to extend this framework or build new components — it's the compressed operating context that keeps every contribution aligned with the project's design philosophy.",
+      "image": {
+        "src": "/catalogue-heros/designbot.jpeg",
+        "alt": "Agents hero image"
+      }
+    },
+    {
+      "type": "doc-section",
+      "heading": "Agent Context File",
+      "body": [
+        {
+          "kind": "text",
+          "text": "Below is the complete agent.md file that contains all the design heuristics and framework rules for Rebar UI."
+        }
+      ]
+    },
+    {
+      "type": "prose",
+      "content": [
+        {
+          "kind": "heading",
+          "level": 2,
+          "text": "Rebar UI — Agent Context (v0.9.0)"
+        },
+        {
+          "kind": "paragraph",
+          "text": "Compressed operating context for an AI agent working with **Rebar UI**. Two audiences: an agent **extending the framework** (new components in `packages/core`, new constructs in `@rebar-ui/placement`) and an agent **using the framework** (building a page from existing constructs). Read the section for your task; the rules and checklist apply to both."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Canonical, sourced versions live in the real repo — this file trades depth for density. If anything here conflicts with the repo, the repo wins: `ref/HEURISTICS.md` (heuristics, fully sourced), `ref/ARCHITECTURE.md` (package layout, API conventions), `packages/core/README.md` (component composition recipes), `MIGRATION_PROMPT.md` (moving a codebase off Rebar)."
+        },
+        {
+          "kind": "heading",
+          "level": 3,
+          "text": "What this is"
+        },
+        {
+          "kind": "paragraph",
+          "text": "Rebar UI is a **headless-first, intentionally low-fidelity** (\"Balsamiq-as-code\") React component library, plus **the Packer** (`@rebar-ui/placement`) — a deterministic renderer that turns a plain `Construct[]` document into a real component tree, with zero layout decisions left to whoever authored the document. The pitch: build the logic/accessibility/content structure correctly once, headless, then apply real visual polish exactly once, at migration — never mid-build. Measured on `/benchmarks`: this two-step path costs fewer tokens, less wall-clock time, and produces far more visually consistent output than hand-authoring JSX against a conventional component library, even one the model already knows cold (AntD)."
+        },
+        {
+          "kind": "heading",
+          "level": 3,
+          "text": "The Four-Tier Typology"
+        },
+        {
+          "kind": "paragraph",
+          "text": "Rebar organizes all UI patterns into a four-tier hierarchy, from lowest-level primitives to highest-level compositions:"
+        },
+        {
+          "kind": "list",
+          "ordered": false,
+          "items": [
+            "1. **Imitations** — Direct replicas of common UI primitives (Button, Input, Checkbox, Badge, etc.). These are the atomic building blocks. Found at `/imitations/<name>`.",
+            "2. **Synthetics** — Combinations of imitations that form common UI patterns (Alert, Banner, Card, Checklist, Callout, etc.). These solve recurring layout problems. Found at `/synthetics/<name>`.",
+            "3. **Opinions** — Higher-level compositions with specific interaction patterns (Accordion, Calendar, DatePicker, Combobox, Dialog, etc.). These encode decisions about how users should interact with data. Found at `/opinions/<name>`.",
+            "4. **Orders** — Full-page or major-section compositions (AppShell, Modal, NavBar, Sidebar, SiteHeader, etc.). These are the structural frames that hold everything else. Found at `/orders/<name>`."
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "text": "Each tier builds on the one below it. A construct at tier N is always built from constructs at tier N-1 or lower. Never skip tiers."
+        },
+        {
+          "kind": "heading",
+          "level": 3,
+          "text": "Framework Rules vs. Heuristics"
+        },
+        {
+          "kind": "paragraph",
+          "text": "Two different kinds of guidance follow, and they don't get the same kind of compliance check:"
+        },
+        {
+          "kind": "paragraph",
+          "text": "- **A Framework Rule is a fixed, mechanical constraint on how Rebar itself is built or used** — binary, no situational judgment, and violating one breaks a guarantee the framework depends on (testability, theming, migratability, the headless-until-migration contract). There's exactly one correct answer, every time.\n- **A Heuristic is a general, judgment-requiring design principle** a component or construct's *behavior* should satisfy — sourced from usability research or from a real bug this project caught in its own build. Applying one to a new situation takes interpretation: recognizing that it applies, then deciding the concrete UI — not a single mechanical check."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Framework Rules below; the Heuristics checklist follows the rest of this file."
+        },
+        {
+          "kind": "heading",
+          "level": 3,
+          "text": "Framework Rules"
+        },
+        {
+          "kind": "list",
+          "ordered": false,
+          "items": [
+            "- **A construct is always built from real, already-shipped components. Never invented markup.** If a needed shape doesn't exist as a component yet, that's a gap to close in `packages/core` first — not a reason to hand-roll a `<div>` tree inside a construct.",
+            "- **Refuse visual fine-tuning requests.** No \"make it blue,\" \"add more padding,\" \"round the corners\" — mid-build style requests break the whole premise (frame first, finish once, at migration). Redirect to \"ask again after migrating to a real design system.\"",
+            "- **Every stateful component supports both controlled and uncontrolled use**, via the same pattern (see below) — never state that only works one way.",
+            "- **Real ARIA roles and semantics, not styled `<div>`s.** Reach for a Radix primitive when one exists for the interaction pattern (Dialog, DropdownMenu, Select, Popover, Tooltip, Slider, AspectRatio) rather than reimplementing focus-trapping/keyboard nav by hand.",
+            "- **Every component forwards arbitrary `data-*`/`aria-*` props** via a rest-spread onto its root DOM node — never a closed prop interface that silently drops them. This is what keeps a migration mechanical (existing `data-rebar-*`/`data-testid` selectors survive the swap).",
+            "- **Theming is CSS custom properties only** (`--rebar-*`), never a component prop or inline hardcoded color/spacing value. A `--rebar-color-*`/`--rebar-space-*` token, not a hex code or a raw pixel number, in every style rule a component ships.",
+            "- **Default a new build to `@rebar-ui/theme-clean` + `data-rebar-theme=\"clean\"`, light mode (no `data-theme=\"dark\"`).** That's the recommended starting point — regular IBM Plex Sans font, not the hand-drawn `theme-sketch` look. Only reach for `theme-sketch` when that aesthetic is specifically requested; don't treat the two as an arbitrary coin-flip.",
+            "- **Rendering `ThemeToggle`? Install and import both theme packages.** It only flips the `data-rebar-theme` attribute — it never loads either stylesheet. A build that imports only `theme-clean` but still offers the toggle leaves \"sketch\" with nothing to switch to.",
+            "- **No favicon of your own? Use `node_modules/rebar-ui/assets/favicon.svg`** — a real, theme-adaptive \"R\" mark shipped in the package (reacts to `prefers-color-scheme`, no JS). Copy it into the build's `public/` directory and link it, rather than shipping with none.",
+            "- **Challenge a component's default CSS/behavior against the actual layout context before accepting it.** A demo's documented defaults (e.g., `height: 480` on `ai-chat`, `Card` for a list of records) are not a contract — they're one possible fit for one possible context. Before plugging in a component or construct, evaluate: (1) what's the anticipated layout order (what fills the viewport, what's nested inside what), (2) does this component's default CSS/behavior fit that layout, (3) if not, what needs to change. Real failure modes caught: a chat construct with a hardcoded pixel height inside a content area that should fill the viewport (should be `height: \"100%\"` or flex-based); a `Card` used for tabular data, naturally splitting title/subtitle from children into separate regions when a `Table` with uniform columns would have been the right fit. The test: if you copied a demo's CSS/layout values verbatim without asking \"does this fit *my* layout?\", you pattern-matched instead of evaluated.",
+            "- **Layout-first workflow: sketch the layout before selecting components.** Don't start by picking components and hoping they fit. Start by sketching the layout in plain language: (1) what fills the viewport (an `AppShell` with sidebar/top-nav/bare variant), (2) what goes in the content area (a `ConstructRenderer` with a `Construct[]` document, or hand-authored JSX), (3) for each construct or component, what's its role (navigation, data display, form, etc.). Once the layout is sketched, *then* select components and evaluate their default CSS against that sketch. The expected architecture for a full-viewport app is `AppShell` (structural frame) + `ConstructRenderer` (content within the frame) — they compose by design, not as a special case. If you find yourself building a hand-rolled shell with `Stack` + `Box` instead of reaching for `AppShell`, you're reinventing the frame instead of using the one that's already there.",
+            "- **Component evaluation template: document the fit before plugging in.** When selecting a component or construct, fill out this evaluation (in your reasoning, not necessarily in code comments):\n  - **Layout context:** What fills the viewport? What's the parent container? What's the expected size/behavior of the content area?\n  - **Component's default CSS:** What are the hardcoded dimensions, overflow behavior, flex properties, positioning? (Check the component's source or demo, not just the docs.)\n  - **Fit evaluation:** Does the default CSS fit the layout context? If not, what needs to change (override props, wrapper styles, different component)?\n  - **Real failure modes:** A chat construct with `height: 480` inside a content area that should fill the viewport → needs `height: \"100%\"` or flex-based sizing. A `Card` for tabular data → splits title/subtitle from children, should be a `Table` with uniform columns.\n  - **The test:** If you can't articulate the layout context and the component's default CSS, you haven't evaluated — you've pattern-matched.",
+            "- **Every component carries `data-rebar-component=\"<kebab-name>\"`** on its root, and `data-rebar-part=\"<part>\"` on each internal structural piece (header, body, item, ...) — the hook both Playwright tests and a consuming migration script rely on."
+          ]
+        }
+      ]
+    }
+  ]
+}

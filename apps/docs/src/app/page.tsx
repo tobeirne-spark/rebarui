@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { Box, Button, Card, CodeBlock, Heading, Stack, Text } from "rebar-ui";
-import type { Block, FeatureGridItem, PillarGridItem } from "@rebar-ui/placement";
+import type { Construct, FeatureGridItem, PillarGridItem } from "@rebar-ui/placement";
 import { ComparisonDemo } from "@/components/ComparisonDemo";
 import { NextBlockRenderer } from "@/components/NextBlockRenderer";
 
@@ -9,24 +9,24 @@ import { NextBlockRenderer } from "@/components/NextBlockRenderer";
 // hand-authored Rebar components — the hero, both section headers, the feature row, the
 // three-pillars grid, the migration comparison (a `comparison` block, both sides real: the Rebar
 // side rendered live, the antd side a real separate build embedded via an `iframe` block), and the
-// "get started" section below are all `BlockRenderer` output from plain Block[] documents, the same
-// mechanism /benchmarks measures and /docs/heuristics explains. Proof-by-existence, per
+// "get started" section below are all `BlockRenderer` output from plain Construct[] documents, the same
+// mechanism /benchmarks measures and /about/agent explains. Proof-by-existence, per
 // ref/MARKETING_SITE.md: this site really is built the way it says Rebar is meant to be used, not
 // just described that way. `Section` (page-chrome padding/background) is the one thing the Packer
 // itself is built from and stays hand-authored; `ComparisonDemo` isn't hand-drawn content either —
 // it's a thin client wrapper that keeps the comparison's iframe src in sync with the ambient theme
-// toggle, then hands the resulting `Block[]` straight to the Packer like everything else here.
+// toggle, then hands the resulting `Construct[]` straight to the Packer like everything else here.
 
-const HERO_BLOCKS: Block[] = [
+const HERO_BLOCKS: Construct[] = [
   {
     type: "hero",
-    badge: "🚧 v0.1 — actively building, see [the repo](https://github.com/ob27/rebarui)",
+    badge: "🚧 0.10.0 — see [the repo](https://github.com/ob27/rebarui)",
     title: "Rebar UI",
     subtitle:
       "Headless-first, intentionally low-fidelity React components, built to be built with by an LLM through a small placement layer — not hand-authored. Measured cheaper, faster, and more consistent than hand-authored Ant Design on a single build — and once a design goes through 15+ rounds of revision, still cheaper overall even after fully migrating to a real design system for production.",
     actions: [
-      { label: "Getting Started", href: "/docs/getting-started", variant: "primary" },
-      { label: "Design Heuristics", href: "/docs/heuristics" },
+      { label: "Agent Context", href: "/about/agent", variant: "primary" },
+      { label: "Design Heuristics", href: "/about/agent" },
     ],
     codeSnippet: "npm install rebar-ui",
   },
@@ -47,7 +47,7 @@ const MICRO_FEATURES: FeatureGridItem[] = [
   },
 ];
 
-const THEME_SECTION_HEADER: Block[] = [
+const THEME_SECTION_HEADER: Construct[] = [
   {
     type: "section-header",
     kicker: "The migration path",
@@ -57,7 +57,7 @@ const THEME_SECTION_HEADER: Block[] = [
   },
 ];
 
-const COMPOSITE_DEMO_BLOCKS: Block[] = [
+const COMPOSITE_DEMO_BLOCKS: Construct[] = [
   {
     type: "filter-bar",
     searchPlaceholder: "Search projects…",
@@ -75,13 +75,13 @@ const COMPOSITE_DEMO_BLOCKS: Block[] = [
     ],
   },
   // The full Composite-tier spec also has a "New Project" modal — deliberately left out of this
-  // live demo. The `modal` block always renders forced-open (see /docs/heuristics#control for
+  // live demo. The `modal` block always renders forced-open (see /about/agent#control for
   // why), which is correct for a benchmark scaffold that's the whole page, but would cover this
   // entire homepage as a fixed overlay here. The antd screenshot on the right still shows it —
   // that's a real difference between "a live demo embedded in a bigger page" and "the whole spec."
 ];
 
-const PILLARS_HEADER: Block[] = [
+const PILLARS_HEADER: Construct[] = [
   {
     type: "section-header",
     kicker: "Three pillars",
@@ -95,19 +95,19 @@ const PILLARS: PillarGridItem[] = [
   {
     title: "Design Heuristics",
     body: "Spacing, type scale, color, and interaction defaults baked in — cited to Nielsen, Shneiderman, Material, Carbon, and USWDS, not invented. See each rule applied live by the DSL Packer.",
-    href: "/docs/heuristics",
+    href: "/about/agent",
     cta: "Read the heuristics",
   },
   {
-    title: "Design Components",
-    body: "38 components and counting, working toward full Ant Design v6 parity — v1's supported migration target for web components, with a real codemod, not just a prompt. Other targets (and other component sets, like mobile) get the generic migration prompt for now.",
-    href: "/components",
-    cta: "Browse components",
+    title: "Four Tiers",
+    body: "166 components and 39 blocks, classified by where they sit between a raw static primitive and a piece of page-level structural law — Imitations, Synthetics, Opinions, Orders. Working toward full Ant Design v6 parity, with a real codemod, not just a prompt.",
+    href: "/about/agent",
+    cta: "Browse the tiers",
   },
   {
     title: "Benchmarks",
     body: "The actual argument for building this way, measured: cheaper, faster, and far more visually consistent than hand-authored AntD on a single build — and cheaper overall even after migrating away for real theming, once a design goes through 15+ rounds of revision.",
-    href: "/benchmarks",
+    href: "/about/benchmarks",
     cta: "See the numbers",
   },
 ];
@@ -158,14 +158,14 @@ export default function Home() {
           />
           <Text size="xs" color="secondary" style={{ textAlign: "center" }}>
             Both sides are genuinely live implementations, not a real one next to a screenshot: the
-            left renders in this page directly from a ~15-line <code>Block[]</code> document; the
+            left renders in this page directly from a ~15-line <code>Construct[]</code> document; the
             right is a real, separate Vite+antd build (see{" "}
             <code>apps/docs/scripts/build-antd-demo.sh</code>) embedded live in an iframe. Both
             intentionally show the base list view rather than the &quot;New Project&quot; modal
             from the full spec, so the comparison is of the same thing on both sides — see the
             modal itself, live and properly closable, on the{" "}
-            <a href="/components/dialog" className="rebar-link">Dialog reference page</a>. Same underlying spec as the{" "}
-            <a href="/benchmarks/tiers" className="rebar-link">Composite tier</a> benchmark.
+            <a href="/opinions/dialog" className="rebar-link">Dialog reference page</a>. Same underlying spec as the{" "}
+            <a href="/about/benchmarks/tiers" className="rebar-link">Composite tier</a> benchmark.
           </Text>
         </Stack>
       </Section>
@@ -193,11 +193,11 @@ import { Button } from "rebar-ui";
 </html>`}
             />
             <Stack direction="row" gap="md">
-              <Link href="/docs/getting-started">
+              <Link href="/about">
                 <Button variant="primary">Read the docs</Button>
               </Link>
-              <Link href="/components">
-                <Button variant="secondary">Browse components</Button>
+              <Link href="/about/agent">
+                <Button variant="secondary">Browse the tiers</Button>
               </Link>
             </Stack>
           </Stack>

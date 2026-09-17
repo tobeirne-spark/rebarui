@@ -160,6 +160,26 @@ export function FloatingSelectionToolbar({
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
   }, [containerRef, minSelectionLength]);
 
+  // The toolbar's position is only ever computed from a `selectionchange` event — scrolling the
+  // page (or any scrollable ancestor of `containerRef`) doesn't fire that event at all, since the
+  // actual Selection object hasn't changed, only its on-screen position has. Left unhandled, a
+  // scroll leaves the toolbar frozen at its last computed viewport coordinates while the real
+  // selection moves out from underneath it — a visibly "detached," stuck-in-place toolbar over
+  // unrelated content. Closing on scroll (rather than live-repositioning) matches real precedent
+  // (Medium/Notion's own selection toolbars both dismiss on scroll) and avoids the jank of
+  // repositioning a floating element on every scroll tick.
+  useEffect(() => {
+    if (!selectedText) return;
+    const handleScroll = () => {
+      setSelectedText(null);
+      setSelectionRect(null);
+    };
+    // Capture phase: scroll events don't bubble, so this is the only way to catch a scroll on any
+    // scrollable ancestor of the selection, not just `window` itself.
+    window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", handleScroll, { capture: true });
+  }, [selectedText]);
+
   // Measure the toolbar's own real rendered size (once it exists) and clamp against the viewport
   // — same two-pass idea as `ContextMenu`'s `clampedPosition` effect: position first at the raw,
   // unclamped spot so there's something to measure, then correct it once real dimensions exist.

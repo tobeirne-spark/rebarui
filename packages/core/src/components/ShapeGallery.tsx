@@ -20,7 +20,7 @@ const FAVORITES_TAB = "__rebar_shape_gallery_favorites__";
 export interface ShapeGalleryProps
   // `onSelect` collides with the native `onSelect` DOM event (text-selection, not "pick an item")
   // that HTMLAttributes declares on every element — same collision class as `title` on `Card`,
-  // see robot.md's checklist item 6. Omit the native one and redeclare our own below.
+  // see agents.md's checklist item 6. Omit the native one and redeclare our own below.
   extends Omit<ComponentPropsWithoutRef<"div">, "onSelect"> {
   items: ShapeGalleryItem[];
   favoriteIds?: string[];

@@ -1,3 +1,20 @@
+/**
+ * The published `rebar-ui` version — kept in sync with `package.json`'s `"version"` field by hand
+ * at each release (same manual-sync discipline as the docs site's own decoupled version display),
+ * not derived at build time. Stamped onto `<html data-rebar-ui-version>` the first time this
+ * package is imported (see below), so any rebar-ui-built page — this project's own docs site or a
+ * consumer's real app — carries a real, inspectable record of which version built it, without the
+ * consumer having to wire anything up. `RebarDevTools` reads this same attribute to display it.
+ */
+export const REBAR_UI_VERSION = "0.10.1";
+
+if (typeof document !== "undefined") {
+  document.documentElement.setAttribute("data-rebar-ui-version", REBAR_UI_VERSION);
+}
+
+export { AppShell } from "./components/AppShell";
+export type { AppShellProps } from "./components/AppShell";
+
 export { Box } from "./components/Box";
 export type { BoxProps } from "./components/Box";
 
@@ -86,7 +103,7 @@ export { Badge } from "./components/Badge";
 export type { BadgeProps, BadgeTone } from "./components/Badge";
 
 export { Empty } from "./components/Empty";
-export type { EmptyProps } from "./components/Empty";
+export type { EmptyProps, EmptyIcon, EmptyIllustration } from "./components/Empty";
 
 export { Skeleton } from "./components/Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./components/Skeleton";
@@ -117,6 +134,18 @@ export type { RateProps } from "./components/Rate";
 
 export { NavBar } from "./components/NavBar";
 export type { NavBarProps, NavBarItem } from "./components/NavBar";
+
+export { SidebarNav } from "./components/SidebarNav";
+export type {
+  SidebarNavProps,
+  SidebarNavItem,
+  SidebarNavEntry,
+  SidebarNavHeading,
+  SidebarNavDivider,
+  SidebarNavLogo,
+  SidebarNavWorkspace,
+  SidebarNavSearch,
+} from "./components/SidebarNav";
 
 export { NavIndex } from "./components/NavIndex";
 export type { NavIndexProps, NavIndexItem } from "./components/NavIndex";
@@ -211,6 +240,39 @@ export type { BubbleChartProps, BubbleChartSeries, BubbleChartPoint } from "./co
 export { Heatmap } from "./components/Heatmap";
 export type { HeatmapProps, HeatmapCell } from "./components/Heatmap";
 
+export { StackedLineChart } from "./components/StackedLineChart";
+export type { StackedLineChartProps, StackedLineChartSeries } from "./components/StackedLineChart";
+
+export { StackedAreaChart } from "./components/StackedAreaChart";
+export type { StackedAreaChartProps, StackedAreaChartSeries } from "./components/StackedAreaChart";
+
+export { SteppedBarChart } from "./components/SteppedBarChart";
+export type { SteppedBarChartProps, SteppedBarChartBar } from "./components/SteppedBarChart";
+
+export { StepChart } from "./components/StepChart";
+export type { StepChartProps, StepChartSeries, StepChartStep } from "./components/StepChart";
+
+export { IndexChart } from "./components/IndexChart";
+export type { IndexChartProps, IndexChartSeries } from "./components/IndexChart";
+
+export { Histogram } from "./components/Histogram";
+export type { HistogramProps, HistogramSeries } from "./components/Histogram";
+
+export { RibbonChart } from "./components/RibbonChart";
+export type { RibbonChartProps, RibbonChartSeries } from "./components/RibbonChart";
+
+export { CalendarHeatmap } from "./components/CalendarHeatmap";
+export type { CalendarHeatmapProps, CalendarHeatmapCell } from "./components/CalendarHeatmap";
+
+export { BulletGraph } from "./components/BulletGraph";
+export type { BulletGraphProps, BulletGraphMeasure } from "./components/BulletGraph";
+
+export { PackedBubbleChart } from "./components/PackedBubbleChart";
+export type { PackedBubbleChartProps, PackedBubbleItem } from "./components/PackedBubbleChart";
+
+export { UMAPPlot } from "./components/UMAPPlot";
+export type { UMAPPlotProps, UMAPPlotCluster, UMAPPlotPoint } from "./components/UMAPPlot";
+
 export { RichTextEditor } from "./components/RichTextEditor";
 export type { RichTextEditorProps } from "./components/RichTextEditor";
 
@@ -234,6 +296,12 @@ export type { GeoChartProps, GeoChartRegion, GeoChartLayoutEntry } from "./compo
 
 export { GanttChart } from "./components/GanttChart";
 export type { GanttChartProps, GanttChartTask } from "./components/GanttChart";
+
+export { PertChart } from "./components/PertChart";
+export type { PertChartProps, PertTask } from "./components/PertChart";
+
+export { WaybackSlider } from "./components/WaybackSlider";
+export type { WaybackSliderProps } from "./components/WaybackSlider";
 
 export { SankeyDiagram } from "./components/SankeyDiagram";
 export type { SankeyDiagramProps, SankeyDiagramNode, SankeyDiagramLink } from "./components/SankeyDiagram";
@@ -295,6 +363,48 @@ export type { BionicOptions, BionicSegment } from "./bionic";
 export { useLongPress } from "./useLongPress";
 export type { UseLongPressOptions, LongPressHandlers } from "./useLongPress";
 
+/**
+ * A small, curated icon set (RemixIcon-sourced, Apache-2.0 — see `icons.tsx`'s own doc comment),
+ * exported publicly so a consumer building real content (nav items, buttons, demo data — exactly
+ * what this project's own docs site does for `SidebarNav`'s reference page) has a real, on-brand
+ * set to reach for instead of falling back to plain emoji glyphs, which render inconsistently
+ * across platforms and read as inconsistent with every other shipped component's iconography.
+ */
+export {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  MicIcon,
+  StopCircleIcon,
+  SendPlaneIcon,
+  CopyIcon,
+  DeleteIcon,
+  MoveIcon,
+  DownloadIcon,
+  MoreIcon,
+  LockIcon,
+  UnlockIcon,
+  SearchIcon,
+  ErrorWarningIcon,
+  WifiOffIcon,
+  TimeIcon,
+  CloseIcon,
+  HomeIcon,
+  FolderIcon,
+  SettingsIcon,
+  QuestionIcon,
+  DashboardIcon,
+  LineChartIcon,
+  ChatIcon,
+  TeamIcon,
+  TaskIcon,
+  CreditCardIcon,
+  CalendarIcon,
+} from "./components/icons";
+export type { IconProps } from "./components/icons";
+export { useDelayedLoading } from "./useDelayedLoading";
+export type { UseDelayedLoadingOptions } from "./useDelayedLoading";
+
 export { BarChart } from "./components/BarChart";
 export type { BarChartProps, BarChartBar } from "./components/BarChart";
 
@@ -316,6 +426,9 @@ export type { FunnelChartProps, FunnelChartStage } from "./components/FunnelChar
 export { WaterfallChart } from "./components/WaterfallChart";
 export type { WaterfallChartProps, WaterfallChartStep } from "./components/WaterfallChart";
 
+export { DistributionChart } from "./components/DistributionChart";
+export type { DistributionChartProps, DistributionSeries } from "./components/DistributionChart";
+
 export { RadarChart } from "./components/RadarChart";
 export type { RadarChartProps, RadarChartSeries } from "./components/RadarChart";
 
@@ -324,6 +437,8 @@ export type { BoxPlotProps, BoxPlotGroup } from "./components/BoxPlot";
 
 export { Drawer } from "./components/Drawer";
 export type { DrawerProps, DrawerSide } from "./components/Drawer";
+export { SidePanel } from "./components/SidePanel";
+export type { SidePanelProps } from "./components/SidePanel";
 
 export { BottomSheet } from "./components/BottomSheet";
 export type { BottomSheetProps } from "./components/BottomSheet";
@@ -336,6 +451,16 @@ export type { MobileTabBarProps, MobileTabBarItem } from "./components/MobileTab
 
 export { ScrollArea } from "./components/ScrollArea";
 export type { ScrollAreaProps } from "./components/ScrollArea";
+export { Footer } from "./components/Footer";
+export type { FooterProps, FooterLinkItem, FooterChipItem } from "./components/Footer";
+export { ScrollMask } from "./components/ScrollMask";
+export type { ScrollMaskProps } from "./components/ScrollMask";
+export { Ellipsis } from "./components/Ellipsis";
+export type { EllipsisProps, EllipsisDirection } from "./components/Ellipsis";
+export { FloatingBubble } from "./components/FloatingBubble";
+export type { FloatingBubbleProps, FloatingBubbleAxis, FloatingBubbleOffset } from "./components/FloatingBubble";
+export { FloatingPanel } from "./components/FloatingPanel";
+export type { FloatingPanelProps, FloatingPanelRef } from "./components/FloatingPanel";
 
 export { SplitButton } from "./components/SplitButton";
 export type { SplitButtonProps, SplitButtonItem } from "./components/SplitButton";
@@ -390,6 +515,32 @@ export type { GitGraphProps, GitGraphCommit } from "./components/GitGraph";
 export { VersionHistory } from "./components/VersionHistory";
 export type { VersionHistoryProps, VersionSnapshot } from "./components/VersionHistory";
 
+export { IndexBar } from "./components/IndexBar";
+export type { IndexBarProps, IndexBarGroup } from "./components/IndexBar";
+
+export { GraphExplorer } from "./components/GraphExplorer";
+export type {
+  GraphExplorerProps,
+  GraphExplorerNode,
+  GraphExplorerEdge,
+  GraphExplorerAction,
+} from "./components/GraphExplorer";
+
+export { ErrorBlock } from "./components/ErrorBlock";
+export type { ErrorBlockProps, ErrorBlockStatus } from "./components/ErrorBlock";
+
+export { NoticeBar } from "./components/NoticeBar";
+export type { NoticeBarProps, NoticeBarTone } from "./components/NoticeBar";
+
+export { ProgressCircle } from "./components/ProgressCircle";
+export type { ProgressCircleProps } from "./components/ProgressCircle";
+
+export { Selector } from "./components/Selector";
+export type { SelectorProps, SelectorOption } from "./components/Selector";
+
+export { NumberKeyboard } from "./components/NumberKeyboard";
+export type { NumberKeyboardProps } from "./components/NumberKeyboard";
+
 export { ChatThread } from "./components/ChatThread";
 export type {
   ChatThreadProps,
@@ -407,12 +558,8 @@ export type { UploadQueueProps, UploadQueueItem } from "./components/UploadQueue
 export { InfiniteScrollGrid } from "./components/InfiniteScrollGrid";
 export type { InfiniteScrollGridProps } from "./components/InfiniteScrollGrid";
 
-export { GoalTracker } from "./components/GoalTracker";
-export type {
-  GoalTrackerProps,
-  GoalTrackerGoal,
-  GoalTrackerFocusArea,
-} from "./components/GoalTracker";
+export { TodoItem } from "./components/TodoItem";
+export type { TodoItemProps } from "./components/TodoItem";
 
 export { TextToSpeechBar } from "./components/TextToSpeechBar";
 export type { TextToSpeechBarProps, TtsState, TtsVoiceOption } from "./components/TextToSpeechBar";
@@ -428,6 +575,9 @@ export type { SlashCommandMenuProps, SlashCommand } from "./components/SlashComm
 
 export { VoiceComposer } from "./components/VoiceComposer";
 export type { VoiceComposerProps, VoiceComposerState } from "./components/VoiceComposer";
+
+export { AiChatInput } from "./components/AiChatInput";
+export type { AiChatInputProps, AiChatInputIntent } from "./components/AiChatInput";
 
 export { ShapeGallery } from "./components/ShapeGallery";
 export type { ShapeGalleryProps, ShapeGalleryItem } from "./components/ShapeGallery";

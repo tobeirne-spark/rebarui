@@ -239,6 +239,17 @@ describe("FloatingSelectionToolbar", () => {
     expect(top).toBeGreaterThanOrEqual(0);
   });
 
+  it("closes on scroll rather than staying frozen at a stale position", () => {
+    render(<Harness />);
+    const container = screen.getByTestId("container");
+    act(() => selectTextWithin(container, 0, 11));
+    expect(screen.getByRole("toolbar")).toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event("scroll")));
+
+    expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
+  });
+
   it("clamps horizontally so the toolbar never renders past the right edge of the viewport", () => {
     mockSelectionRect({
       top: 300,

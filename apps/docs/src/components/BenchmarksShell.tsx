@@ -6,14 +6,14 @@ import { Box, NavIndex, Stack } from "rebar-ui";
 import type { NavIndexItem } from "rebar-ui";
 
 const BENCHMARK_SECTIONS: NavIndexItem[] = [
-  { href: "/benchmarks", label: "Overview" },
-  { href: "/benchmarks/scenarios", label: "What this costs you" },
-  { href: "/benchmarks/receipts", label: "The receipts" },
-  { href: "/benchmarks/claude", label: "Claude Sonnet 5" },
-  { href: "/benchmarks/qwen", label: "Qwen3.7" },
-  { href: "/benchmarks/kimi", label: "Kimi-K3" },
-  { href: "/benchmarks/tiers", label: "Simple/Composite/Complex" },
-  { href: "/benchmarks/iteration", label: "Does iteration change it?" },
+  { href: "/about/benchmarks", label: "Overview" },
+  { href: "/about/benchmarks/scenarios", label: "What this costs you" },
+  { href: "/about/benchmarks/receipts", label: "The receipts" },
+  { href: "/about/benchmarks/claude", label: "Claude Sonnet 5" },
+  { href: "/about/benchmarks/qwen", label: "Qwen3.7" },
+  { href: "/about/benchmarks/kimi", label: "Kimi-K3" },
+  { href: "/about/benchmarks/tiers", label: "Simple/Composite/Complex" },
+  { href: "/about/benchmarks/iteration", label: "Does iteration change it?" },
 ];
 
 // Mirrors DocsShell exactly (cross-page left nav via NavIndex), sized wider (1040 vs. 960) since

@@ -115,7 +115,12 @@ export function SpeedDial({
       <span
         aria-hidden="true"
         style={{
-          display: "inline-block",
+          display: "inline-flex",
+          // A plain "+" glyph reads fine at the button's own default text size, but a real icon
+          // (an SVG from packages/core/src/components/icons.tsx, sized in `em`s) inherits that
+          // same small ~14px font-size otherwise, rendering tiny and lost inside a 44px circular
+          // button — this gives custom icons real room to fill it properly.
+          fontSize: icon ? "1.5em" : undefined,
           transform: currentOpen ? "rotate(45deg)" : "rotate(0deg)",
           transition: "transform 200ms",
         }}

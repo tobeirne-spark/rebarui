@@ -1,8 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ActionSheet } from "../components/ActionSheet";
 import { Button } from "../components/Button";
+
+// jsdom doesn't implement a real `PointerEvent` constructor in every version this project's CI
+// runs against — a minimal, local stand-in, the same technique NodeLinkGraph.test.tsx uses.
+class FakePointerEvent extends MouseEvent {
+  pointerId: number;
+  pointerType: string;
+  constructor(type: string, params: MouseEventInit & { pointerId?: number; pointerType?: string } = {}) {
+    super(type, params);
+    this.pointerId = params.pointerId ?? 0;
+    this.pointerType = params.pointerType ?? "mouse";
+  }
+}
 
 const ACTIONS = [
   { label: "Share" },
@@ -75,10 +87,24 @@ describe("ActionSheet", () => {
     expect(screen.getByRole("dialog", { name: "Choose an action" })).toBeInTheDocument();
   });
 
-  it("renders a decorative drag handle, same as BottomSheet", () => {
+  it("renders the visible pill as aria-hidden, same as BottomSheet", () => {
     render(<ActionSheet open actions={ACTIONS} />);
     const handle = document.querySelector('[data-rebar-part="handle"]');
     expect(handle).not.toBeNull();
     expect(handle).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("dragging the handle down past ~25% of the sheet's height dismisses it, same as BottomSheet", () => {
+    const onOpenChange = vi.fn();
+    render(<ActionSheet open onOpenChange={onOpenChange} actions={ACTIONS} />);
+    const dragHandle = document.querySelector('[data-rebar-part="drag-handle"]') as HTMLElement;
+
+    act(() => {
+      dragHandle.dispatchEvent(new FakePointerEvent("pointerdown", { bubbles: true, clientY: 100, pointerId: 1, button: 0 }));
+      window.dispatchEvent(new FakePointerEvent("pointermove", { clientY: 250, pointerId: 1 }));
+      window.dispatchEvent(new FakePointerEvent("pointerup", { clientY: 250, pointerId: 1 }));
+    });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

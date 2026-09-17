@@ -6,3 +6,9 @@ named archetypes) and render it through `BlockRenderer`, instead of hand-authori
 `README.md` for the full archetype list and per-harness prompt guidance (agentic vs.
 single-completion-call, and image-driven tasks specifically). Read `dist/index.d.ts` for exact
 current TypeScript shapes, not `src/`.
+
+`BlockRenderer` already renders the correct page root (a plain wrapper on top of the page's own
+already-correct background) — render its output directly as the page, never nested inside a
+`Card` or other bounded/backgrounded element "for structure." That wraps the whole page in one
+component's border/shadow/padding, producing a page that looks like a single giant grey/boxed
+rectangle instead of a normal page with individual cards on it.

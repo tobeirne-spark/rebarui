@@ -2,10 +2,10 @@ import Link from "next/link";
 import { Stack, Text } from "rebar-ui";
 
 const FOOTER_LINKS = [
-  { href: "/docs", label: "Docs" },
-  { href: "/docs/theming", label: "Theming & Defaults" },
-  { href: "/docs/migration", label: "Migration" },
-  { href: "/docs/contributing", label: "Contributing" },
+  { href: "/about", label: "About" },
+  { href: "/about/agent", label: "Design Heuristics" },
+  { href: "/about/benchmarks", label: "Benchmarks" },
+  { href: "https://github.com/ob27/rebarui/blob/main/CONTRIBUTING.md", label: "Contributing" },
 ];
 
 export function SiteFooter() {

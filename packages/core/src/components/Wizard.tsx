@@ -8,6 +8,8 @@ import { Select } from "./Select";
 import { Steps } from "./Steps";
 import type { StepItem } from "./Steps";
 import { Stack } from "./Stack";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 /** Above this step count, `Steps` would otherwise render one item per step no matter how many
  * there are — fine for a handful, unreadable for a long wizard. Caps the visible window at the
@@ -74,14 +76,30 @@ export interface WizardProps extends Omit<ComponentPropsWithoutRef<"div">, "onSu
   backLabel?: string;
   nextLabel?: string;
   onSubmit?: (values: Record<string, WizardValue>) => void;
+  /** Force bionic reading on/off for field labels, overriding the ambient data-rebar-bionic
+   * setting. Step titles/descriptions are forwarded to `Steps`, which already wires its own
+   * bionic rendering. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /** `Text`'s polymorphic `as` prop doesn't widen its prop types to the target element, so it can't
  * accept `htmlFor` when rendered `as="label"` — a real native `<label>`, styled to match, instead. */
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: ReactNode }) {
+function FieldLabel({
+  htmlFor,
+  children,
+  bionic,
+  bionicOptions,
+}: {
+  htmlFor?: string;
+  children: ReactNode;
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
+}) {
+  const content = useBionicChildren(children, bionic, bionicOptions);
   return (
     <label htmlFor={htmlFor} className="rebar-text" data-rebar-size="sm">
-      {children}
+      {content}
     </label>
   );
 }
@@ -111,6 +129,8 @@ export function Wizard({
   backLabel = "Back",
   nextLabel = "Next",
   onSubmit,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: WizardProps) {
@@ -144,7 +164,7 @@ export function Wizard({
       data-rebar-state={isLastStep ? "last-step" : "in-progress"}
       {...props}
     >
-      <Steps {...windowSteps(steps, current)} />
+      <Steps {...windowSteps(steps, current)} bionic={bionic} bionicOptions={bionicOptions} />
       <Stack gap="md" className="rebar-wizard-step" data-rebar-part="step">
         {step.fields.map((field, i) => {
           const key = `${current}-${i}`;
@@ -156,6 +176,8 @@ export function Wizard({
                 checked={value === true}
                 onCheckedChange={(checked) => setValue(key, checked === true)}
                 data-rebar-part="field"
+                bionic={bionic}
+                bionicOptions={bionicOptions}
               >
                 {field.label}
                 {field.required ? " *" : ""}
@@ -165,7 +187,7 @@ export function Wizard({
           if (field.kind === "select") {
             return (
               <Stack key={key} gap="xs" data-rebar-part="field">
-                <FieldLabel>
+                <FieldLabel bionic={bionic} bionicOptions={bionicOptions}>
                   {field.label}
                   {field.required ? " *" : ""}
                 </FieldLabel>
@@ -182,7 +204,7 @@ export function Wizard({
             const fieldId = `rebar-wizard-field-${key}`;
             return (
               <Stack key={key} gap="xs" data-rebar-part="field">
-                <FieldLabel htmlFor={fieldId}>
+                <FieldLabel htmlFor={fieldId} bionic={bionic} bionicOptions={bionicOptions}>
                   {field.label}
                   {field.required ? " *" : ""}
                 </FieldLabel>
@@ -200,7 +222,7 @@ export function Wizard({
           const fieldId = `rebar-wizard-field-${key}`;
           return (
             <Stack key={key} gap="xs" data-rebar-part="field">
-              <FieldLabel htmlFor={fieldId}>
+              <FieldLabel htmlFor={fieldId} bionic={bionic} bionicOptions={bionicOptions}>
                 {field.label}
                 {field.required ? " *" : ""}
               </FieldLabel>

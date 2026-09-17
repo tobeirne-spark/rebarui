@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface CandlestickDataPoint {
   label: string;
@@ -24,6 +26,9 @@ export interface CandlestickChartProps extends Omit<ComponentPropsWithoutRef<"fi
   /** Fill for a candle that closed below its own open. */
   downColor?: string;
   yFormat?: (v: number) => string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /**
@@ -41,9 +46,12 @@ export function CandlestickChart({
   upColor = "var(--rebar-color-success, #2e7d32)",
   downColor = "var(--rebar-color-danger, #d32f2f)",
   yFormat = (v: number) => v.toFixed(2),
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: CandlestickChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const width = 700;
   const marginLeft = 62;
   const marginRight = 20;
@@ -145,7 +153,7 @@ export function CandlestickChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

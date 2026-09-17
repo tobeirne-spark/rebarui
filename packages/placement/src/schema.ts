@@ -63,7 +63,7 @@
  * `heuristic` covers one entry of a heuristics/design-principles page: a heading, a bolded one-line
  * rule, `doc-section`-style prose for the rationale (same tiny inline markup), and an optional code
  * sample and/or a real nested `Block[]` demo. Added to finish converting this project's own
- * `/docs/heuristics` off hand-authored JSX. Distinct from `doc-section` specifically because a
+ * `/about/agent` off hand-authored JSX. Distinct from `doc-section` specifically because a
  * heuristic's `rule` needs its own fixed bold styling separate from the rationale that follows it,
  * and because it carries its own stable `id` rather than slugifying one from `title` (this
  * project's real heuristic ids are hand-picked and already referenced elsewhere, e.g. by a
@@ -76,7 +76,7 @@
  *
  * `spin-card` is a small, centered card demonstrating a loading state — a real `Spin` overlaying a
  * few lines of content, sized and labeled by the caller rather than hardcoded, even though its
- * first real use (a "fetching" demo on `/docs/heuristics`) only ever needed one specific size/tip.
+ * first real use (a "fetching" demo on `/about/agent`) only ever needed one specific size/tip.
  *
  * `site-header` is a real site nav bar — logo (optionally linked, optionally with an icon image),
  * a `NavBar` capped at half the header's own width (ref/HEURISTICS.md "Nav overflow" — the logo and
@@ -85,7 +85,14 @@
  * the plain `header` block above (a page-content title bar, not a site-wide nav) — added after this
  * project's own hand-authored `SiteHeader.tsx` component turned out to be exactly this same
  * shape, worth a real block rather than every consuming app re-inventing the same logo+nav+trailing
- * composition and 50%-width-cap flex arithmetic by hand.
+ * composition and 50%-width-cap flex arithmetic by hand. `logo.iconPath`/`iconViewBox` (an
+ * alternative to `iconSrc`) render the mark as a real inline `<svg fill="currentColor">` instead
+ * of an `<img>` — added after this project's own logo (a `currentColor` SVG loaded via `iconSrc`)
+ * turned out not to react to this site's own light/dark toggle at all: an externally-loaded image
+ * has no visibility into the host page's DOM/CSS, `currentColor` inside it just resolves to that
+ * file's own isolated default regardless of what the page's theme actually is. An inline `<svg>`
+ * doesn't have that problem — it's a real element in the page, so it inherits the ambient text
+ * color exactly like everything else already does.
  *
  * `scatter-chart`, `line-chart`, and `stacked-bar-chart` wrap `rebar-ui`'s chart components of the
  * same names — promoted from hand-drawn, one-off SVG helpers this project's own `/benchmarks`
@@ -134,6 +141,31 @@
  * convention `nav-bar`'s own overflow already uses). The schema shape (`columns: string[]`,
  * `rows: TableRow[]`) didn't change — every existing `table` block (the Simple/Composite/Complex
  * tier specs on /benchmarks) keeps working unmodified; the new fields are additive and optional.
+ *
+ * `side-panel` wraps `rebar-ui`'s `SidePanel` — a persistent, non-modal side panel (the Slack
+ * "thread"/"details" pattern), rendered beside a nested `main: Construct[]` document rather than over
+ * it. Distinct from `modal` (a forced-open `Dialog`, a backdrop overlay meant for a static-render
+ * context only): a side panel has no backdrop and is meant for a real, live page — the main
+ * content stays fully visible and interactive while it's open. Unmeasured, like the rest of this
+ * batch.
+ *
+ * `error-block` wraps `rebar-ui`'s `ErrorBlock` — a whole-page failure/empty state (a generic
+ * error, no network, no data, the server's busy), each with a sensible default icon/copy so a
+ * document only needs `status` for the common case. This is this project's first genuinely
+ * Mobile-only block (see `ref/BLOCKS.md`'s Global/Web/Mobile split — every other antd-mobile-
+ * derived pattern shipped so far landed as a `packages/core` component only, never promoted into
+ * a block). `action` is the retry affordance, rendered the same small-secondary-button way
+ * `banner`/`header`/`callout` already render theirs — no `icon` override field, unlike the real
+ * component's own `icon` prop: an arbitrary icon isn't serializable `Block[]` data, and the
+ * per-`status` default icon already covers the archetype's real use; reach for the real
+ * `ErrorBlock` component directly if a custom icon is genuinely needed.
+ *
+ * `footer` wraps `rebar-ui`'s `Footer` — page-bottom chrome (a "no more results" label, a plain
+ * content line, a row of links, a row of chips), the second Mobile block (see `ref/BLOCKS.md`),
+ * mirroring how `site-header` already wraps `NavBar` for the top of a page. No `onLinkClick`/
+ * `onChipClick` in the schema — a click handler isn't serializable `Block[]` data; `links` render
+ * as real `<a href>`s (via `renderLink`, same as every other link-bearing block) and a plain click
+ * is the only interaction a `type: "link"` chip needs here.
  */
 
 export type IconName = "close" | "info" | "refresh" | "clock";
@@ -243,6 +275,35 @@ export interface DataListItem {
   action?: Action;
 }
 
+export interface GoalTrackerGoalData {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface GoalTrackerFocusAreaData {
+  id: string;
+  text: string;
+  goals: GoalTrackerGoalData[];
+}
+
+/** Mirrors `ChatThread`'s own `ChatMessage.status` — meaningful only for a live (`source`-bound)
+ * message list, where a caller needs to show "sending"/"streaming"/"error" per message the way a
+ * real streaming reply requires. Ignored by a literal, static `messages` array. */
+export type AiChatMessageStatus = "sending" | "sent" | "streaming" | "error";
+
+export interface AiChatMessageData {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  status?: AiChatMessageStatus;
+  /** An avatar shown beside this message — omitted entirely unless `avatarFallback` is set,
+   * matching `ChatThread`'s own `ChatMessage` shape exactly. */
+  avatarFallback?: string;
+  avatarSrc?: string;
+  avatarPlaceholder?: boolean;
+}
+
 /**
  * One row of a component's prop reference, as generated from real TypeScript types (see
  * apps/docs/scripts/generate-props.mjs) — the `props-table` block renders exactly this shape, so
@@ -271,6 +332,14 @@ export type ProseNode =
 export interface NavBarItem {
   label: string;
   href: string;
+  /** When set, this item renders as a dropdown trigger instead of a plain link. */
+  megaMenu?: {
+    columns: {
+      heading: string;
+      items: { label: string; description?: string; href: string; icon?: IconName; external?: boolean }[];
+    }[];
+    footer?: { label: string; href: string };
+  };
 }
 
 export interface NavIndexItem {
@@ -287,7 +356,7 @@ export interface SectionNavItem {
   label: string;
 }
 
-export type Block =
+export type Construct =
   | { type: "header"; title: string; action?: Action }
   | {
       type: "nav-bar";
@@ -301,7 +370,25 @@ export type Block =
     }
   | {
       type: "site-header";
-      logo: { label: string; href?: string; iconSrc?: string };
+      logo: {
+        label: string;
+        href?: string;
+        /** An image URL, rendered via a plain `<img>` — fine for a raster logo or a fixed-color
+         * brand SVG, but an `<img>`-loaded external file can never see this page's own DOM/CSS
+         * (a `currentColor` fill inside it just resolves to that file's own default, not this
+         * page's ambient text color) — so it can't react to a light/dark toggle. Use
+         * `iconPath`/`iconViewBox` instead for a mark that needs to. */
+        iconSrc?: string;
+        /** An SVG path's `d` attribute, rendered inline (`<svg fill="currentColor"><path
+         * d={iconPath} /></svg>`) instead of `iconSrc` — a real DOM element, so it inherits the
+         * ambient text color and reacts live to this page's own light/dark toggle, the one thing
+         * `iconSrc` fundamentally can't do. Takes priority over `iconSrc` when both are set. */
+        iconPath?: string;
+        /** The `viewBox` the path was drawn against — required alongside `iconPath` if it isn't
+         * the common icon default `"0 0 24 24"` (e.g. a hand-drawn wordmark drawn at its own,
+         * larger native scale). */
+        iconViewBox?: string;
+      };
       items: NavBarItem[];
       ariaLabel?: string;
       /** Right-aligned trailing content, pushed to the header's far edge. Omit for a header that
@@ -350,16 +437,73 @@ export type Block =
     }
   | { type: "banner"; tone: Tone; icon?: IconName; text: string; action?: Action }
   | { type: "checklist"; heading?: string; items: string[] }
+  | {
+      type: "goal-tracker";
+      /** Literal, fixed-at-author-time seed — omit both when using `source` instead. */
+      aspiration?: string;
+      focusAreas?: GoalTrackerFocusAreaData[];
+      /** Live binding: a key into `BlockRenderer`'s `data` prop, resolving to a live
+       * `GoalTrackerSource` (`./live`) — takes priority over the literal fields above when set.
+       * Presence of this field is what makes `goal-tracker` an Opinion, not a Synthetic — see
+       * `./opinions`. */
+      source?: string;
+      /** Live binding: a key into `handlers`, resolving to a `GoalTrackerChangeHandler` — fired
+       * with the *entire* next `{aspiration, focusAreas}` state after any local edit (rename/
+       * toggle/add/delete), the same whole-state `onChange` contract `card-kanban`'s own `Kanban`
+       * already uses. Only meaningful alongside `source`. */
+      onChange?: string;
+      celebration?: "none" | "small" | "big";
+    }
+  | {
+      type: "ai-chat";
+      title?: string;
+      /** A literal, fixed-at-author-time transcript — omit when using `source` instead. A
+       * document setting neither renders an empty transcript. */
+      messages?: AiChatMessageData[];
+      /** Live binding: a key into `BlockRenderer`'s `data` prop, resolving to a live `AiChatSource`
+       * (`./live`) the caller owns and mutates in place (appending/streaming into the same array) —
+       * takes priority over `messages` when both are set. Presence of this field (or `onSend`) is
+       * what makes `ai-chat` an Opinion, not a Synthetic — see `./opinions`. */
+      source?: string;
+      /** Live binding: a key into `handlers`, resolving to an `AiChatSendHandler` — replaces the
+       * local-only "append the message, never reply" demo behavior with a real send call. Only
+       * meaningful alongside `source`. */
+      onSend?: string;
+      placeholder?: string;
+      /** Shows the dictation (voice-to-text) toggle on the input. Default `false`. */
+      dictation?: boolean;
+      /** Height of the scrollable transcript area, in px. Default `240`. */
+      height?: number;
+    }
   | { type: "callout"; tone: Tone; icon?: IconName; title: string; subtitle?: string }
   | { type: "feature-grid"; items: FeatureGridItem[] }
   | { type: "pillar-grid"; items: PillarGridItem[] }
   | { type: "card-grid"; items: CardGridItem[] }
   | { type: "persona-card"; items: PersonaCardItem[] }
-  | { type: "form"; heading?: string; fields: FormField[]; submitLabel?: string }
+  | {
+      type: "form";
+      heading?: string;
+      fields: FormField[];
+      submitLabel?: string;
+      /** Live binding: a key into `handlers`, resolving to a `FormSubmitHandler` (`./live`) —
+       * fired with every field's current value, keyed by that field's own `label` (fields have no
+       * separate id in this schema). Every field renders as a real controlled input either way
+       * (typing/checking/selecting always works); without this set, submitting is a no-op, same
+       * as today. Presence of this field is what makes `form` an Opinion, not a Synthetic — see
+       * `./opinions`. No `source` for initial/prefilled values yet — a real gap for an edit-in-
+       * place form, not solved in this pass (see ref/HEURISTICS.md #59's own forward-looking
+       * note on full CRUD). */
+      onSubmit?: string;
+    }
   | {
       type: "table";
       columns: string[];
-      rows: TableRow[];
+      /** A literal, fixed-at-author-time row set — omit when using `source` instead. */
+      rows?: TableRow[];
+      /** Live binding: a key into `BlockRenderer`'s `data` prop, resolving to a live `TableSource`
+       * (`./live`) — takes priority over `rows` when set. Presence of this field (or `onAddRow`/
+       * `onRowAction`) is what makes `table` an Opinion, not a Synthetic — see `./opinions`. */
+      source?: string;
       /** Enables per-column sort (the real `Table` component's own sort, not a fixed order) —
        * on by default. */
       sortable?: boolean;
@@ -377,6 +521,17 @@ export type Block =
        * layer of its own; a caller needing the new row to stick needs its own storage, the same
        * way `card-kanban`'s board state is real-but-local for the same reason. */
       addable?: boolean | { label?: string };
+      /** Live binding: a key into `handlers`, resolving to a `TableAddRowHandler` — replaces the
+       * local-only append above with a real, persisted add. Falls back to the local-only append
+       * when unset, even with `source` set. */
+      onAddRow?: string;
+      /** Live binding: a key into `handlers`, resolving to a `TableRowActionHandler` — fired when
+       * a row's own `actionLabel` button is clicked (that button is a no-op with no `onRowAction`
+       * set, same as today). */
+      onRowAction?: string;
+      /** Passed straight through to the real `Table` component's own `loading` prop. Meaningful
+       * with or without `source`. */
+      loading?: boolean;
       /** Shows an "Export CSV" button — downloads the currently visible rows (post search/filter)
        * as a real `.csv` file, entirely client-side. */
       exportable?: boolean;
@@ -387,31 +542,57 @@ export type Block =
     }
   | { type: "data-list"; items: DataListItem[] }
   | { type: "filter-bar"; searchPlaceholder?: string; filterLabel?: string; filterOptions?: string[]; actionLabel?: string }
-  | { type: "tabs"; tabs: { label: string; blocks: Block[] }[] }
-  | { type: "modal"; title: string; blocks: Block[]; confirmLabel?: string; cancelLabel?: string }
-  | { type: "wizard"; steps: WizardStep[]; submitLabel?: string; backLabel?: string; nextLabel?: string }
+  | { type: "tabs"; tabs: { label: string; blocks: Construct[] }[] }
+  | { type: "modal"; title: string; blocks: Construct[]; confirmLabel?: string; cancelLabel?: string }
+  | {
+      type: "wizard";
+      steps: WizardStep[];
+      submitLabel?: string;
+      backLabel?: string;
+      nextLabel?: string;
+      /** Live binding: a key into `BlockRenderer`'s `handlers` prop, resolving to a
+       * `WizardSubmitHandler` (`./live`) — forwards the real `Wizard` component's own `onSubmit`
+       * (fired with the collected `Record<string, WizardValue>` on completion) straight through.
+       * A wizard's steps are legitimately static content, but its *result* is real live output a
+       * backend-driven app needs to receive — presence of this field is what makes `wizard` an
+       * Opinion, not a Synthetic, even though it has no `source` of its own — see `./opinions`. */
+      onSubmit?: string;
+    }
   | {
       type: "card-kanban";
       title: string;
       sharedWith?: { name: string; avatarSrc?: string }[];
-      columns: KanbanColumnData[];
-      cards: Record<string, KanbanCardData>;
+      /** Literal, fixed-at-author-time seed — omit both when using `source` instead. */
+      columns?: KanbanColumnData[];
+      cards?: Record<string, KanbanCardData>;
+      /** Live binding: a key into `BlockRenderer`'s `data` prop, resolving to a live
+       * `KanbanBoardSource` (`./live`) — takes priority over the literal fields above when set.
+       * Presence of this field is what makes `card-kanban` an Opinion, not a Synthetic — see
+       * `./opinions`. */
+      source?: string;
+      /** Live binding: a key into `handlers`, resolving to a `KanbanChangeHandler` — fired with
+       * the entire next `{columns, cards}` board state after any drag/reorder, forwarding
+       * `Kanban`'s own existing `onChange` prop straight through instead of only ever calling a
+       * local `setBoard`. Only meaningful alongside `source`. */
+      onChange?: string;
       searchPlaceholder?: string;
       shareUrl?: string;
       /** Content shown inside the "Board settings" modal — omit to hide the button entirely. */
-      settingsBlocks?: Block[];
+      settingsBlocks?: Construct[];
     }
   | {
       type: "sticky-kanban";
       title: string;
       sharedWith?: { name: string; avatarSrc?: string }[];
-      columns: KanbanColumnData[];
-      cards: Record<string, KanbanCardData>;
+      columns?: KanbanColumnData[];
+      cards?: Record<string, KanbanCardData>;
+      source?: string;
+      onChange?: string;
       searchPlaceholder?: string;
       shareUrl?: string;
-      settingsBlocks?: Block[];
+      settingsBlocks?: Construct[];
     }
-  | { type: "hero"; badge?: string; title: string; subtitle: string; actions?: Action[]; codeSnippet?: string }
+  | { type: "hero"; badge?: string; title: string; subtitle: string; actions?: Action[]; codeSnippet?: string; imageSrc?: string }
   | { type: "section-header"; kicker?: string; title: string; subtitle?: string }
   | { type: "doc-section"; heading?: string; level?: 1 | 2 | 3; body: ProseNode[] }
   | { type: "props-table"; heading?: string; rows: PropRow[] }
@@ -427,9 +608,20 @@ export type Block =
   | {
       type: "comparison";
       leftLabel: string;
-      leftBlocks: Block[];
+      leftBlocks: Construct[];
       rightLabel: string;
-      rightBlocks: Block[];
+      rightBlocks: Construct[];
+    }
+  | {
+      type: "side-panel";
+      /** The main content area, to the panel's left. */
+      main: Construct[];
+      panel: {
+        title: string;
+        blocks: Construct[];
+        /** Whether the panel starts expanded or collapsed to its rail. Default `true`. */
+        defaultOpen?: boolean;
+      };
     }
   | {
       type: "heuristic";
@@ -448,20 +640,46 @@ export type Block =
       /** An optional code sample shown as-is (Block JSON, real component JSX, whatever illustrates
        * the point) — not necessarily runnable Block data, just illustrative text. */
       code?: string;
-      /** An optional *live*, real Block[] demo, rendered recursively the same way `tabs`/`modal`/
+      /** An optional *live*, real Construct[] demo, rendered recursively the same way `tabs`/`modal`/
        * `comparison` already nest — distinct from `code` above (which is just displayed text): a
        * heuristic can have one, both, or neither. */
-      exampleBlocks?: Block[];
+      exampleBlocks?: Construct[];
     }
   | {
       type: "spin-card";
       /** A small, centered card showing a real `Spin` loading overlay over a few lines of content —
        * for demonstrating a loading state, not a real data-bound card. Defaults sized/labeled to
-       * match this block's original real-world use (a "fetching" demo on /docs/heuristics). */
+       * match this block's original real-world use (a "fetching" demo on /about/agent). */
       tip?: string;
       items: string[];
       width?: number;
       minHeight?: number;
+    }
+  | {
+      type: "error-block";
+      /** Which failure state this is — each has its own default icon/title/description (all
+       * overridable below). Default `"default"`. */
+      status?: "default" | "disconnected" | "empty" | "busy";
+      /** Overrides the status's default title. */
+      title?: string;
+      /** Overrides the status's default description. */
+      description?: string;
+      /** A retry button or other recovery action. */
+      action?: Action;
+      /** Widens the icon/spacing for a whole-page failure state — on by default here, since a
+       * dedicated block for this is specifically for the full-page case (an inline, one-card
+       * failure state is small enough to just use the real `ErrorBlock` component directly). */
+      fullPage?: boolean;
+    }
+  | {
+      type: "footer";
+      /** Shown above everything else, with a dividing line on either side — e.g. "No more results". */
+      label?: string;
+      /** Plain content below the label — e.g. a copyright line. */
+      content?: string;
+      links?: { text: string; href: string }[];
+      /** `type: "link"` renders a real, focusable button instead of a non-interactive tag. */
+      chips?: { text: string; type?: "plain" | "link" }[];
     }
   | {
       type: "scatter-chart";
@@ -473,6 +691,11 @@ export type Block =
       ariaLabel?: string;
       height?: number;
       series: { label: string; color?: string; values: number[] }[];
+      /** Live binding: a key into `BlockRenderer`'s `data` prop, resolving to a live
+       * `ScatterChartSource` (`./live`) — takes priority over `series` when set. Read-only: a
+       * chart has no meaningful user-initiated write-back, so this is its only live field, and
+       * its presence is what makes `scatter-chart` an Opinion, not a Synthetic — see `./opinions`. */
+      source?: string;
     }
   | {
       type: "line-chart";
@@ -483,6 +706,10 @@ export type Block =
       labelStep?: number;
       crossoverIndex?: number;
       series: { label: string; color?: string; values: number[]; dashed?: boolean }[];
+      /** Live binding → `LineChartSource` (`./live`), resolved from `data` — takes priority over
+       * `series`. `xLabels` stays literal-only this pass — wire it live only when a real consumer
+       * needs it. */
+      source?: string;
     }
   | {
       type: "stacked-bar-chart";
@@ -490,6 +717,9 @@ export type Block =
       ariaLabel?: string;
       height?: number;
       bars: { label: string; segments: { label: string; value: number; color?: string }[] }[];
+      /** Live binding → `StackedBarChartSource` (`./live`), resolved from `data` — takes priority
+       * over `bars`. */
+      source?: string;
     }
   | {
       /** A small, static, presentational summary table — headers plus a plain grid of string/number
@@ -511,4 +741,34 @@ export type Block =
       dir: string;
       prefix: string;
       count?: number;
+    }
+  | {
+      /** A component catalog entry — heading, measured/unmeasured tag, description, shape code
+       * block, optional implementation code block, and optional live demo blocks. Encapsulates the
+       * ConstructEntry pattern used across tier pages (/opinions, /synthetics, /orders) so the chrome
+       * around each block's demo is Packer-printed, not hand-authored JSX. */
+      type: "construct-entry";
+      id: string;
+      measured: boolean;
+      description: string;
+      shape: string;
+      code?: string;
+      blocks?: Construct[];
+    }
+  | {
+      /** A multi-column navigation mega-menu panel — used as a dropdown from a NavBar item.
+       * Each column has a heading and a list of items (label + optional description + href).
+       * An optional footer link renders at the bottom of the panel. */
+      type: "mega-menu";
+      columns: {
+        heading: string;
+        items: {
+          label: string;
+          description?: string;
+          href: string;
+          icon?: IconName;
+          external?: boolean;
+        }[];
+      }[];
+      footer?: { label: string; href: string };
     };

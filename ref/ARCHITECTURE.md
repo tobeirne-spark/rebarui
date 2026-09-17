@@ -15,7 +15,7 @@ Monorepo (pnpm workspaces + Turborepo, pending confirmation):
 ```
 packages/
   core/            # components + primitives, wraps Radix, ships CSS-var-only styles
-  placement/       # @rebar-ui/placement — the placement layer: block schema + BlockRenderer, see below
+  placement/       # @rebar-ui/placement — the placement layer: construct schema + ConstructRenderer, see below
   theme-sketch/    # default sketch theme: fonts, sketchy borders, grayscale tokens
   theme-clean/     # plain production-safe baseline theme
   devtools/        # dev-only floating panel — kept out of prod via a consumer-side dynamic import, see below
@@ -27,7 +27,7 @@ apps/
 ```
 
 `core` depends on Radix primitives + React Hook Form (for `Form`). `placement` depends only on
-`core` (it renders blocks using `core`'s own components) — it's a separate package specifically so
+`core` (it renders constructs using `core`'s own components) — it's a separate package specifically so
 a consumer who never wants the placement layer (just the atomic components) doesn't pay for it.
 `theme-*` packages are pure CSS (custom properties + a stylesheet), no JS. `devtools` depends on
 `core`'s internal usage registry but is an entirely separate import — an app that never imports
@@ -38,29 +38,46 @@ for it.
 
 Rebar UI is meant to be built with by an LLM through a small procedural placement layer, not by
 hand-authoring `Stack`/`Box` JSX directly: the model writes a compact typed document naming a
-handful of pre-built composite archetypes — called **blocks** — and a deterministic renderer
-(`BlockRenderer`, built from `core`'s own components) turns that document into the actual tree. The
-model never decides layout — direction, gap, nesting — only which block and what content.
+handful of pre-built composite archetypes — called **constructs** — and a deterministic renderer
+(`ConstructRenderer`, built from `core`'s own components) turns that document into the actual tree. The
+model never decides layout — direction, gap, nesting — only which construct and what content.
 
 Two heuristics do the actual layout work, so the model never has to:
 
-- **Anatomical order** — within any one block, its internal parts always render in the same fixed,
+- **Anatomical order** — within any one construct, its internal parts always render in the same fixed,
   predetermined sequence, head to toe. A `callout` is always icon → title → subtitle, top to
   bottom, every time; a `banner` is always icon → text → trailing action, left to right. The model
   fills in the slots' content; it never decides which slot comes first.
-- **The magnetic heuristic** — at the document level, blocks are simply listed in the order the
+- **The magnetic heuristic** — at the document level, constructs are simply listed in the order the
   model wants them to appear, and the renderer "snaps" each one into the stack in that sequence —
   like magnets pulling into a line, not a grid the model has to compute coordinates for. Supplying
   order is the only placement decision the model makes; no `x`/`y`, no `flex`/`grid` value, ever.
 
 **Status: shipped as `@rebar-ui/placement`, dogfooded on this project's own marketing site
-(`apps/docs`)** — not just a benchmark prototype anymore. `BlockRenderer` and its six current block
-types (`header`, `banner`, `checklist`, `callout`, `feature-grid`, `pillar-grid`) live in
+(`apps/docs`)** — not just a benchmark prototype anymore. `ConstructRenderer` and its construct catalog
+(39 types as of this writing — see `packages/core/robot.md`'s own catalog for the full list with
+descriptions, and [`CONSTRUCTS.md`](CONSTRUCTS.md) for how they split across Global/Web/Mobile) live in
 `packages/placement/src`; the homepage's feature-card row and three-pillars grid
-(`apps/docs/src/app/page.tsx`) are real `BlockRenderer` output, not hand-authored `Stack`/`Card`
+(`apps/docs/src/app/page.tsx`) are real `ConstructRenderer` output, not hand-authored `Stack`/`Card`
 JSX — proof-by-existence that the mechanism holds up outside the one benchmark component it was
 validated on, per the dogfooding principle already stated in
 [MARKETING_SITE.md](MARKETING_SITE.md#what-to-change-and-why).
+
+A third, orthogonal axis classifies both components and constructs by where they sit in a
+build-lifecycle — Imitations (static primitives) → Synthetics (static compositions) → Opinions
+(real state/reactivity) → Orders (macro/page-level governance) — see
+[`TIERS.md`](TIERS.md). Read literally as a four-step ladder it doesn't quite survive contact with
+the real construct catalog: "Order" turned out to be a different axis entirely (macro governance vs.
+behavioral complexity) than the Imitation→Synthetic→Opinion complexity ladder, so of the 39 constructs
+only ~8 are genuine Orders — the rest split across Synthetic (~22, plain static content) and
+Opinion (9, constructs that already embed real interactive state in `ConstructRenderer.tsx` despite looking
+like static schema data). `TIERS.md` keeps that nuance explicit for whoever maintains the schema;
+`robot.md`'s own digest states the four tiers as the clean ascending lifecycle they are for
+everyday use, since that's still a genuinely good mental model for an LLM composing new content to
+hold, even though "Order" is really the frame the other three render inside rather than a fourth
+rung on their ladder. "Opinion" is not a vibe: a construct *is* an Opinion iff its schema type declares
+a `source`/`onX` live-data-binding field (`packages/placement/src/opinions.ts`), a mechanical,
+compiler-checked fact, not a judgment call.
 
 The evidence for the underlying mechanism lives in
 [`/benchmarks`](../apps/docs/src/app/benchmarks/page.tsx): a hand-authored-JSX version of Rebar
@@ -72,9 +89,9 @@ out the document schema instead of making the agent discover it by reading sourc
 
 What's still open: the three archetypes measured in that benchmark (`banner`/`checklist`/`callout`)
 were chosen to fit one benchmark component; `feature-grid`/`pillar-grid` were added to cover this
-project's own marketing copy and haven't been measured in isolation the same way. Whether the block
+project's own marketing copy and haven't been measured in isolation the same way. Whether the construct
 vocabulary keeps paying off as it grows to cover arbitrary UI, and whether DOM order (and therefore
-accessibility — WCAG 2.1 SC 1.3.2) stays correct as more blocks are added, are the honest open
+accessibility — WCAG 2.1 SC 1.3.2) stays correct as more constructs are added, are the honest open
 questions, not yet answered by more than "it worked for these six."
 
 **Why this is the intended default rather than an optional mode:** most of the token cost of an
@@ -114,7 +131,7 @@ decide to restructure it for a small screen (reorder sections, promote/demote co
 what a desktop layout affords space for). The Packer already is that single place: it already owns
 every layout decision for a page built through it (anatomical order, the magnetic heuristic — see
 above) precisely so the model never has to. A second render path inside the same renderer, given
-the same `Block[]` document, is a natural extension of a decision this system already centralizes,
+the same `Construct[]` document, is a natural extension of a decision this system already centralizes,
 not a new architectural seam — for a component used *directly*, a container-query-based mobile
 adjustation is still the right fallback, just narrower in scope (that one component's own layout,
 not the page around it).
@@ -123,7 +140,7 @@ not the page around it).
 vertical stacking in place of a desktop row's horizontal arrangement (the same content, `anatomical
 order` still deciding internal sequence, just without a desktop row's width to spend); larger
 touch targets by default, consistent with ref/HEURISTICS.md #19 (44×44px minimum) rather than a
-separate rule; overflow-prone chrome (a `nav-bar`'s collapsed items, a `table` block's named
+separate rule; overflow-prone chrome (a `nav-bar`'s collapsed items, a `table` construct's named
 filters) collapsing more aggressively, since a phone's viewport hits those overflow thresholds far
 sooner than a laptop's; anything genuinely desktop-only (a hover-triggered `HoverCard`, a
 drag-and-drop `Kanban` board without `useLongPress`'s touch pairing) either gaining its already-
@@ -135,13 +152,13 @@ diagram*" — diagrams (flowcharts, sequence diagrams, org charts) are a separat
 archetype family for `@rebar-ui/placement` (see the removed `/diagrams` "coming soon" placeholder
 for the prior state of that intent — the concept is unchanged, just no longer a stub page in the
 nav). Whenever diagram archetypes are actually built, they inherit this same two-print mechanism
-for free, for the same reason components do: they'd already be `Block[]`-described and rendered by
+for free, for the same reason components do: they'd already be `Construct[]`-described and rendered by
 the same Packer, not a bespoke SVG each diagram type invents its own responsive behavior for.
 
 **Detection.** Chosen by real viewport/device signals at render time (not, e.g., a user-agent
 string sniff alone — those are unreliable and don't track a foldable or a resized window), matching
 the breakpoint tokens ref/HEURISTICS.md already defines (`### Breakpoints`) rather than inventing a
-second set. The exact mechanism (a `matchMedia` listener driving which print `BlockRenderer`
+second set. The exact mechanism (a `matchMedia` listener driving which print `ConstructRenderer`
 returns, vs. two static builds selected server-side) is an open implementation question, not
 resolved by this doc on purpose — this section exists to state the *shape* of the commitment before
 committing to one specific technical path.

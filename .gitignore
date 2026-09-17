@@ -8,3 +8,5 @@ coverage/
 .env.local
 .firebase/
 ref/
+Screenshot*
+firebase-debug.log

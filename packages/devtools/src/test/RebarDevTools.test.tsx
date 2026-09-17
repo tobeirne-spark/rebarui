@@ -7,6 +7,7 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-rebar-theme");
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-rebar-bionic");
+  document.documentElement.removeAttribute("data-rebar-ui-version");
   localStorage.clear();
 });
 
@@ -35,6 +36,19 @@ describe("RebarDevTools", () => {
     const stat = await screen.findByText("Components on this page");
     expect(stat.closest(".rebar-devtools-stat")).toHaveTextContent("2");
     expect(screen.getByText("button")).toBeInTheDocument();
+  });
+
+  it("shows the rebar-ui version read off the document root, stamped there by core's own entry module", async () => {
+    document.documentElement.setAttribute("data-rebar-ui-version", "0.3.0");
+    render(<RebarDevTools forceEnabled />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Rebar DevTools" }));
+    expect(screen.getByText("v0.3.0")).toBeInTheDocument();
+  });
+
+  it("shows no version line at all when the attribute is absent (an older rebar-ui, or none)", async () => {
+    render(<RebarDevTools forceEnabled />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Rebar DevTools" }));
+    expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument();
   });
 
   it("doesn't clobber the page's real theme on mount — reads it instead of hardcoding sketch", async () => {

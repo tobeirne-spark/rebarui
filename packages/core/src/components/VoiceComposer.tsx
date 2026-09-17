@@ -3,6 +3,9 @@ import type { ChangeEvent, ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
 import { Spin } from "./Spin";
+import { MicIcon, SendPlaneIcon, StopCircleIcon } from "./icons";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export type VoiceComposerState = "idle" | "recording" | "transcribing" | "ready" | "error";
 
@@ -33,6 +36,10 @@ export interface VoiceComposerProps extends ComponentPropsWithoutRef<"div"> {
   onCancel: () => void;
   /** Shown as real visible text in the "error" state, not just logged or silently swallowed. */
   errorMessage?: string;
+  /** Force bionic reading on/off for the error message, overriding the ambient data-rebar-bionic
+   * setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /** `125` -> `"02:05"`. Guards against a negative/undefined/fractional input rather than ever
@@ -66,7 +73,7 @@ function getStatusMessage(state: VoiceComposerState, errorMessage?: string): str
 
 interface MainButtonConfig {
   label: string;
-  glyph: string;
+  Glyph: typeof MicIcon | null;
   onClick?: () => void;
   disabled?: boolean;
 }
@@ -79,16 +86,16 @@ function getMainButtonConfig(
 ): MainButtonConfig {
   switch (state) {
     case "recording":
-      return { label: "Stop", glyph: "⏹", onClick: onStopRecording };
+      return { label: "Stop", Glyph: StopCircleIcon, onClick: onStopRecording };
     case "transcribing":
-      return { label: "Transcribing…", glyph: "", disabled: true };
+      return { label: "Transcribing…", Glyph: null, disabled: true };
     case "ready":
-      return { label: "Send", glyph: "➤", onClick: onSend };
+      return { label: "Send", Glyph: SendPlaneIcon, onClick: onSend };
     case "error":
-      return { label: "Retry", glyph: "🎙", onClick: onStartRecording };
+      return { label: "Retry", Glyph: MicIcon, onClick: onStartRecording };
     case "idle":
     default:
-      return { label: "Record", glyph: "🎙", onClick: onStartRecording };
+      return { label: "Record", Glyph: MicIcon, onClick: onStartRecording };
   }
 }
 
@@ -111,11 +118,18 @@ export const VoiceComposer = forwardRef<HTMLDivElement, VoiceComposerProps>(func
     onSend,
     onCancel,
     errorMessage,
+    bionic,
+    bionicOptions,
     className,
     ...props
   },
   ref,
 ) {
+  const errorContent = useBionicChildren(
+    errorMessage ?? "Something went wrong recording.",
+    bionic,
+    bionicOptions,
+  );
   const showCancel = state !== "idle";
   const showDraft = state === "recording" || state === "ready";
   const mainButton = getMainButtonConfig(state, onStartRecording, onStopRecording, onSend);
@@ -143,9 +157,11 @@ export const VoiceComposer = forwardRef<HTMLDivElement, VoiceComposerProps>(func
         >
           {state === "transcribing" ? (
             <Spin spinning size="sm" className="rebar-voice-composer-spin" />
-          ) : (
-            <span aria-hidden="true">{mainButton.glyph}</span>
-          )}
+          ) : mainButton.Glyph ? (
+            <span aria-hidden="true">
+              <mainButton.Glyph />
+            </span>
+          ) : null}
           <span>{mainButton.label}</span>
         </Button>
 
@@ -199,7 +215,7 @@ export const VoiceComposer = forwardRef<HTMLDivElement, VoiceComposerProps>(func
 
       {state === "error" ? (
         <p className="rebar-voice-composer-error" data-rebar-part="error-message">
-          {errorMessage ?? "Something went wrong recording."}
+          {errorContent}
         </p>
       ) : null}
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
+import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
 export interface CarouselProps {
   /** One slide per child. */
@@ -78,7 +79,7 @@ export function Carousel({
           disabled={index === 0}
           onClick={() => goTo(index - 1)}
         >
-          ‹
+          <ChevronLeftIcon />
         </Button>
 
         <span className="rebar-carousel-status" aria-live="polite">
@@ -107,7 +108,7 @@ export function Carousel({
           disabled={index === count - 1}
           onClick={() => goTo(index + 1)}
         >
-          ›
+          <ChevronRightIcon />
         </Button>
       </div>
     </div>

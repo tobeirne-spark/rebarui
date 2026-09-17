@@ -22,6 +22,15 @@ describe("ThemeToggle", () => {
     expect(screen.getByRole("button", { name: "Appearance" })).toBeInTheDocument();
   });
 
+  it("defaults the trigger to size sm, and forwards an explicit size override", () => {
+    const { container, rerender } = render(<ThemeToggle />);
+    expect(container.querySelector('[data-rebar-size="sm"]')).toBeInTheDocument();
+
+    rerender(<ThemeToggle size="md" />);
+    expect(container.querySelector('[data-rebar-size="md"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-rebar-size="sm"]')).not.toBeInTheDocument();
+  });
+
   it("toggles data-rebar-theme between sketch and clean", async () => {
     const user = userEvent.setup();
     document.documentElement.removeAttribute("data-rebar-theme");

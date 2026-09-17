@@ -18,6 +18,9 @@ across the repo or left only in conversation. Current docs:
 - `ref/HEURISTICS.md` — the default design/behavior rules baked into components, with sources.
 - `ref/MARKETING_SITE.md` — the docs/marketing site plan (structure, framework, IA), benchmarked
   against mermaid.js.org.
+- `ref/PLACEMENT_LIVE_DATA.md` — a scoped, not-yet-built proposal for letting `@rebar-ui/placement`
+  blocks bind to live data/handlers instead of only static JSON, prompted by Coherence's two
+  rebuilds both bypassing the Packer entirely for exactly this reason.
 
 When plans change, update these files in place rather than creating new ones alongside them —
 they're living documents, not a changelog. New planning docs (e.g. a future phase's detailed
@@ -29,10 +32,10 @@ Packer-printed vs. hand-authored, with a prioritized gap list. Regenerate the nu
 by git — `.gitignore`'s blanket `ref/` rule had silently kept it (and a couple other `ref/` docs)
 out of version control entirely.
 
-## Agent context: `robot.md`
+## Agent context: `agents.md`
 
 Before designing a new component, building a block, or using the Packer (`@rebar-ui/placement`)
-to compose a page, read `packages/core/robot.md` — the compressed, single-file context for
+to compose a page, read `packages/core/agents.md` — the compressed, single-file context for
 exactly these tasks: Framework Rules vs. Heuristics (a fixed, binary constraint vs. a
 judgment-requiring design principle — don't conflate the two), the controlled/uncontrolled
 component pattern, the block-authoring conventions, the full block/component catalogs, and the

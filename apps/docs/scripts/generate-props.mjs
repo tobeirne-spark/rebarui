@@ -61,6 +61,8 @@ const COMPONENT_FILES = [
   "Timeline.tsx",
   "Rate.tsx",
   "NavBar.tsx",
+  "SidebarNav.tsx",
+  "AppShell.tsx",
   "HoverCard.tsx",
   "NavIndex.tsx",
   "SectionNav.tsx",
@@ -93,13 +95,20 @@ const COMPONENT_FILES = [
   "GaugeChart.tsx",
   "FunnelChart.tsx",
   "WaterfallChart.tsx",
+  "DistributionChart.tsx",
   "RadarChart.tsx",
   "BoxPlot.tsx",
   "Drawer.tsx",
+  "SidePanel.tsx",
   "BottomSheet.tsx",
   "ActionSheet.tsx",
   "MobileTabBar.tsx",
   "ScrollArea.tsx",
+  "Footer.tsx",
+  "ScrollMask.tsx",
+  "Ellipsis.tsx",
+  "FloatingBubble.tsx",
+  "FloatingPanel.tsx",
   "SplitButton.tsx",
   "Calendar.tsx",
   "TimePicker.tsx",
@@ -113,6 +122,17 @@ const COMPONENT_FILES = [
   "FileUpload.tsx",
   "BubbleChart.tsx",
   "Heatmap.tsx",
+  "StackedLineChart.tsx",
+  "StackedAreaChart.tsx",
+  "SteppedBarChart.tsx",
+  "StepChart.tsx",
+  "IndexChart.tsx",
+  "Histogram.tsx",
+  "RibbonChart.tsx",
+  "CalendarHeatmap.tsx",
+  "BulletGraph.tsx",
+  "PackedBubbleChart.tsx",
+  "UMAPPlot.tsx",
   "RichTextEditor.tsx",
   "PullToRefresh.tsx",
   "PickerWheel.tsx",
@@ -121,6 +141,8 @@ const COMPONENT_FILES = [
   "CandlestickChart.tsx",
   "GeoChart.tsx",
   "GanttChart.tsx",
+  "PertChart.tsx",
+  "WaybackSlider.tsx",
   "SankeyDiagram.tsx",
   "WordCloud.tsx",
   "NodeLinkGraph.tsx",
@@ -147,19 +169,41 @@ const COMPONENT_FILES = [
   "Menubar.tsx",
   "GitGraph.tsx",
   "VersionHistory.tsx",
+  "IndexBar.tsx",
+  "GraphExplorer.tsx",
+  "ErrorBlock.tsx",
+  "NoticeBar.tsx",
+  "ProgressCircle.tsx",
+  "Selector.tsx",
+  "NumberKeyboard.tsx",
   "ChatThread.tsx",
   "WaveformAudioPlayer.tsx",
   "UploadQueue.tsx",
   "InfiniteScrollGrid.tsx",
-  "GoalTracker.tsx",
+  "TodoItem.tsx",
   "TextToSpeechBar.tsx",
   "FloatingSelectionToolbar.tsx",
   "SlashCommandMenu.tsx",
   "VoiceComposer.tsx",
+  "AiChatInput.tsx",
   "ShapeGallery.tsx",
   "FileManager.tsx",
   "LayersPanel.tsx",
 ];
+
+// react-docgen-typescript detects every component-shaped export in a parsed file, not just the
+// one named after it — parsing "Drawer.tsx" (needed for `Drawer`'s own props) also yields
+// `DrawerPanel`, the shared internal plumbing `BottomSheet`/`ActionSheet` build on. `DrawerPanel`
+// is deliberately not exported from `packages/core/src/index.ts` (see its own doc comment) — a
+// consumer can't actually `import { DrawerPanel } from "rebar-ui"`, so it shouldn't appear
+// alongside real public components on `/components` (surfaced as a "no reference page" entry
+// nobody could ever build a real page for, since it isn't a real public API). Filtered out here
+// rather than given a fake page.
+// Same reasoning for `buildTruncated` — a plain, non-component helper function exported from
+// `Ellipsis.tsx` purely so its truncation math has a real unit test (jsdom can't exercise the
+// real measure-and-search effect, see that file's own comment); not a component, not part of the
+// public `rebar-ui` API surface.
+const INTERNAL_ONLY = new Set(["DrawerPanel", "buildTruncated"]);
 
 const result = {};
 
@@ -167,6 +211,7 @@ for (const file of COMPONENT_FILES) {
   const filePath = path.join(coreDir, "src/components", file);
   const docs = parser.parse(filePath);
   for (const doc of docs) {
+    if (INTERNAL_ONLY.has(doc.displayName)) continue;
     result[doc.displayName] = Object.values(doc.props).map((prop) => ({
       name: prop.name,
       type: prop.type?.raw ?? prop.type?.name ?? "unknown",

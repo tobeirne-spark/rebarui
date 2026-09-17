@@ -81,7 +81,6 @@ describe("QRCode", () => {
     // any real QR encode — a reliable target to prove `false` actually suppresses it.
     const withoutOverride = render(<QRCode value="hi" />);
     const moduleCount = Number(withoutOverride.container.querySelector("svg")!.getAttribute("data-rebar-module-count"));
-    const cell = 160 / moduleCount;
     const topLeftBefore = Array.from(withoutOverride.container.querySelectorAll("rect[data-rebar-part='module']"))
       .find((r) => r.getAttribute("x") === "0" && r.getAttribute("y") === "0");
     expect(topLeftBefore).toBeInTheDocument();

@@ -2,10 +2,17 @@ import { forwardRef } from "react";
 import type { ReactNode } from "react";
 import clsx from "clsx";
 import { EMPTY_PLACEHOLDER } from "../assets/emptyPlaceholder";
+import { GHOST_EMPTY_PLACEHOLDER } from "../assets/ghostEmptyPlaceholder";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
 export type EmptyIcon = "auto" | "illustration" | "vector";
+export type EmptyIllustration = "ghost" | "bowl-and-spoon";
+
+const ILLUSTRATIONS: Record<EmptyIllustration, string> = {
+  ghost: GHOST_EMPTY_PLACEHOLDER,
+  "bowl-and-spoon": EMPTY_PLACEHOLDER,
+};
 
 export interface EmptyProps {
   description?: ReactNode;
@@ -19,14 +26,17 @@ export interface EmptyProps {
    * "vector" for the plain circle-with-an-X everywhere.
    */
   icon?: EmptyIcon;
+  /** Which raster illustration to use when `icon` shows one. Default `"ghost"`. */
+  illustration?: EmptyIllustration;
   /** Force bionic reading on/off for the description, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
 }
 
-// A real hand-drawn illustration (an empty bowl and spoon), not a generic geometric shape — see
-// emptyPlaceholder.ts. Decorative only: alt="" so a screen reader skips straight to the
-// description text below, the same convention Avatar/AspectRatio already use for their own
+// A real hand-drawn illustration, not a generic geometric shape — a ghost by default
+// (ghostEmptyPlaceholder.ts), or the original empty bowl and spoon (emptyPlaceholder.ts) via
+// `illustration="bowl-and-spoon"`. Decorative only: alt="" so a screen reader skips straight to
+// the description text below, the same convention Avatar/AspectRatio already use for their own
 // decorative placeholder art.
 //
 // The illustration is baked-in dark ink on a white background — a raster image, so it can't pick
@@ -38,7 +48,7 @@ export interface EmptyProps {
 // render only that one element, forced visible via inline style regardless of theme, overriding
 // the auto-toggle CSS rules that would otherwise hide it in the "wrong" theme.
 export const Empty = forwardRef<HTMLDivElement, EmptyProps>(function Empty(
-  { description = "No data", children, bionic, bionicOptions, icon = "auto", className },
+  { description = "No data", children, bionic, bionicOptions, icon = "auto", illustration = "ghost", className },
   ref,
 ) {
   const descriptionContent = useBionicChildren(description, bionic, bionicOptions);
@@ -50,7 +60,7 @@ export const Empty = forwardRef<HTMLDivElement, EmptyProps>(function Empty(
         <img
           className="rebar-empty-icon rebar-empty-icon-raster"
           data-rebar-part="icon"
-          src={EMPTY_PLACEHOLDER}
+          src={ILLUSTRATIONS[illustration]}
           alt=""
           style={icon === "illustration" ? { display: "block" } : undefined}
         />

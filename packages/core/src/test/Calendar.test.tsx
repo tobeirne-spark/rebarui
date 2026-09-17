@@ -127,4 +127,62 @@ describe("Calendar", () => {
     await user.click(leadingDay);
     expect(onValueChange).not.toHaveBeenCalled();
   });
+
+  it("drills up: clicking the month label shows a 12-month grid for the year", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Calendar month={SEPT_2026} />);
+
+    await user.click(screen.getByRole("button", { name: /September 2026, show month picker/ }));
+    expect(container.querySelector('[data-rebar-component="calendar"]')).toHaveAttribute("data-rebar-view", "month");
+    expect(screen.getByText("2026")).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-rebar-part="month-cell"]')).toHaveLength(12);
+    expect(screen.getByRole("button", { name: "Sep" })).toHaveAttribute("data-rebar-selected", "true");
+  });
+
+  it("drills up again: clicking the year label from month view shows a 12-year grid", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Calendar month={SEPT_2026} />);
+
+    await user.click(screen.getByRole("button", { name: /show month picker/ }));
+    await user.click(screen.getByRole("button", { name: /2026, show year picker/ }));
+
+    expect(container.querySelector('[data-rebar-component="calendar"]')).toHaveAttribute("data-rebar-view", "year");
+    expect(container.querySelectorAll('[data-rebar-part="year-cell"]')).toHaveLength(12);
+    expect(screen.getByRole("button", { name: "2026" })).toHaveAttribute("data-rebar-selected", "true");
+    // The year view's own label is plain text, not a further drill-up control.
+    expect(screen.queryByRole("button", { name: /show .* picker/ })).not.toBeInTheDocument();
+  });
+
+  it("picking a year drills back to month view for that year; picking a month commits it and returns to day view", async () => {
+    const user = userEvent.setup();
+    const onMonthChange = vi.fn();
+    render(<Calendar month={SEPT_2026} onMonthChange={onMonthChange} />);
+
+    await user.click(screen.getByRole("button", { name: /show month picker/ }));
+    await user.click(screen.getByRole("button", { name: /show year picker/ }));
+    // 2020 is within the default decade window shown for 2026 (2016-2027) — no paging needed.
+    await user.click(screen.getByRole("button", { name: "2020" }));
+
+    // Back in month view, now for 2020 — no month committed yet.
+    expect(screen.getByText("2020")).toBeInTheDocument();
+    expect(onMonthChange).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Mar" }));
+    expect(onMonthChange).toHaveBeenCalledTimes(1);
+    const [picked] = onMonthChange.mock.calls[0]! as [Date];
+    expect(picked.getFullYear()).toBe(2020);
+    expect(picked.getMonth()).toBe(2); // March
+  });
+
+  it("browsing month/year views never fires onMonthChange until a month is actually picked", async () => {
+    const user = userEvent.setup();
+    const onMonthChange = vi.fn();
+    render(<Calendar month={SEPT_2026} onMonthChange={onMonthChange} />);
+
+    await user.click(screen.getByRole("button", { name: /show month picker/ }));
+    await user.click(screen.getByRole("button", { name: "Next year" }));
+    await user.click(screen.getByRole("button", { name: "Previous year" }));
+
+    expect(onMonthChange).not.toHaveBeenCalled();
+  });
 });

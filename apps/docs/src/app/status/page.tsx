@@ -62,7 +62,8 @@ export default function StatusPage() {
 
         <Alert type="info" title="Not part of the public docs nav">
           Kept around because it&apos;s a useful at-a-glance check, but it&apos;s not linked from
-          the site header — the real per-component reference lives under /components.
+          the site header — the real per-component reference lives under the four tier catalogs
+          (/imitations, /synthetics, /opinions, /orders).
         </Alert>
 
         <Card>

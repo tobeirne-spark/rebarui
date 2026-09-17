@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import * as RadixAccordion from "@radix-ui/react-accordion";
 import type { ReactNode } from "react";
 import clsx from "clsx";
+import { ChevronDownIcon } from "./icons";
 
 export type AccordionProps =
   | ({ type: "single" } & RadixAccordion.AccordionSingleProps)
@@ -40,7 +41,7 @@ export function AccordionItem({ value, trigger, children, disabled }: AccordionI
         <RadixAccordion.Trigger className="rebar-accordion-trigger" data-rebar-part="trigger">
           {trigger}
           <span className="rebar-accordion-icon" aria-hidden="true">
-            ▾
+            <ChevronDownIcon />
           </span>
         </RadixAccordion.Trigger>
       </RadixAccordion.Header>

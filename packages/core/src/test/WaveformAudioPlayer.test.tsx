@@ -197,7 +197,7 @@ describe("WaveformAudioPlayer", () => {
 
   it("resets transport state when src changes", () => {
     const { container, rerender } = render(<WaveformAudioPlayer src="voice-1.mp3" />);
-    let audio = container.querySelector("audio")! as HTMLAudioElement;
+    const audio = container.querySelector("audio")! as HTMLAudioElement;
     setDuration(audio, 100);
     fireEvent.loadedMetadata(audio);
     audio.currentTime = 50;

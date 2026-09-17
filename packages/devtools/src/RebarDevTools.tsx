@@ -153,6 +153,13 @@ export function RebarDevTools({ forceEnabled }: RebarDevToolsProps) {
   if (!isDev) return null;
 
   const sortedTypes = Object.entries(counts.byType).sort((a, b) => b[1] - a[1]);
+  // Stamped by rebar-ui's own entry module the moment it's first imported (see
+  // `packages/core/src/index.ts`'s `REBAR_UI_VERSION`) — reading it here, rather than importing
+  // the constant directly, keeps this package free of a hard dependency on `rebar-ui` itself, and
+  // works for any rebar-ui-built page regardless of which package versions devtools itself ships
+  // alongside.
+  const rebarUiVersion =
+    typeof document !== "undefined" ? document.documentElement.getAttribute("data-rebar-ui-version") : null;
 
   return (
     <>
@@ -171,6 +178,7 @@ export function RebarDevTools({ forceEnabled }: RebarDevToolsProps) {
           <div className="rebar-devtools-panel" role="dialog" aria-label="Rebar DevTools">
             <div className="rebar-devtools-header">
               <strong>Rebar DevTools</strong>
+              {rebarUiVersion ? <span className="rebar-devtools-version">v{rebarUiVersion}</span> : null}
               <button
                 type="button"
                 className="rebar-devtools-close"

@@ -1,8 +1,12 @@
 import * as RadixDialog from "@radix-ui/react-dialog";
-import type { ReactNode } from "react";
-import { useState } from "react";
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { useRef, useState } from "react";
 import clsx from "clsx";
 import { Heading } from "./Heading";
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 export type DrawerSide = "left" | "right" | "top" | "bottom";
 
@@ -34,8 +38,20 @@ export interface DrawerProps {
  */
 export interface DrawerPanelProps extends DrawerProps {
   dataComponent: string;
-  /** Extra content rendered inside the panel, above the header — e.g. a decorative drag handle. */
+  /** Extra content rendered inside the panel, above the header — e.g. a drag handle. */
   handle?: ReactNode;
+  /**
+   * Makes `handle` a real drag-to-dismiss surface — `side="bottom"` only (the native bottom-sheet
+   * gesture; dragging a left/right/top panel closed isn't a pattern this adds). Plain
+   * pointerdown/pointermove/pointerup tracking (no new dependency), the same linear-track/clamp/
+   * snap-past-a-threshold technique `SwipeActions`/`PullToRefresh`/`PickerWheel` already use —
+   * past ~25% of the panel's own height, release closes it; otherwise it springs back via a CSS
+   * transition (no real spring physics, same discipline as those three). Off by default: every
+   * existing `Drawer`/`DrawerPanel` usage keeps its current (tap/Esc/backdrop-only) behavior
+   * unless this is explicitly set. Dismissal always still works via the close button, Esc, and a
+   * backdrop click regardless — this is an added path, never the only one (heuristic #38).
+   */
+  dragToDismiss?: boolean;
 }
 
 function defaultAccessibleLabel(dataComponent: string) {
@@ -57,6 +73,7 @@ export function DrawerPanel({
   size = 360,
   dataComponent,
   handle,
+  dragToDismiss,
 }: DrawerPanelProps) {
   // Same controlled/uncontrolled pattern as Dialog: internally managed regardless of whether the
   // caller passes `open`, so every consumer (a plain uncontrolled trigger, or ActionSheet forcing
@@ -74,6 +91,48 @@ export function DrawerPanel({
   const sizeStyle = isHorizontal ? { width: size } : { height: size };
   const hasVisibleTitle = title !== undefined && title !== null && title !== "";
 
+  const dragEnabled = Boolean(dragToDismiss) && side === "bottom";
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const draggingRef = useRef(false);
+  const startYRef = useRef(0);
+
+  const handleHandlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragEnabled) return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+
+    draggingRef.current = true;
+    startYRef.current = e.clientY;
+    setIsDragging(true);
+    setDragOffset(0);
+    let latestDelta = 0;
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (!draggingRef.current) return;
+      // Only downward drag moves the sheet — dragging up shouldn't pull it past its resting
+      // (fully open) position.
+      latestDelta = clamp(moveEvent.clientY - startYRef.current, 0, size * 1.5);
+      setDragOffset(latestDelta);
+    };
+    const handleUp = () => {
+      draggingRef.current = false;
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      setIsDragging(false);
+      setDragOffset(null);
+      if (latestDelta >= size * 0.25) {
+        handleOpenChange(false);
+      }
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+  };
+
+  const dragStyle =
+    dragEnabled && dragOffset !== null
+      ? { transform: `translateY(${dragOffset}px)`, transition: isDragging ? "none" : "transform 0.2s ease" }
+      : undefined;
+
   return (
     <RadixDialog.Root open={currentOpen} onOpenChange={handleOpenChange}>
       {trigger ? <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger> : null}
@@ -83,10 +142,21 @@ export function DrawerPanel({
           className={clsx("rebar-drawer-content", `rebar-drawer-content-${side}`, className)}
           data-rebar-component={dataComponent}
           data-rebar-side={side}
-          style={sizeStyle}
+          style={{ ...sizeStyle, ...dragStyle }}
           aria-modal="true"
         >
-          {handle}
+          {dragEnabled ? (
+            <div
+              className="rebar-drawer-drag-handle"
+              data-rebar-part="drag-handle"
+              onPointerDown={handleHandlePointerDown}
+              style={{ touchAction: "none" }}
+            >
+              {handle}
+            </div>
+          ) : (
+            handle
+          )}
           <div className="rebar-dialog-header" data-rebar-part="header">
             <RadixDialog.Title asChild>
               <Heading

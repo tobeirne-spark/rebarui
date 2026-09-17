@@ -44,6 +44,19 @@ const blocks: Block[] = [
 <BlockRenderer blocks={blocks} />;
 ```
 
+### The page shell — `BlockRenderer` already is one
+
+Once `rebar-ui/style.css` and a theme are imported, `BlockRenderer` already renders the correct
+page root: `<Box data-rebar-placement-root><Stack gap="lg">...blocks...</Stack></Box>`, a plain,
+unstyled wrapper on top of the page's own already-correct background (`body`'s
+`--rebar-color-bg-primary`). For a bare page, render `<BlockRenderer blocks={blocks} />` directly
+as (or as the sole child of) the page's root element — **do not nest it inside a `Card`, or any
+other element with its own background/border, "for structure."** It doesn't need one, and
+wrapping the entire block sequence in one forces the whole page into that element's border/
+shadow/corner-radius/padding treatment — a page that reads as one giant grey/boxed rectangle
+instead of a normal page with individual cards on it (`card-grid`/`persona-card`/`pillar-grid`
+already render their own, correctly-scoped `Card`s where the content is actually card-shaped).
+
 ### Wiring real navigation (`renderLink`)
 
 `BlockRenderer`'s default `renderLink` renders a plain `<a href>` for any block with an `href`

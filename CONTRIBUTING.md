@@ -1,6 +1,6 @@
 # Contributing to Rebar UI
 
-Rebar UI is a small, actively-building (v0.1) project — one person plus AI-assisted development so
+Rebar UI is a small, Open Beta (0.08) project — one person plus AI-assisted development so
 far. Contributions are genuinely welcome, but the project is young enough that "meaningful
 contribution" mostly means small, well-scoped changes right now, not large architectural ones.
 This doc exists so you don't have to guess how to get from "I want to help" to an opened PR.
@@ -92,7 +92,7 @@ then dry-run it against real code before calling it done.
 ### Design heuristics
 
 Component defaults (spacing, sizing, when to show an icon, etc.) follow the rules in
-`ref/HEURISTICS.md` — also viewable live with real examples at `/docs/heuristics` on the site. If
+`ref/HEURISTICS.md` — also viewable live with real examples at `/about/agent` on the site. If
 a change would contradict one of them, that's worth flagging in your issue/PR, not silently
 deviating.
 
@@ -108,7 +108,7 @@ example of applying it to one specific case.
 ## Opening a PR
 
 - Keep it scoped — one component, one fix, one block. Large multi-part changes are harder to
-  review and more likely to conflict with parallel work on a fast-moving v0.1 project.
+  review and more likely to conflict with parallel work on a fast-moving Open Beta project.
 - Make sure `pnpm run lint`, `test`, `build`, and `typecheck` all pass locally before pushing —
   CI runs the same four checks and will block merge if any fail.
 - Describe *what* changed and *why* in the PR description; if it's a behavior change, say what you

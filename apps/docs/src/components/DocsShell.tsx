@@ -20,10 +20,20 @@ interface DocsShellProps {
   /** Label for the status-filter chip covering sections with no `status` set — see
    * ref/HEURISTICS.md #42 (category and status are independent filter dimensions). */
   unstatusedLabel?: string;
+  /** Was hardcoded to "Search components…" regardless of what a given caller's sidebar actually
+   * lists — wrong on /docs/* (searching doc pages, not components). Each caller now says what
+   * it's searching. */
+  searchPlaceholder?: string;
   children: ReactNode;
 }
 
-export function DocsShell({ sections, categoryLabels, unstatusedLabel, children }: DocsShellProps) {
+export function DocsShell({
+  sections,
+  categoryLabels,
+  unstatusedLabel,
+  searchPlaceholder = "Search…",
+  children,
+}: DocsShellProps) {
   const items: NavIndexItem[] = sections;
 
   return (
@@ -34,7 +44,7 @@ export function DocsShell({ sections, categoryLabels, unstatusedLabel, children 
             items={items}
             categoryLabels={categoryLabels}
             unstatusedLabel={unstatusedLabel}
-            searchPlaceholder="Search components…"
+            searchPlaceholder={searchPlaceholder}
             renderLink={({ href, children: linkChildren, className }) => (
               <Link href={href} className={className}>
                 {linkChildren}

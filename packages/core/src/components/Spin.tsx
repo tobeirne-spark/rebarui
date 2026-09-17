@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import clsx from "clsx";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { useDelayedLoading } from "../useDelayedLoading";
 import { HOURGLASS_SPINNER, HOURGLASS_SPINNER_DARK } from "../assets/hourglassSpinner";
 import { DRUM_ROLL_SPINNER, DRUM_ROLL_SPINNER_DARK } from "../assets/drumRollSpinner";
 import { FLYING_PAPERS_SPINNER, FLYING_PAPERS_SPINNER_DARK } from "../assets/flyingPapersSpinner";
@@ -26,6 +27,14 @@ export interface SpinProps {
   /** Force bionic reading on/off for `tip`, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
+  /** Waits this long before showing the spinner at all — a `spinning` that goes back to `false`
+   * before this elapses never renders anything, the fix for a near-instant (e.g. local, in-memory)
+   * operation flashing a spinner for a single frame. Unset by default (shows immediately, exactly
+   * today's behavior) — see `ref/HEURISTICS.md` #52 and `useDelayedLoading`. */
+  delayMs?: number;
+  /** Once shown, keeps the spinner up for at least this long, even if `spinning` goes back to
+   * `false` sooner. Unset by default (hides immediately). */
+  minDurationMs?: number;
 }
 
 function VectorSpinner({ size, className }: { size: SpinSize; className?: string }) {
@@ -111,9 +120,27 @@ function Spinner({
 }
 
 export const Spin = forwardRef<HTMLDivElement, SpinProps>(function Spin(
-  { spinning = true, size = "md", variant = "drums", tip, children, className, bionic, bionicOptions },
+  {
+    spinning: spinningProp = true,
+    size = "md",
+    variant = "drums",
+    tip,
+    children,
+    className,
+    bionic,
+    bionicOptions,
+    delayMs,
+    minDurationMs,
+  },
   ref,
 ) {
+  const hasDelayConfig = (delayMs ?? 0) > 0 || (minDurationMs ?? 0) > 0;
+  // Always called (no conditional-hook issue) — only its result is used, and only once a
+  // delay/minimum-duration is actually configured; otherwise `spinning` passes through exactly as
+  // before, synchronously, with no added tick.
+  const delayedSpinning = useDelayedLoading(spinningProp, { delayMs, minDurationMs });
+  const spinning = hasDelayConfig ? delayedSpinning : spinningProp;
+
   if (!children) {
     return spinning ? (
       <div ref={ref} className={className} data-rebar-component="spin">

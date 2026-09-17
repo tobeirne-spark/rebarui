@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Block } from "@rebar-ui/placement";
+import type { Construct } from "@rebar-ui/placement";
 import { NextBlockRenderer } from "./NextBlockRenderer";
 
 function readAmbientDark(): boolean {
@@ -25,7 +25,7 @@ export function ComparisonDemo({
   iframeTitle,
 }: {
   leftLabel: string;
-  leftBlocks: Block[];
+  leftBlocks: Construct[];
   rightLabel: string;
   iframeSrc: string;
   iframeTitle: string;
@@ -38,7 +38,7 @@ export function ComparisonDemo({
     return () => observer.disconnect();
   }, []);
 
-  const blocks: Block[] = [
+  const blocks: Construct[] = [
     {
       type: "comparison",
       leftLabel,

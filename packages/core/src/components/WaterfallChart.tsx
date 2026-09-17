@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface WaterfallChartStep {
   label: string;
@@ -22,6 +24,9 @@ export interface WaterfallChartProps extends Omit<ComponentPropsWithoutRef<"figu
   ariaLabel?: string;
   height?: number;
   yFormat?: (v: number) => string;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 /**
@@ -38,9 +43,12 @@ export function WaterfallChart({
   ariaLabel,
   height = 340,
   yFormat = (v: number) => Math.round(v).toLocaleString(),
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: WaterfallChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const width = 700;
   const marginLeft = 74;
   const marginRight = 16;
@@ -179,7 +187,7 @@ export function WaterfallChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

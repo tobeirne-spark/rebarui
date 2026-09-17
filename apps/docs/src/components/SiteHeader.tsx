@@ -1,30 +1,57 @@
 "use client";
 
-import type { Block } from "@rebar-ui/placement";
-import corePackageJson from "../../../../packages/core/package.json";
+import type { Construct } from "@rebar-ui/placement";
 import { NextBlockRenderer } from "@/components/NextBlockRenderer";
+import { REBAR_MARK_PATH, REBAR_MARK_VIEWBOX } from "@/data/rebarMark";
 
-const BLOCKS: Block[] = [
+const BLOCKS: Construct[] = [
   {
     type: "site-header",
-    logo: { label: "Rebar UI", href: "/", iconSrc: "/rebar-icon.svg" },
+    logo: { label: "Rebar UI", href: "/", iconPath: REBAR_MARK_PATH, iconViewBox: REBAR_MARK_VIEWBOX },
     items: [
-      { href: "/docs", label: "Docs" },
-      { href: "/components", label: "Components" },
-      { href: "/blocks", label: "Blocks" },
-      { href: "/benchmarks", label: "Benchmarks" },
-      { href: "/about", label: "About" },
+      { href: "/about/agent", label: "For Agents" },
+      {
+        href: "/imitations",
+        label: "For Humans",
+        megaMenu: {
+          columns: [
+            {
+              heading: "Framework",
+              items: [
+                { label: "Orders", description: "Pick your Plenum", href: "/orders" },
+                { label: "Archetypes", description: "Construct studies", href: "/archetypes" },
+                { label: "Imitations", description: "Primitive Constructs", href: "/imitations" },
+              ],
+            },
+            {
+              heading: "",
+              items: [
+                { label: "Synthetics", description: "Complex Constructs", href: "/synthetics" },
+                { label: "Opinions", description: "Dynamic Constructs", href: "/opinions" },
+                { label: "Geneses", description: "Rebar alive", href: "/geneses" },
+              ],
+            },
+            {
+              heading: "Philosophy",
+              items: [
+                { label: "Heuristics", href: "/heuristics" },
+                { label: "Roadmap", href: "/planned/_none" },
+                { label: "Rules", href: "/about/agent" },
+                { label: "Benchmarks", href: "/about/benchmarks" },
+                { label: "About", href: "/about" },
+              ],
+            },
+          ],
+          footer: { label: "Go to the GitHub Repo", href: "https://github.com/ob27/rebarui" },
+        },
+      },
     ],
     ariaLabel: "Main",
-    trailing: { kind: "text", text: `v${corePackageJson.version}` },
+    trailing: { kind: "text", text: "0.10.0" },
     themeToggle: true,
   },
 ];
 
-// The header's "Theme" popover and DevTools' own panel (🔧, bottom-right) both write the same
-// data-rebar-theme/data-theme attributes, and each only reads the current value once, on its own
-// mount — a real, known gap: changing the theme via one doesn't refresh the other's displayed
-// selection until it remounts. Not resolved here; flagging it rather than hiding it.
 export function SiteHeader() {
   return <NextBlockRenderer blocks={BLOCKS} />;
 }

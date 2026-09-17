@@ -1,6 +1,8 @@
-import { useRef, useState } from "react";
-import type { ComponentPropsWithoutRef, KeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ComponentPropsWithoutRef, KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import clsx from "clsx";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface PickerWheelProps
   extends Omit<ComponentPropsWithoutRef<"div">, "value" | "defaultValue" | "onChange"> {
@@ -20,6 +22,9 @@ export interface PickerWheelProps
    * extra hit area onto the *neighboring* row, so the honest fix is sizing the row itself at 44px.
    */
   itemHeight?: number;
+  /** Force bionic reading on/off for option labels, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -48,10 +53,14 @@ export function PickerWheel({
   onValueChange,
   visibleCount = 5,
   itemHeight = 44,
+  bionic,
+  bionicOptions,
   className,
   "aria-label": ariaLabel = "Picker",
   ...props
 }: PickerWheelProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const [internalValue, setInternalValue] = useState(defaultValue ?? options[0]);
   const isControlled = value !== undefined;
   const current = (isControlled ? value : internalValue) ?? options[0] ?? "";
@@ -113,11 +122,24 @@ export function PickerWheel({
     window.addEventListener("pointerup", handleUp);
   };
 
-  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (options.length === 0) return;
-    e.preventDefault();
-    selectIndex(selectedIndex + (e.deltaY > 0 ? 1 : -1));
-  };
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  // A plain JSX `onWheel` handler can't call `preventDefault()` here — React (like the browser
+  // itself for scrollable-feeling elements) attaches wheel listeners as passive by default, so
+  // `preventDefault()` inside one is silently ignored with a console warning, not just a style
+  // nit: without it, spinning the wheel also scrolls the surrounding page. Attaching the listener
+  // natively with `{ passive: false }` is the standard fix.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || options.length === 0) return;
+    const listener = (e: WheelEvent) => {
+      e.preventDefault();
+      selectIndex(selectedIndex + (e.deltaY > 0 ? 1 : -1));
+    };
+    track.addEventListener("wheel", listener, { passive: false });
+    return () => track.removeEventListener("wheel", listener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIndex, options]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "ArrowUp") {
@@ -149,13 +171,13 @@ export function PickerWheel({
         style={{ height: itemHeight, top: centerOffset }}
       />
       <div
+        ref={trackRef}
         className="rebar-picker-wheel-track"
         data-rebar-part="track"
         role="listbox"
         aria-label={ariaLabel}
         tabIndex={0}
         onPointerDown={handlePointerDown}
-        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         style={{
           transform: `translateY(${displayTranslate}px)`,
@@ -180,7 +202,7 @@ export function PickerWheel({
                 selectIndex(index);
               }}
             >
-              {option}
+              {renderBionicChildren(option, bionicEnabled, bionicOptions)}
             </button>
           );
         })}

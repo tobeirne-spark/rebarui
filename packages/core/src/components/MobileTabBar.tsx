@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
+import { renderBionicChildren, useAmbientBionic } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface MobileTabBarItem {
   label: string;
@@ -28,6 +30,9 @@ export interface MobileTabBarProps extends Omit<ComponentPropsWithoutRef<"nav">,
   }) => ReactNode;
   className?: string;
   "aria-label"?: string;
+  /** Force bionic reading on/off for item labels, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const defaultRenderLink = ({
@@ -65,10 +70,14 @@ export function MobileTabBar({
   defaultActiveIndex = 0,
   onActiveChange,
   renderLink = defaultRenderLink,
+  bionic,
+  bionicOptions,
   className,
   "aria-label": ariaLabel = "Primary",
   ...props
 }: MobileTabBarProps) {
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const isControlled = activeIndex !== undefined;
   const [internalActive, setInternalActive] = useState(defaultActiveIndex);
   const currentActive = isControlled ? activeIndex : internalActive;
@@ -98,7 +107,9 @@ export function MobileTabBar({
                 {item.icon}
               </span>
             ) : null}
-            <span className="rebar-mobile-tab-bar-label">{item.label}</span>
+            <span className="rebar-mobile-tab-bar-label">
+              {renderBionicChildren(item.label, bionicEnabled, bionicOptions)}
+            </span>
           </>
         );
         const handleClick = () => {

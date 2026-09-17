@@ -1,6 +1,10 @@
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
+import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
+import { computeTrendline } from "../chartTrendline";
+import { useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
 
 export interface AreaChartSeries {
   label: string;
@@ -20,14 +24,19 @@ export interface AreaChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   ariaLabel?: string;
   height?: number;
   labelStep?: number;
+  /** Adds a dashed linear-regression trendline per series — off by default. */
+  trendline?: boolean;
+  /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 const DEFAULT_PALETTE = [
-  "var(--rebar-color-text-secondary, #757575)",
   "var(--rebar-color-primary, #0066cc)",
   "var(--rebar-color-success, #2e7d32)",
   "var(--rebar-color-warning, #f57c00)",
   "var(--rebar-color-danger, #d32f2f)",
+  "var(--rebar-color-text-secondary, #757575)",
 ];
 
 /**
@@ -42,9 +51,14 @@ export function AreaChart({
   ariaLabel,
   height = 300,
   labelStep = 1,
+  trendline,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: AreaChartProps) {
+  const titleContent = useBionicChildren(title, bionic, bionicOptions);
+  const { activeKey, isSelected, getMarkProps, backgroundProps } = useChartMarkSelection<string>();
   const width = 700;
   const marginLeft = 62;
   const marginRight = 20;
@@ -90,7 +104,9 @@ export function AreaChart({
         style={{ width: "100%", maxWidth: width, height: "auto", margin: "0 auto", display: "block" }}
         role="img"
         aria-label={ariaLabel ?? title ?? "Area chart"}
+        {...backgroundProps}
       >
+        <rect x={0} y={0} width={width} height={height} fill="transparent" data-rebar-part="chart-background" />
         {ticks.map((t, i) => {
           const y = yScale(t);
           return (
@@ -121,13 +137,42 @@ export function AreaChart({
           const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const linePoints = s.values.map((v, j) => `${xScale(j)},${yScale(v)}`).join(" ");
           const areaPoints = `${xScale(0)},${baselineY} ${linePoints} ${xScale(s.values.length - 1)},${baselineY}`;
+          const trend = trendline ? computeTrendline(s.values.map((v, j) => ({ x: j, y: v }))) : null;
           return (
             <g key={s.label}>
               <polygon points={areaPoints} fill={color} fillOpacity={0.18} stroke="none" />
               <polyline points={linePoints} fill="none" stroke={color} strokeWidth={2.5} />
-              {s.values.map((v, j) => (
-                <circle key={j} cx={xScale(j)} cy={yScale(v)} r={3.5} fill={color} />
-              ))}
+              {trend ? (
+                <line
+                  x1={xScale(0)}
+                  y1={yScale(trend.intercept)}
+                  x2={xScale(s.values.length - 1)}
+                  y2={yScale(trend.slope * (s.values.length - 1) + trend.intercept)}
+                  stroke={color}
+                  strokeWidth={1.5}
+                  strokeDasharray="2 4"
+                  opacity={0.6}
+                  data-rebar-part="trendline"
+                />
+              ) : null}
+              {s.values.map((v, j) => {
+                const key = `${i}:${j}`;
+                const selected = isSelected(key);
+                return (
+                  <circle
+                    key={j}
+                    cx={xScale(j)}
+                    cy={yScale(v)}
+                    r={selected ? 5.5 : 3.5}
+                    fill={color}
+                    stroke={selected ? "var(--rebar-color-bg-primary, #ffffff)" : undefined}
+                    strokeWidth={selected ? 1.5 : undefined}
+                    style={{ cursor: "pointer" }}
+                    data-rebar-part="mark"
+                    {...getMarkProps(key)}
+                  />
+                );
+              })}
             </g>
           );
         })}
@@ -143,6 +188,26 @@ export function AreaChart({
             {s.label}
           </text>
         ))}
+        {activeKey
+          ? (() => {
+              const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
+              const seriesIndex = Number(seriesIndexStr);
+              const pointIndex = Number(pointIndexStr);
+              const activeSeries = series[seriesIndex];
+              const value = activeSeries?.values[pointIndex];
+              if (!activeSeries || value === undefined) return null;
+              return (
+                <ChartValueTag
+                  x={xScale(pointIndex)}
+                  y={yScale(value)}
+                  viewBoxWidth={width}
+                  viewBoxHeight={height}
+                  accentColor={activeSeries.color ?? DEFAULT_PALETTE[seriesIndex % DEFAULT_PALETTE.length]}
+                  lines={[activeSeries.label, `${xLabels[pointIndex]}: ${Math.round(value).toLocaleString()}`]}
+                />
+              );
+            })()
+          : null}
       </svg>
       {title ? (
         <figcaption
@@ -154,7 +219,7 @@ export function AreaChart({
             marginTop: "var(--rebar-space-xs)",
           }}
         >
-          {title}
+          {titleContent}
         </figcaption>
       ) : null}
     </figure>

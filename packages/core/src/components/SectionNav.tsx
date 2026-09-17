@@ -64,7 +64,7 @@ const BEACON_POINTER_IDLE_MS = 150;
  *
  * Sticky and independently scrollable by default, with its scrollbar hidden (still fully
  * scrollable by wheel, touch, or keyboard — `scrollbar-width: none` / `::-webkit-scrollbar` just
- * suppress the visible track) — a long index (see this project's own `/docs/heuristics`, 46
+ * suppress the visible track) — a long index (see this project's own `/about/agent`, 46
  * entries) would otherwise either force the whole page to scroll to reach its tail or render a
  * visible scrollbar competing with the page's own content for attention. Hidden below
  * `--rebar-breakpoint-lg` (1024px) — there's no room for a side rail once the main content column

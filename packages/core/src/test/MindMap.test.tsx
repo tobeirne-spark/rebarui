@@ -3,7 +3,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { MindMap } from "../components/MindMap";
 import type { MindMapBranch } from "../components/MindMap";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.documentElement.removeAttribute("data-rebar-bionic");
+});
 
 const branches: MindMapBranch[] = [
   {
@@ -55,5 +58,18 @@ describe("MindMap", () => {
     const { container } = render(<MindMap topic="Central topic" branches={branches} />);
     // 2 branch edges + 3 child edges = 5 edges.
     expect(container.querySelectorAll('[data-rebar-part="edge"]')).toHaveLength(5);
+  });
+
+  it("splits the topic/branch labels for bionic reading via SVG tspan when ambient", () => {
+    document.documentElement.setAttribute("data-rebar-bionic", "true");
+    const { container } = render(<MindMap topic="Central topic" branches={branches} />);
+    const fixations = container.querySelectorAll("tspan.rebar-bionic-fixation");
+    expect(fixations.length).toBeGreaterThan(0);
+    expect(fixations[0]?.tagName.toLowerCase()).toBe("tspan");
+  });
+
+  it("does not split labels for bionic reading when not ambient", () => {
+    const { container } = render(<MindMap topic="Central topic" branches={branches} />);
+    expect(container.querySelector(".rebar-bionic-fixation")).not.toBeInTheDocument();
   });
 });

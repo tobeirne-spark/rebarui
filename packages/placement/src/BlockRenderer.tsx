@@ -2,14 +2,20 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AiChatInput,
   Avatar,
   Box,
   Button,
   Card,
   Carousel,
+  ChatThread,
   Checkbox,
   CodeBlock,
   Dialog,
+  Editable,
+  Empty,
+  ErrorBlock,
+  Footer,
   Heading,
   Iframe,
   Input,
@@ -17,10 +23,12 @@ import {
   LineChart,
   NavBar,
   NavIndex,
+  Popconfirm,
   Popover,
   ScatterChart,
   SectionNav,
   Select,
+  SidePanel,
   Spin,
   Stack,
   StackedBarChart,
@@ -32,10 +40,34 @@ import {
   Tag,
   Text,
   ThemeToggle,
+  TodoItem,
   Wizard,
 } from "rebar-ui";
-import type { TableColumn } from "rebar-ui";
-import type { Action, Block, FormField, KanbanCardData, KanbanColumnData, ProseNode, TableFilter } from "./schema";
+import type { AiChatInputIntent, ChatMessage, TableColumn, WizardValue } from "rebar-ui";
+import type {
+  Action,
+  Construct,
+  FormField,
+  GoalTrackerFocusAreaData,
+  ProseNode,
+  TableFilter,
+} from "./schema";
+import type {
+  AiChatSendHandler,
+  AiChatSource,
+  FormSubmitHandler,
+  GoalTrackerChangeHandler,
+  GoalTrackerSource,
+  KanbanBoardSource,
+  KanbanChangeHandler,
+  LineChartSource,
+  ScatterChartSource,
+  StackedBarChartSource,
+  TableAddRowHandler,
+  TableRowActionHandler,
+  TableSource,
+  WizardSubmitHandler,
+} from "./live";
 import { ICONS } from "./icons";
 
 // Parses the tiny inline markup `doc-section` prose supports: `` `code` ``, `[label](href)`, and
@@ -121,15 +153,36 @@ function renderProseNode(
   }
 }
 
+/** Live data sources, keyed by whatever string an individual block's own `source` field
+ * references — e.g. `{ chatMessages: messages }` resolves an `ai-chat` block whose `source` is
+ * `"chatMessages"`. Type your own object literal against `./live`'s exported per-block types
+ * (`AiChatSource`, `TableSource`, ...) with `satisfies` at the call site for real compile-time
+ * checking, even though this map itself stays a plain string-keyed `Record`. */
+export type BlockRendererData = Record<string, unknown>;
+
+/** Live event handlers, keyed the same way as `BlockRendererData` — e.g.
+ * `{ sendChatMessage: handleSend }` resolves an `ai-chat` block whose `onSend` is
+ * `"sendChatMessage"`. */
+export type BlockRendererHandlers = Record<string, (...args: never[]) => void>;
+
 export interface BlockRendererProps {
-  blocks: Block[];
+  blocks: Construct[];
   /**
    * How an `Action`/pillar-grid `href` becomes a link. Defaults to a plain `<a>` — pass your
    * framework's link component (e.g. Next.js `Link`) to get client-side navigation instead of a
    * full page load. Kept out of this package's own dependencies on purpose: the placement layer
    * shouldn't need to know which framework it's running inside.
    */
-  renderLink?: (props: { href: string; children: ReactNode }) => ReactNode;
+  renderLink?: (props: { href: string; children: ReactNode; className?: string; onClick?: () => void }) => ReactNode;
+  /** Live data sources for Opinion-tier blocks (see schema.ts's `source` fields and
+   * `./opinions`) — supplied by the real, hand-authored app code that owns the live state. Omit
+   * entirely for a purely static document; every block renders its own literal data exactly as
+   * before. The same "a real value supplied outside the serializable block data, referenced from
+   * inside it only by name" pattern this package's `renderLink` already established. */
+  data?: BlockRendererData;
+  /** Live event handlers for Opinion-tier blocks (see schema.ts's `onX` fields) — resolved the
+   * same way as `data`. */
+  handlers?: BlockRendererHandlers;
 }
 
 const defaultRenderLink = ({ href, children }: { href: string; children: ReactNode }) => (
@@ -137,6 +190,23 @@ const defaultRenderLink = ({ href, children }: { href: string; children: ReactNo
     {children}
   </a>
 );
+
+/** Resolves a block's `source` key against `data`, falling back to `fallback` (the block's own
+ * literal field) when `key` is unset or not present in `data` — the shared mechanism every
+ * Opinion-tier `*BlockView` uses to decide "am I live or static," per `ref/PLACEMENT_LIVE_DATA.md`. */
+function resolveSource<T>(data: BlockRendererData, key: string | undefined, fallback: T): T {
+  if (key === undefined) return fallback;
+  return (data[key] as T | undefined) ?? fallback;
+}
+
+/** Resolves a block's `onX` key against `handlers` — `undefined` when unset, so callers can tell
+ * "no live handler wired" apart from "a live handler that happens to no-op." */
+function resolveHandler<T extends (...args: never[]) => void>(
+  handlers: BlockRendererHandlers,
+  key: string | undefined,
+): T | undefined {
+  return key === undefined ? undefined : (handlers[key] as T | undefined);
+}
 
 function renderActionContent(action: Action | undefined) {
   if (!action) return null;
@@ -175,7 +245,13 @@ function itemPath(blockPath: string, arrayName: string, itemIndex: number) {
   return `${blockPath}.${arrayName}[${itemIndex}]`;
 }
 
-function renderFormField(field: FormField, index: number, blockPath: string) {
+function renderFormField(
+  field: FormField,
+  index: number,
+  blockPath: string,
+  value: WizardValue | undefined,
+  onFieldChange: (label: string, value: WizardValue) => void,
+) {
   const fieldPath = itemPath(blockPath, "fields", index);
   switch (field.kind) {
     case "text":
@@ -187,7 +263,13 @@ function renderFormField(field: FormField, index: number, blockPath: string) {
             {field.label}
             {field.required ? " *" : ""}
           </Text>
-          <Input type={field.kind} placeholder={field.placeholder} />
+          <Input
+            type={field.kind}
+            aria-label={field.label}
+            placeholder={field.placeholder}
+            value={(value as string) ?? ""}
+            onChange={(e) => onFieldChange(field.label, e.target.value)}
+          />
         </Stack>
       );
     case "textarea":
@@ -197,7 +279,14 @@ function renderFormField(field: FormField, index: number, blockPath: string) {
             {field.label}
             {field.required ? " *" : ""}
           </Text>
-          <textarea className="rebar-input" placeholder={field.placeholder} rows={3} />
+          <textarea
+            className="rebar-input"
+            aria-label={field.label}
+            placeholder={field.placeholder}
+            rows={3}
+            value={(value as string) ?? ""}
+            onChange={(e) => onFieldChange(field.label, e.target.value)}
+          />
         </Stack>
       );
     case "select":
@@ -211,6 +300,8 @@ function renderFormField(field: FormField, index: number, blockPath: string) {
             aria-label={field.label}
             options={field.options.map((o) => ({ value: o, label: o }))}
             placeholder={field.options[0]}
+            value={value as string}
+            onValueChange={(v) => onFieldChange(field.label, v)}
           />
         </Stack>
       );
@@ -218,7 +309,8 @@ function renderFormField(field: FormField, index: number, blockPath: string) {
       return (
         <Checkbox
           key={index}
-          defaultChecked={field.checked}
+          checked={(value as boolean) ?? field.checked ?? false}
+          onCheckedChange={(checked) => onFieldChange(field.label, checked === true)}
           data-rebar-block-path={fieldPath}
           data-rebar-block-item-label={field.label}
         >
@@ -231,10 +323,43 @@ function renderFormField(field: FormField, index: number, blockPath: string) {
   }
 }
 
+function FormBlockView({
+  block,
+  path,
+  handlers,
+}: {
+  block: Extract<Construct, { type: "form" }>;
+  path: string;
+  handlers: BlockRendererHandlers;
+}) {
+  const [values, setValues] = useState<Record<string, WizardValue>>({});
+  const onSubmitHandler = resolveHandler<FormSubmitHandler>(handlers, block.onSubmit);
+
+  const setFieldValue = (label: string, value: WizardValue) => {
+    setValues((prev) => ({ ...prev, [label]: value }));
+  };
+
+  return (
+    <Card data-rebar-placement-block="form" data-rebar-block-path={path}>
+      <Stack gap="md">
+        {block.heading ? <Heading level={3}>{block.heading}</Heading> : null}
+        {block.fields.map((field, fieldIndex) =>
+          renderFormField(field, fieldIndex, path, values[field.label], setFieldValue),
+        )}
+        {block.submitLabel ? (
+          <Button variant="primary" onClick={() => onSubmitHandler?.(values)}>
+            {block.submitLabel}
+          </Button>
+        ) : null}
+      </Stack>
+    </Card>
+  );
+}
+
 // Patches any top-level `iframe` block in `blocks` with a measured `height`, unless the document
 // already set one explicitly (an explicit height always wins). An iframe has no natural content
 // height, unlike everything else this schema renders — see schema.ts's doc comment on `iframe`.
-function withMeasuredHeight(blocks: Block[], height: number | undefined): Block[] {
+function withMeasuredHeight(blocks: Construct[], height: number | undefined): Construct[] {
   if (height === undefined) return blocks;
   return blocks.map((block) => (block.type === "iframe" ? { ...block, height: block.height ?? height } : block));
 }
@@ -248,11 +373,15 @@ function ComparisonBlockView({
   index,
   path,
   renderLink,
+  data,
+  handlers,
 }: {
-  block: Extract<Block, { type: "comparison" }>;
+  block: Extract<Construct, { type: "comparison" }>;
   index: number;
   path: string;
   renderLink: NonNullable<BlockRendererProps["renderLink"]>;
+  data: BlockRendererData;
+  handlers: BlockRendererHandlers;
 }) {
   const leftRef = useRef<HTMLDivElement>(null);
   const [leftHeight, setLeftHeight] = useState<number | undefined>(undefined);
@@ -285,7 +414,9 @@ function ComparisonBlockView({
         </Text>
         <div ref={leftRef}>
           <Stack gap="lg" data-rebar-block-path={`${path}.leftBlocks`}>
-            {block.leftBlocks.map((inner, innerIndex) => renderBlock(inner, innerIndex, renderLink, `${path}.leftBlocks`))}
+            {block.leftBlocks.map((inner, innerIndex) =>
+              renderBlock(inner, innerIndex, renderLink, `${path}.leftBlocks`, [], data, handlers),
+            )}
           </Stack>
         </div>
       </Stack>
@@ -295,7 +426,9 @@ function ComparisonBlockView({
         </Text>
         <Box style={{ border: "1px solid var(--rebar-color-border, #e0e0e0)", borderRadius: 4, overflow: "hidden" }}>
           <Stack gap="lg" data-rebar-block-path={`${path}.rightBlocks`}>
-            {rightBlocks.map((inner, innerIndex) => renderBlock(inner, innerIndex, renderLink, `${path}.rightBlocks`))}
+            {rightBlocks.map((inner, innerIndex) =>
+              renderBlock(inner, innerIndex, renderLink, `${path}.rightBlocks`, [], data, handlers),
+            )}
           </Stack>
         </Box>
       </Stack>
@@ -309,17 +442,35 @@ function KanbanBoardBlockView({
   path,
   renderLink,
   variant,
+  data,
+  handlers,
 }: {
-  block: Extract<Block, { type: "card-kanban" | "sticky-kanban" }>;
+  block: Extract<Construct, { type: "card-kanban" | "sticky-kanban" }>;
   index: number;
   path: string;
   renderLink: NonNullable<BlockRendererProps["renderLink"]>;
   variant: "default" | "sticky";
+  data: BlockRendererData;
+  handlers: BlockRendererHandlers;
 }) {
-  const [board, setBoard] = useState<{ columns: KanbanColumnData[]; cards: Record<string, KanbanCardData> }>({
-    columns: block.columns,
-    cards: block.cards,
+  const isLive = block.source !== undefined;
+  const liveBoard = resolveSource<KanbanBoardSource>(data, block.source, {
+    columns: block.columns ?? [],
+    cards: block.cards ?? {},
   });
+  const liveOnChange = resolveHandler<KanbanChangeHandler>(handlers, block.onChange);
+  const [localBoard, setLocalBoard] = useState<KanbanBoardSource>({
+    columns: block.columns ?? [],
+    cards: block.cards ?? {},
+  });
+  const board = isLive ? liveBoard : localBoard;
+  const handleBoardChange = (next: KanbanBoardSource) => {
+    if (isLive) {
+      liveOnChange?.(next);
+      return;
+    }
+    setLocalBoard(next);
+  };
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -372,7 +523,7 @@ function KanbanBoardBlockView({
             >
               <Stack gap="md" data-rebar-block-path={`${path}.settingsBlocks`}>
                 {block.settingsBlocks.map((inner, innerIndex) =>
-                  renderBlock(inner, innerIndex, renderLink, `${path}.settingsBlocks`),
+                  renderBlock(inner, innerIndex, renderLink, `${path}.settingsBlocks`, [], data, handlers),
                 )}
               </Stack>
             </Dialog>
@@ -385,7 +536,301 @@ function KanbanBoardBlockView({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
-      <Kanban columns={board.columns} cards={board.cards} search={search} cardVariant={variant} onChange={setBoard} />
+      <Kanban columns={board.columns} cards={board.cards} search={search} cardVariant={variant} onChange={handleBoardChange} />
+    </Stack>
+  );
+}
+
+/**
+ * A hierarchical goal/OKR tracker: one Aspiration, several Focus Areas, each holding several
+ * Goals. Reclassified from a standalone `GoalTracker` component into this block — the real
+ * reusable, directly-importable primitive was the smaller `TodoItem` (a checkable row with an
+ * optional celebration burst), while the aspiration/focus-area/goal hierarchy plus inline editing
+ * plus add/delete affordances is exactly "a named, pre-decided layout of real components" per
+ * `agents.md`'s own component-vs-block test. Local-only state seeded from the block's literal
+ * data, same convention `KanbanBoardBlockView` above already uses for its own board mutations.
+ */
+function GoalTrackerBlockView({
+  block,
+  index,
+  path,
+  data,
+  handlers,
+}: {
+  block: Extract<Construct, { type: "goal-tracker" }>;
+  index: number;
+  path: string;
+  data: BlockRendererData;
+  handlers: BlockRendererHandlers;
+}) {
+  const isLive = block.source !== undefined;
+  const liveState = resolveSource<GoalTrackerSource>(data, block.source, {
+    aspiration: block.aspiration ?? "",
+    focusAreas: block.focusAreas ?? [],
+  });
+  const onChangeHandler = resolveHandler<GoalTrackerChangeHandler>(handlers, block.onChange);
+
+  const [localAspiration, setLocalAspiration] = useState(block.aspiration ?? "");
+  const [localFocusAreas, setLocalFocusAreas] = useState<GoalTrackerFocusAreaData[]>(block.focusAreas ?? []);
+  const nextIdRef = useRef(0);
+  const celebration = block.celebration ?? "small";
+
+  const aspiration = isLive ? liveState.aspiration : localAspiration;
+  const focusAreas = isLive ? liveState.focusAreas : localFocusAreas;
+
+  const nextId = (prefix: string) => `${prefix}-${nextIdRef.current++}`;
+
+  const setAspirationValue = (next: string) => {
+    if (isLive) {
+      onChangeHandler?.({ aspiration: next, focusAreas });
+      return;
+    }
+    setLocalAspiration(next);
+  };
+  const applyFocusAreasChange = (compute: (prev: GoalTrackerFocusAreaData[]) => GoalTrackerFocusAreaData[]) => {
+    if (isLive) {
+      onChangeHandler?.({ aspiration, focusAreas: compute(focusAreas) });
+      return;
+    }
+    setLocalFocusAreas(compute);
+  };
+
+  const updateFocusArea = (id: string, text: string) => {
+    applyFocusAreasChange((prev) => prev.map((fa) => (fa.id === id ? { ...fa, text } : fa)));
+  };
+  const updateGoal = (focusAreaId: string, goalId: string, text: string) => {
+    applyFocusAreasChange((prev) =>
+      prev.map((fa) =>
+        fa.id !== focusAreaId ? fa : { ...fa, goals: fa.goals.map((g) => (g.id === goalId ? { ...g, text } : g)) },
+      ),
+    );
+  };
+  const toggleGoal = (focusAreaId: string, goalId: string, completed: boolean) => {
+    applyFocusAreasChange((prev) =>
+      prev.map((fa) =>
+        fa.id !== focusAreaId
+          ? fa
+          : { ...fa, goals: fa.goals.map((g) => (g.id === goalId ? { ...g, completed } : g)) },
+      ),
+    );
+  };
+  const deleteFocusArea = (id: string) => applyFocusAreasChange((prev) => prev.filter((fa) => fa.id !== id));
+  const deleteGoal = (focusAreaId: string, goalId: string) => {
+    applyFocusAreasChange((prev) =>
+      prev.map((fa) => (fa.id !== focusAreaId ? fa : { ...fa, goals: fa.goals.filter((g) => g.id !== goalId) })),
+    );
+  };
+  const addFocusArea = () => {
+    applyFocusAreasChange((prev) => [...prev, { id: nextId("focus-area"), text: "", goals: [] }]);
+  };
+  const addGoal = (focusAreaId: string) => {
+    applyFocusAreasChange((prev) =>
+      prev.map((fa) =>
+        fa.id !== focusAreaId
+          ? fa
+          : { ...fa, goals: [...fa.goals, { id: nextId("goal"), text: "", completed: false }] },
+      ),
+    );
+  };
+
+  return (
+    <Stack key={index} gap="lg" data-rebar-placement-block="goal-tracker" data-rebar-block-path={path}>
+      <Stack gap="xs" data-rebar-part="aspiration">
+        <Text size="xs" color="secondary" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Aspiration
+        </Text>
+        <Editable
+          value={aspiration}
+          onChange={setAspirationValue}
+          aria-label="Aspiration"
+          placeholder="Set an aspiration"
+          className="rebar-goal-tracker-aspiration-text"
+        />
+      </Stack>
+
+      {focusAreas.length === 0 ? (
+        <Empty description="No focus areas yet" />
+      ) : (
+        <Stack gap="md">
+          {focusAreas.map((focusArea, faIndex) => {
+            const faPath = itemPath(path, "focusAreas", faIndex);
+            const total = focusArea.goals.length;
+            const completedCount = focusArea.goals.filter((g) => g.completed).length;
+            return (
+              <Card key={focusArea.id} data-rebar-block-path={faPath} data-rebar-block-item-label={focusArea.text}>
+                <Stack gap="sm">
+                  <Text size="xs" color="secondary" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    Focus area
+                  </Text>
+                  <Stack direction="row" gap="sm" align="center" style={{ flexWrap: "wrap" }}>
+                    <Editable
+                      value={focusArea.text}
+                      onChange={(text) => updateFocusArea(focusArea.id, text)}
+                      aria-label="Focus area"
+                      placeholder="Name this focus area"
+                      className="rebar-goal-tracker-focus-area-text"
+                    />
+                    <Text size="sm" color="secondary" data-rebar-part="focus-area-progress">
+                      {completedCount} of {total} complete
+                    </Text>
+                    <Popconfirm
+                      trigger={
+                        <Button type="button" variant="tertiary" aria-label={`Delete focus area "${focusArea.text}"`}>
+                          Delete
+                        </Button>
+                      }
+                      title={`Delete "${focusArea.text || "this focus area"}"?`}
+                      description="This removes the focus area and all of its goals."
+                      destructive
+                      onConfirm={() => deleteFocusArea(focusArea.id)}
+                    />
+                  </Stack>
+
+                  {focusArea.goals.length === 0 ? (
+                    <Text size="sm" color="secondary" data-rebar-part="no-goals">
+                      No goals yet
+                    </Text>
+                  ) : (
+                    <Stack gap="sm">
+                      {focusArea.goals.map((goal, goalIndex) => (
+                        <Stack
+                          key={goal.id}
+                          direction="row"
+                          gap="sm"
+                          align="center"
+                          data-rebar-block-path={itemPath(faPath, "goals", goalIndex)}
+                          data-rebar-block-item-label={goal.text}
+                        >
+                          <TodoItem
+                            label={
+                              <Editable
+                                value={goal.text}
+                                onChange={(text) => updateGoal(focusArea.id, goal.id, text)}
+                                aria-label="Goal"
+                                placeholder="Name this goal"
+                                className={goal.completed ? "rebar-todo-item-label-completed" : undefined}
+                              />
+                            }
+                            completed={goal.completed}
+                            onToggle={(completed) => toggleGoal(focusArea.id, goal.id, completed)}
+                            toggleLabel={`Mark "${goal.text || "this goal"}" as ${goal.completed ? "incomplete" : "complete"}`}
+                            celebration={celebration}
+                            style={{ flex: "1 1 auto" }}
+                          />
+                          <Popconfirm
+                            trigger={
+                              <Button type="button" variant="tertiary" aria-label={`Delete goal "${goal.text}"`}>
+                                Delete
+                              </Button>
+                            }
+                            title={`Delete "${goal.text || "this goal"}"?`}
+                            destructive
+                            onConfirm={() => deleteGoal(focusArea.id, goal.id)}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="tertiary"
+                    size="sm"
+                    onClick={() => addGoal(focusArea.id)}
+                    style={{ alignSelf: "flex-start" }}
+                  >
+                    + Add goal
+                  </Button>
+                </Stack>
+              </Card>
+            );
+          })}
+        </Stack>
+      )}
+
+      <Button type="button" variant="secondary" onClick={addFocusArea} style={{ alignSelf: "flex-start" }}>
+        + Add focus area
+      </Button>
+    </Stack>
+  );
+}
+
+let aiChatNextId = 0;
+function nextAiChatId() {
+  aiChatNextId += 1;
+  return `ai-chat-${aiChatNextId}`;
+}
+
+/**
+ * A chat surface — `ChatThread` (the transcript) + `AiChatInput` (the composer), the exact
+ * composition this project's own `AiChatInput` docs page already hand-authors. Local-only state
+ * seeded from the block's literal `messages` (same convention `card-kanban`/`goal-tracker` already
+ * use): sending appends the caller's own new message to the transcript — this is a static-render
+ * demo surface, not a real backend, so it never fabricates an assistant reply, matching the same
+ * hand-authored page's own behavior exactly (send appends, nothing more). `intent` is computed
+ * from the current draft text the same way that page does (`/` → command, `?` → search) rather
+ * than being a block-level setting, since it's inherently about *what's currently typed*, not a
+ * fixed per-block config.
+ */
+function AiChatBlockView({
+  block,
+  index,
+  path,
+  data,
+  handlers,
+}: {
+  block: Extract<Construct, { type: "ai-chat" }>;
+  index: number;
+  path: string;
+  data: BlockRendererData;
+  handlers: BlockRendererHandlers;
+}) {
+  const isLive = block.source !== undefined;
+  const liveMessages = resolveSource<AiChatSource>(data, block.source, []);
+  const liveOnSend = resolveHandler<AiChatSendHandler>(handlers, block.onSend);
+
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>(block.messages ?? []);
+  const [draft, setDraft] = useState("");
+  const [dictating, setDictating] = useState(false);
+
+  const messages: ChatMessage[] = isLive ? liveMessages : localMessages;
+  const trimmed = draft.trim();
+  const intent: AiChatInputIntent = trimmed.startsWith("/") ? "command" : trimmed.startsWith("?") ? "search" : "message";
+
+  const handleSend = (text: string) => {
+    if (isLive) {
+      liveOnSend?.(text);
+      setDraft("");
+      return;
+    }
+    setLocalMessages((prev) => [...prev, { id: nextAiChatId(), role: "user", content: text }]);
+    setDraft("");
+  };
+
+  return (
+    <Stack
+      key={index}
+      gap="sm"
+      data-rebar-placement-block="ai-chat"
+      data-rebar-block-path={path}
+      style={{ border: "1px solid var(--rebar-color-border, #e0e0e0)", borderRadius: 4, padding: "var(--rebar-space-md, 16px)" }}
+    >
+      {block.title ? (
+        <Text style={{ fontWeight: "var(--rebar-font-weight-semibold)" }}>{block.title}</Text>
+      ) : null}
+      <div style={{ height: block.height ?? 240, overflowY: "auto" }}>
+        <ChatThread messages={messages} />
+      </div>
+      <AiChatInput
+        value={draft}
+        onValueChange={setDraft}
+        onSend={handleSend}
+        intent={intent}
+        placeholder={block.placeholder}
+        dictation={block.dictation}
+        dictating={dictating}
+        onDictationToggle={setDictating}
+      />
     </Stack>
   );
 }
@@ -426,7 +871,7 @@ function ChartFilterFooter({
   );
 }
 
-function useSeriesFilter(labels: string[]) {
+function useSeriesFilter(_labels: string[]) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const toggle = (label: string) => {
     setHidden((prev) => {
@@ -443,17 +888,20 @@ function ScatterChartBlockView({
   block,
   index,
   path,
+  data,
 }: {
-  block: Extract<Block, { type: "scatter-chart" }>;
+  block: Extract<Construct, { type: "scatter-chart" }>;
   index: number;
   path: string;
+  data: BlockRendererData;
 }) {
-  const labels = block.series.map((s) => s.label);
+  const series = resolveSource<ScatterChartSource>(data, block.source, block.series);
+  const labels = series.map((s) => s.label);
   const { hidden, toggle, visible } = useSeriesFilter(labels);
   return (
     <Stack key={index} gap="sm" data-rebar-placement-block="scatter-chart" data-rebar-block-path={path}>
       <ScatterChart
-        series={block.series.filter((s) => visible(s.label))}
+        series={series.filter((s) => visible(s.label))}
         title={block.title}
         ariaLabel={block.ariaLabel}
         height={block.height}
@@ -467,17 +915,20 @@ function LineChartBlockView({
   block,
   index,
   path,
+  data,
 }: {
-  block: Extract<Block, { type: "line-chart" }>;
+  block: Extract<Construct, { type: "line-chart" }>;
   index: number;
   path: string;
+  data: BlockRendererData;
 }) {
-  const labels = block.series.map((s) => s.label);
+  const series = resolveSource<LineChartSource>(data, block.source, block.series);
+  const labels = series.map((s) => s.label);
   const { hidden, toggle, visible } = useSeriesFilter(labels);
   return (
     <Stack key={index} gap="sm" data-rebar-placement-block="line-chart" data-rebar-block-path={path}>
       <LineChart
-        series={block.series.filter((s) => visible(s.label))}
+        series={series.filter((s) => visible(s.label))}
         xLabels={block.xLabels}
         labelStep={block.labelStep}
         crossoverIndex={block.crossoverIndex}
@@ -494,20 +945,23 @@ function StackedBarChartBlockView({
   block,
   index,
   path,
+  data,
 }: {
-  block: Extract<Block, { type: "stacked-bar-chart" }>;
+  block: Extract<Construct, { type: "stacked-bar-chart" }>;
   index: number;
   path: string;
+  data: BlockRendererData;
 }) {
+  const bars = resolveSource<StackedBarChartSource>(data, block.source, block.bars);
   // The "series" a stacked bar chart's viewer thinks in are the distinct segment labels repeated
   // across every bar (a legend of categories), not the bars themselves — filtering one out drops
   // that segment from every bar, not a whole bar.
-  const labels = [...new Set(block.bars.flatMap((bar) => bar.segments.map((s) => s.label)))];
+  const labels = [...new Set(bars.flatMap((bar) => bar.segments.map((s) => s.label)))];
   const { hidden, toggle, visible } = useSeriesFilter(labels);
   return (
     <Stack key={index} gap="sm" data-rebar-placement-block="stacked-bar-chart" data-rebar-block-path={path}>
       <StackedBarChart
-        bars={block.bars.map((bar) => ({ ...bar, segments: bar.segments.filter((s) => visible(s.label)) }))}
+        bars={bars.map((bar) => ({ ...bar, segments: bar.segments.filter((s) => visible(s.label)) }))}
         title={block.title}
         ariaLabel={block.ariaLabel}
         height={block.height}
@@ -522,7 +976,7 @@ function StatsTableBlockView({
   index,
   path,
 }: {
-  block: Extract<Block, { type: "stats-table" }>;
+  block: Extract<Construct, { type: "stats-table" }>;
   index: number;
   path: string;
 }) {
@@ -549,7 +1003,7 @@ function GalleryBlockView({
   index,
   path,
 }: {
-  block: Extract<Block, { type: "gallery" }>;
+  block: Extract<Construct, { type: "gallery" }>;
   index: number;
   path: string;
 }) {
@@ -564,7 +1018,6 @@ function GalleryBlockView({
           const n = String(i + 1).padStart(2, "0");
           return (
             <Box key={n} style={{ maxWidth: 360, margin: "0 auto" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`${block.dir}/${block.prefix}-${n}.png`}
                 alt={`${block.label}, run ${n}`}
@@ -619,19 +1072,30 @@ function DataTableBlockView({
   block,
   index,
   path,
+  data,
+  handlers,
 }: {
-  block: Extract<Block, { type: "table" }>;
+  block: Extract<Construct, { type: "table" }>;
   index: number;
   path: string;
+  data: BlockRendererData;
+  handlers: BlockRendererHandlers;
 }) {
+  const isLive = block.source !== undefined;
+  const liveRows = resolveSource<TableSource>(data, block.source, []);
+  const [localRows, setLocalRows] = useState(block.rows ?? []);
+  const activeRows = isLive ? liveRows : localRows;
+
   const [search, setSearch] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<number, string>>({});
-  const [localRows, setLocalRows] = useState(block.rows);
   const [addOpen, setAddOpen] = useState(false);
   const [draftCells, setDraftCells] = useState<string[]>(() => block.columns.map(() => ""));
   const [copied, setCopied] = useState(false);
 
-  const hasActions = localRows.some((r) => r.actionLabel);
+  const onRowActionHandler = resolveHandler<TableRowActionHandler>(handlers, block.onRowAction);
+  const onAddRowHandler = resolveHandler<TableAddRowHandler>(handlers, block.onAddRow);
+
+  const hasActions = activeRows.some((r) => r.actionLabel);
   const columns: TableColumn<Record<string, unknown>>[] = block.columns.map((header, i) => ({
     key: String(i),
     header,
@@ -643,14 +1107,18 @@ function DataTableBlockView({
       header: "",
       render: (_value, row) =>
         row.__actionLabel ? (
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onRowActionHandler?.(row.__rowKey as number, activeRows[row.__rowKey as number]!)}
+          >
             {row.__actionLabel as string}
           </Button>
         ) : null,
     });
   }
 
-  const rows = localRows.map((row, rowIndex) => {
+  const rows = activeRows.map((row, rowIndex) => {
     const record: Record<string, unknown> = { __rowKey: rowIndex, __actionLabel: row.actionLabel };
     row.cells.forEach((cell, cellIndex) => {
       record[String(cellIndex)] = cell;
@@ -686,7 +1154,11 @@ function DataTableBlockView({
 
   const addLabel = (typeof block.addable === "object" && block.addable.label) || "Add row";
   const handleAddSubmit = () => {
-    setLocalRows((prev) => [...prev, { cells: draftCells }]);
+    if (isLive) {
+      onAddRowHandler?.(draftCells);
+    } else {
+      setLocalRows((prev) => [...prev, { cells: draftCells }]);
+    }
     setDraftCells(block.columns.map(() => ""));
     setAddOpen(false);
   };
@@ -770,17 +1242,20 @@ function DataTableBlockView({
         columns={columns}
         data={visibleRows}
         rowKey="__rowKey"
+        loading={block.loading}
       />
     </Stack>
   );
 }
 
 function renderBlock(
-  block: Block,
+  block: Construct,
   index: number,
   renderLink: NonNullable<BlockRendererProps["renderLink"]>,
   parentPath = "blocks",
   pageSections: { id: string; label: string }[] = [],
+  data: BlockRendererData = {},
+  handlers: BlockRendererHandlers = {},
 ) {
   const path = `${parentPath}[${index}]`;
   switch (block.type) {
@@ -851,7 +1326,19 @@ function renderBlock(
         // regardless of their own value).
         <span style={{ display: "inline-block", textDecoration: "none" }}>
           <Stack direction="row" align="center" gap="xs">
-            {block.logo.iconSrc ? <img src={block.logo.iconSrc} alt="" width={24} height={24} /> : null}
+            {block.logo.iconPath ? (
+              <svg
+                viewBox={block.logo.iconViewBox ?? "0 0 24 24"}
+                width={24}
+                height={24}
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d={block.logo.iconPath} />
+              </svg>
+            ) : block.logo.iconSrc ? (
+              <img src={block.logo.iconSrc} alt="" width={24} height={24} />
+            ) : null}
             <Text as="span" size="md" style={{ fontWeight: "var(--rebar-font-weight-bold, 700)" }}>
               {block.logo.label}
             </Text>
@@ -984,6 +1471,12 @@ function renderBlock(
           </Stack>
         </Stack>
       );
+
+    case "goal-tracker":
+      return <GoalTrackerBlockView key={index} block={block} index={index} path={path} data={data} handlers={handlers} />;
+
+    case "ai-chat":
+      return <AiChatBlockView key={index} block={block} index={index} path={path} data={data} handlers={handlers} />;
 
     case "callout": {
       const Icon = block.icon ? ICONS[block.icon] : null;
@@ -1160,18 +1653,10 @@ function renderBlock(
       );
 
     case "form":
-      return (
-        <Card key={index} data-rebar-placement-block="form" data-rebar-block-path={path}>
-          <Stack gap="md">
-            {block.heading ? <Heading level={3}>{block.heading}</Heading> : null}
-            {block.fields.map((field, fieldIndex) => renderFormField(field, fieldIndex, path))}
-            {block.submitLabel ? <Button variant="primary">{block.submitLabel}</Button> : null}
-          </Stack>
-        </Card>
-      );
+      return <FormBlockView key={index} block={block} path={path} handlers={handlers} />;
 
     case "table":
-      return <DataTableBlockView key={index} block={block} index={index} path={path} />;
+      return <DataTableBlockView key={index} block={block} index={index} path={path} data={data} handlers={handlers} />;
 
     case "data-list":
       return (
@@ -1259,7 +1744,15 @@ function renderBlock(
             <TabPanel key={tab.label} value={tab.label}>
               <Stack gap="lg" style={{ paddingTop: "var(--rebar-space-md)" }}>
                 {tab.blocks.map((inner, innerIndex) =>
-                  renderBlock(inner, innerIndex, renderLink, `${itemPath(path, "tabs", tabIndex)}.blocks`),
+                  renderBlock(
+                    inner,
+                    innerIndex,
+                    renderLink,
+                    `${itemPath(path, "tabs", tabIndex)}.blocks`,
+                    [],
+                    data,
+                    handlers,
+                  ),
                 )}
               </Stack>
             </TabPanel>
@@ -1282,7 +1775,7 @@ function renderBlock(
         >
           <Stack gap="md" data-rebar-placement-block="modal" data-rebar-block-path={path}>
             {block.blocks.map((inner, innerIndex) =>
-              renderBlock(inner, innerIndex, renderLink, `${path}.blocks`),
+              renderBlock(inner, innerIndex, renderLink, `${path}.blocks`, [], data, handlers),
             )}
           </Stack>
         </Dialog>
@@ -1296,6 +1789,7 @@ function renderBlock(
           submitLabel={block.submitLabel}
           backLabel={block.backLabel}
           nextLabel={block.nextLabel}
+          onSubmit={resolveHandler<WizardSubmitHandler>(handlers, block.onSubmit)}
           data-rebar-placement-block="wizard"
           data-rebar-block-path={path}
         />
@@ -1303,12 +1797,30 @@ function renderBlock(
 
     case "card-kanban":
       return (
-        <KanbanBoardBlockView key={index} block={block} index={index} path={path} renderLink={renderLink} variant="default" />
+        <KanbanBoardBlockView
+          key={index}
+          block={block}
+          index={index}
+          path={path}
+          renderLink={renderLink}
+          variant="default"
+          data={data}
+          handlers={handlers}
+        />
       );
 
     case "sticky-kanban":
       return (
-        <KanbanBoardBlockView key={index} block={block} index={index} path={path} renderLink={renderLink} variant="sticky" />
+        <KanbanBoardBlockView
+          key={index}
+          block={block}
+          index={index}
+          path={path}
+          renderLink={renderLink}
+          variant="sticky"
+          data={data}
+          handlers={handlers}
+        />
       );
 
     case "hero":
@@ -1472,7 +1984,48 @@ function renderBlock(
       );
 
     case "comparison":
-      return <ComparisonBlockView key={index} block={block} index={index} path={path} renderLink={renderLink} />;
+      return (
+        <ComparisonBlockView
+          key={index}
+          block={block}
+          index={index}
+          path={path}
+          renderLink={renderLink}
+          data={data}
+          handlers={handlers}
+        />
+      );
+
+    case "side-panel":
+      return (
+        <Stack
+          key={index}
+          direction="row"
+          gap="lg"
+          style={{ alignItems: "stretch" }}
+          data-rebar-placement-block="side-panel"
+          data-rebar-block-path={path}
+        >
+          <Box style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <Stack gap="lg" data-rebar-block-path={`${path}.main`}>
+              {block.main.map((inner, innerIndex) =>
+                renderBlock(inner, innerIndex, renderLink, `${path}.main`, [], data, handlers),
+              )}
+            </Stack>
+          </Box>
+          <SidePanel
+            title={block.panel.title}
+            defaultOpen={block.panel.defaultOpen ?? true}
+            data-rebar-block-path={`${path}.panel`}
+          >
+            <Stack gap="md" data-rebar-block-path={`${path}.panel.blocks`}>
+              {block.panel.blocks.map((inner, innerIndex) =>
+                renderBlock(inner, innerIndex, renderLink, `${path}.panel.blocks`, [], data, handlers),
+              )}
+            </Stack>
+          </SidePanel>
+        </Stack>
+      );
 
     case "heuristic":
       return (
@@ -1492,7 +2045,7 @@ function renderBlock(
               }}
             >
               {block.exampleBlocks.map((inner, innerIndex) =>
-                renderBlock(inner, innerIndex, renderLink, `${path}.exampleBlocks`),
+                renderBlock(inner, innerIndex, renderLink, `${path}.exampleBlocks`, [], data, handlers),
               )}
             </Box>
           ) : null}
@@ -1525,14 +2078,43 @@ function renderBlock(
         </Box>
       );
 
+    case "error-block":
+      return (
+        <ErrorBlock
+          key={index}
+          status={block.status ?? "default"}
+          title={block.title}
+          description={block.description}
+          fullPage={block.fullPage ?? true}
+          data-rebar-placement-block="error-block"
+          data-rebar-block-path={path}
+        >
+          {renderAction(block.action, renderLink)}
+        </ErrorBlock>
+      );
+
+    case "footer":
+      return (
+        <Footer
+          key={index}
+          label={block.label}
+          content={block.content}
+          links={block.links}
+          chips={block.chips}
+          renderLink={renderLink}
+          data-rebar-placement-block="footer"
+          data-rebar-block-path={path}
+        />
+      );
+
     case "scatter-chart":
-      return <ScatterChartBlockView key={index} block={block} index={index} path={path} />;
+      return <ScatterChartBlockView key={index} block={block} index={index} path={path} data={data} />;
 
     case "line-chart":
-      return <LineChartBlockView key={index} block={block} index={index} path={path} />;
+      return <LineChartBlockView key={index} block={block} index={index} path={path} data={data} />;
 
     case "stacked-bar-chart":
-      return <StackedBarChartBlockView key={index} block={block} index={index} path={path} />;
+      return <StackedBarChartBlockView key={index} block={block} index={index} path={path} data={data} />;
 
     case "stats-table":
       return <StatsTableBlockView key={index} block={block} index={index} path={path} />;
@@ -1540,16 +2122,147 @@ function renderBlock(
     case "gallery":
       return <GalleryBlockView key={index} block={block} index={index} path={path} />;
 
+    case "construct-entry":
+      return (
+        <Box
+          data-rebar-placement-block="construct-entry"
+          data-rebar-block-path={path}
+          style={{
+            border: "1px solid var(--rebar-color-border, #e0e0e0)",
+            borderRadius: "var(--rebar-radius-md, 8px)",
+            padding: "var(--rebar-space-lg, 24px)",
+            backgroundColor: "var(--rebar-color-bg-surface, #fafafa)",
+          }}
+        >
+          <Stack gap="md">
+            <Stack direction="row" gap="sm" align="center">
+              <Heading level={3}>{block.id}</Heading>
+              <Tag tone={block.measured ? "success" : "default"}>
+                {block.measured ? "Measured" : "Unmeasured"}
+              </Tag>
+            </Stack>
+            <Text>{block.description}</Text>
+            <Stack gap="sm">
+              <Text style={{ fontWeight: 600, fontSize: "var(--rebar-font-size-sm, 14px)" }}>
+                Shape
+              </Text>
+              <CodeBlock code={block.shape} language="typescript" />
+            </Stack>
+            {block.code && (
+              <Stack gap="sm">
+                <Text style={{ fontWeight: 600, fontSize: "var(--rebar-font-size-sm, 14px)" }}>
+                  Implementation
+                </Text>
+                <CodeBlock code={block.code} language="typescript" />
+              </Stack>
+            )}
+            {block.blocks && block.blocks.length > 0 && (
+              <Stack gap="sm">
+                <Text style={{ fontWeight: 600, fontSize: "var(--rebar-font-size-sm, 14px)" }}>
+                  Demo
+                </Text>
+                <Box
+                  style={{
+                    border: "1px solid var(--rebar-color-border, #e0e0e0)",
+                    borderRadius: "var(--rebar-radius-sm, 4px)",
+                    padding: "var(--rebar-space-md, 16px)",
+                    backgroundColor: "var(--rebar-color-bg, #ffffff)",
+                  }}
+                >
+                  <Stack gap="md">
+                    {block.blocks.map((b, i) =>
+                      renderBlock(b, i, renderLink, `${path}.blocks`, pageSections, data, handlers)
+                    )}
+                  </Stack>
+                </Box>
+              </Stack>
+            )}
+          </Stack>
+        </Box>
+      );
+
+    case "mega-menu": {
+      const columnCount = block.columns.length;
+      return (
+        <Box
+          data-rebar-placement-block="mega-menu"
+          data-rebar-block-path={path}
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+            gap: "var(--rebar-space-xl, 32px)",
+            padding: "var(--rebar-space-xl, 32px)",
+            minWidth: columnCount * 200,
+          }}
+        >
+          {block.columns.map((col, ci) => (
+            <Stack key={ci} gap="sm">
+              <Text
+                as="span"
+                size="xs"
+                color="secondary"
+                style={{
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  fontWeight: "var(--rebar-font-weight-semibold, 600)",
+                }}
+              >
+                {col.heading}
+              </Text>
+              <Stack gap="xs">
+                {col.items.map((item, ii) => {
+                  const Icon = item.icon ? ICONS[item.icon] : null;
+                  const content = (
+                    <Stack gap="xs">
+                      <Stack direction="row" gap="xs" align="center">
+                        {Icon ? <Icon /> : null}
+                        <Text as="span" size="sm" style={{ fontWeight: "var(--rebar-font-weight-medium, 500)" }}>
+                          {item.label}
+                          {item.external ? " ↗" : null}
+                        </Text>
+                      </Stack>
+                      {item.description ? (
+                        <Text size="xs" color="secondary">
+                          {item.description}
+                        </Text>
+                      ) : null}
+                    </Stack>
+                  );
+                  return (
+                    <span key={ii} style={{ display: "block" }}>
+                      {renderLink({ href: item.href, children: content })}
+                    </span>
+                  );
+                })}
+              </Stack>
+            </Stack>
+          ))}
+          {block.footer ? (
+            <Box
+              style={{
+                gridColumn: `1 / -1`,
+                borderTop: "1px solid var(--rebar-color-border, #e0e0e0)",
+                paddingTop: "var(--rebar-space-md, 16px)",
+                marginTop: "var(--rebar-space-sm, 8px)",
+              }}
+            >
+              {renderLink({ href: block.footer.href, children: <Text size="sm">{block.footer.label} →</Text> })}
+            </Box>
+          ) : null}
+        </Box>
+      );
+    }
+
     default:
       return null;
   }
 }
 
-export function BlockRenderer({ blocks, renderLink = defaultRenderLink }: BlockRendererProps) {
+export function BlockRenderer({ blocks, renderLink = defaultRenderLink, data = {}, handlers = {} }: BlockRendererProps) {
   // Derived once for any `page-index` block among `blocks` — see that case's comment above and
   // this package's schema.ts doc comment for why a page-index block takes no `sections` prop.
   const pageSections = blocks
-    .filter((block): block is Extract<Block, { type: "doc-section" }> => block.type === "doc-section" && !!block.heading)
+    .filter((block): block is Extract<Construct, { type: "doc-section" }> => block.type === "doc-section" && !!block.heading)
     .map((block) => ({ id: slugify(block.heading!), label: block.heading! }));
 
   // `page-index` renders a real `position: sticky` element, and sticky positioning only works when
@@ -1569,13 +2282,13 @@ export function BlockRenderer({ blocks, renderLink = defaultRenderLink }: BlockR
   // padded with wrapper markup that exists only to support documents with more than one block.
   const onlyBlock = blocks.length === 1 ? blocks[0] : undefined;
   if (onlyBlock?.type === "page-index" || onlyBlock?.type === "site-header") {
-    return renderBlock(onlyBlock, 0, renderLink, "blocks", pageSections);
+    return renderBlock(onlyBlock, 0, renderLink, "blocks", pageSections, data, handlers);
   }
 
   return (
     <Box data-rebar-placement-root>
       <Stack gap="lg">
-        {blocks.map((block, index) => renderBlock(block, index, renderLink, "blocks", pageSections))}
+        {blocks.map((block, index) => renderBlock(block, index, renderLink, "blocks", pageSections, data, handlers))}
       </Stack>
     </Box>
   );

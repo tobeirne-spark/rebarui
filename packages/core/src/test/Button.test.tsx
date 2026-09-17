@@ -50,6 +50,19 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("renders a real currentColor-inheriting vector spinner, not a static emoji glyph", () => {
+    const { container } = render(<Button loading>Submit</Button>);
+    expect(container.querySelector('[data-rebar-component="spin"]')).toBeInTheDocument();
+    const icon = container.querySelector(".rebar-spin-icon-classic");
+    expect(icon).toBeInTheDocument();
+    // Every stroke on the vector spinner uses currentColor, so it always matches whatever text
+    // color CSS resolves for this specific button variant — never a hardcoded, possibly
+    // same-as-background color regardless of variant.
+    for (const path of icon!.querySelectorAll("circle, path")) {
+      expect(path).toHaveAttribute("stroke", "currentColor");
+    }
+  });
+
   it("forwards arbitrary data-* and aria-* attributes to the root node", () => {
     render(
       <Button data-testid="confirm-delete-btn" aria-describedby="warning">

@@ -145,4 +145,61 @@ describe("FileManager", () => {
     render(<FileManager root={ROOT} data-testid="fm" />);
     expect(screen.getByTestId("fm")).toBeInTheDocument();
   });
+
+  it("shows caller-supplied actions only while something is selected, and fires them with the selection", async () => {
+    const user = userEvent.setup();
+    const onZip = vi.fn();
+    render(
+      <FileManager
+        root={ROOT}
+        actions={[{ key: "zip", label: "Zip & download", onSelect: onZip }]}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Zip & download" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Grid view" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select photo.png" }));
+
+    const zipButton = screen.getByRole("button", { name: "Zip & download" });
+    expect(zipButton).toBeInTheDocument();
+    await user.click(zipButton);
+    expect(onZip).toHaveBeenCalledWith(["photo"]);
+  });
+
+  it("disables a caller-supplied action per its own disabled predicate", async () => {
+    const user = userEvent.setup();
+    render(
+      <FileManager
+        root={ROOT}
+        actions={[
+          {
+            key: "download",
+            label: "Download",
+            disabled: (ids) => ids.length !== 1,
+            onSelect: vi.fn(),
+          },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Grid view" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Docs" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select photo.png" }));
+    expect(screen.getByRole("button", { name: "Download" })).toBeDisabled();
+  });
+
+  it("singleFileMode hides the folder tree and the grid/table view toggle", () => {
+    render(<FileManager root={ROOT} singleFileMode />);
+    expect(screen.queryByRole("tree", { name: "Folders" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Grid view" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Table view" })).not.toBeInTheDocument();
+  });
+
+  it("singleFileMode replaces the selection instead of adding to it", async () => {
+    const user = userEvent.setup();
+    const onSelectedIdsChange = vi.fn();
+    render(<FileManager root={ROOT} singleFileMode onSelectedIdsChange={onSelectedIdsChange} />);
+    await user.click(screen.getByRole("checkbox", { name: "Select Docs" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select photo.png" }));
+    expect(onSelectedIdsChange).toHaveBeenLastCalledWith(["photo"]);
+  });
 });

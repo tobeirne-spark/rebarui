@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Checkbox } from "./Checkbox";
 import { Empty } from "./Empty";
 import { Pagination } from "./Pagination";
 import { Skeleton } from "./Skeleton";
+import { renderBionicChildren, useAmbientBionic, useBionicChildren } from "../bionic";
+import type { BionicOptions } from "../bionic";
+import { useDelayedLoading } from "../useDelayedLoading";
 
 export interface TableColumn<T> {
   key: string;
@@ -47,6 +50,14 @@ export interface TableProps<T> {
   page?: number;
   onPageChange?: (page: number) => void;
   loading?: boolean;
+  /** Waits this long before showing the `loading` skeleton rows at all — a `loading` that goes
+   * back to `false` before this elapses never renders them, the fix for a near-instant (e.g.
+   * local, in-memory) fetch flashing skeleton rows for a single frame. Unset by default (shows
+   * immediately, exactly today's behavior) — see `ref/HEURISTICS.md` #52 and `useDelayedLoading`. */
+  loadingDelayMs?: number;
+  /** Once shown, keeps the skeleton rows up for at least this long, even if `loading` goes back
+   * to `false` sooner. Unset by default (hides immediately). */
+  loadingMinDurationMs?: number;
   /** Shown in place of the body when `data` is empty and `loading` is false. */
   emptyMessage?: ReactNode;
   /** Bounds the table's own scrollable body — see ref/HEURISTICS.md #45 (a control's footprint
@@ -59,6 +70,10 @@ export interface TableProps<T> {
   caption?: ReactNode;
   "aria-label"?: string;
   className?: string;
+  /** Force bionic reading on/off for the caption and column headers, overriding the ambient
+   * data-rebar-bionic setting. */
+  bionic?: boolean;
+  bionicOptions?: BionicOptions;
 }
 
 function defaultAccessor<T>(row: T, key: string): unknown {
@@ -71,6 +86,26 @@ function compareValues(a: unknown, b: unknown): number {
   if (b === undefined || b === null) return 1;
   if (typeof a === "number" && typeof b === "number") return a - b;
   return String(a).localeCompare(String(b));
+}
+
+// A soft, dev-only nudge toward ref/HEURISTICS.md #54 (a count/aggregate that names a browsable
+// set elsewhere defaults to a drill-down link, not inert text) — this can't be genuinely enforced
+// (there's no way to know whether a matching detail view actually exists), so it's a console
+// suggestion, never a block: a column whose own key/header reads like a count with no `render` at
+// all is exactly the shape that heuristic is about, common enough (chunk_count, item count, total)
+// to be worth flagging even at the cost of an occasional false positive on a genuinely
+// non-linkable count.
+const AGGREGATE_COLUMN_HINT = /count|total/i;
+
+function warnIfLikelyDrillDownColumn<T>(column: TableColumn<T>): void {
+  if (column.render || process.env.NODE_ENV === "production") return;
+  if (AGGREGATE_COLUMN_HINT.test(column.key) || AGGREGATE_COLUMN_HINT.test(column.header)) {
+    console.warn(
+      `[rebar-ui] Table column "${column.header}" (key: "${column.key}") looks like a count/aggregate rendered as plain text. ` +
+        "If it names a set of items browsable elsewhere in this app, consider a `render` that links to that view instead " +
+        "(ref/HEURISTICS.md #54) — pass a `render` returning the plain value unchanged to silence this for a genuinely non-linkable count.",
+    );
+  }
 }
 
 /**
@@ -94,13 +129,35 @@ export function Table<T>({
   pageSize,
   page: controlledPage,
   onPageChange,
-  loading = false,
+  loading: loadingProp = false,
+  loadingDelayMs,
+  loadingMinDurationMs,
   emptyMessage = "No data.",
   maxHeight,
   caption,
+  bionic,
+  bionicOptions,
   className,
   ...props
 }: TableProps<T>) {
+  const hasLoadingDelayConfig = (loadingDelayMs ?? 0) > 0 || (loadingMinDurationMs ?? 0) > 0;
+  // Always called; only its result is used, and only once a delay/minimum-duration is actually
+  // configured — otherwise `loading` passes through exactly as before, synchronously.
+  const delayedLoading = useDelayedLoading(loadingProp, {
+    delayMs: loadingDelayMs,
+    minDurationMs: loadingMinDurationMs,
+  });
+  const loading = hasLoadingDelayConfig ? delayedLoading : loadingProp;
+
+  useEffect(() => {
+    columns.forEach((column) => warnIfLikelyDrillDownColumn(column));
+    // Only re-check when the column *set* actually changes, not on every render — columns are
+    // typically a stable, module-level or memoized array, so this rarely re-runs at all.
+  }, [columns]);
+
+  const captionContent = useBionicChildren(caption, bionic, bionicOptions);
+  const ambientBionic = useAmbientBionic();
+  const bionicEnabled = bionic ?? ambientBionic;
   const getRowKey = (row: T): string =>
     typeof rowKey === "string" ? String(defaultAccessor(row, rowKey)) : rowKey(row);
 
@@ -166,7 +223,7 @@ export function Table<T>({
     <div className={clsx("rebar-table-wrapper", className)} data-rebar-component="table" {...props}>
       {caption ? (
         <div className="rebar-table-caption" data-rebar-part="caption">
-          {caption}
+          {captionContent}
         </div>
       ) : null}
       <div className="rebar-table-scroll" data-rebar-part="scroll" style={{ maxHeight }}>
@@ -197,13 +254,13 @@ export function Table<T>({
                         className="rebar-table-sort-button"
                         onClick={() => handleSort(col)}
                       >
-                        <span>{col.header}</span>
+                        <span>{renderBionicChildren(col.header, bionicEnabled, bionicOptions)}</span>
                         <span className="rebar-table-sort-icon" aria-hidden="true">
                           {isSorted ? (sort!.direction === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>
                     ) : (
-                      col.header
+                      renderBionicChildren(col.header, bionicEnabled, bionicOptions)
                     )}
                   </th>
                 );

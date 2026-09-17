@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
+import { Spin } from "./Spin";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
@@ -43,7 +44,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       aria-busy={loading || undefined}
       {...props}
     >
-      {loading ? <span aria-hidden="true">⏳</span> : null}
+      {/* "classic" (a plain vector spinner using stroke="currentColor") inherits this button's
+         own already-variant-aware text color — the real fix for every variant/theme combination
+         at once, rather than a light/dark illustrated asset pre-selected against the *page's*
+         theme, which can mismatch a button whose own background doesn't follow the page (e.g. a
+         colored "primary"/"destructive" button in light mode still needs light text on a dark
+         surface). Spin's own `role="status"` announces the loading state, same as `aria-busy`
+         on the button itself. */}
+      {loading ? <Spin spinning size={size} variant="classic" className="rebar-button-spinner" /> : null}
       {content}
     </button>
   );

@@ -1,12 +1,14 @@
 {
   "name": "@rebar-ui/migrate-antd",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "description": "Codemod migrating rebar-ui usage to Ant Design v6. First instance of the migration-adapter pattern — see ref/ARCHITECTURE.md#migration-adapters.",
   "bin": {
     "rebar-migrate-antd": "./dist/cli.js"
   },
   "main": "./dist/transform.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

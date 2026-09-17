@@ -167,6 +167,17 @@ an item-count threshold) and #27 (`Select` is browsing-only today, no type-to-fi
     absent, never a blank area — see `/benchmarks`'s own `ScatterChart`/`LineChart` helpers for a
     real, shipped example of this (title and axis labels are required arguments, not optional).
 
+    A chart's context also needs to be reachable *interactively*, not just printed once as a
+    caption: hovering a data mark should surface its exact underlying value(s) in a tag, and
+    selecting a mark (click) should make that tag persist past the hover ending, so a value can be
+    read at leisure rather than only while the pointer holds still. Selecting a different mark
+    swaps which tag persists; clicking empty chart space clears the selection back to hover-only.
+    This is #1 (visibility of system status) applied to the selected mark specifically — once
+    something is "selected," a viewer shouldn't have to keep the mouse in place to keep seeing why.
+    Component rule: charts with individually-selectable marks (area/bubble/line/box-plot points,
+    heatmap cells) share one hook for this, `useChartMarkSelection`, rather than each
+    reimplementing hover/selection state independently.
+
 17. **Progressive disclosure: default to ≤7-9 visible options** — show essential options first;
     reveal advanced options on demand, respecting Miller's Law (people reliably track 7±2 items at
     once). Default state shows 5-9 visible options; longer lists need search, filtering, grouping,
@@ -285,9 +296,11 @@ an item-count threshold) and #27 (`Select` is browsing-only today, no type-to-fi
     allow pasting paths. Component rule: `Select` is browsing-only (checked against source — no
     type-to-filter); `Combobox` is the shipped answer, filling in the type-to-filter half of
     `Select` — a real WAI-ARIA combobox (search-as-you-type over its own option list), single-select
-    by default or a multi-select dropdown via its `multiple` mode. `Form`'s `kind: "date"` field is
-    already the manual-text-entry half of a date input (native, not a calendar popover); a future
-    `DatePicker` fills in the remaining calendar-browsing half.
+    by default or a multi-select dropdown via its `multiple` mode. Dates get the same split across two
+    distinct, already-shipped components rather than one that tries to do both: `DatePicker` is the
+    fast, keyboard-first direct-entry shape (a bounded day/month/year numeric triplet — closer to
+    `NumberInput` than a calendar), and `Calendar` is the browsing/visual-picking shape (a real month
+    grid), reachable in a `Popover` when a trigger-button shape is wanted.
 
 28. **Information scent in navigation** — navigation labels clearly indicate what's ahead, not vague
     or clever names. Users follow "information scent" — clues that lead them to their goal.
@@ -599,6 +612,197 @@ applied to the #11-30 de-dup above.
     `stats-table`/`table` blocks — scrolls within itself on a narrow viewport rather than forcing
     the page to scroll horizontally. No gap found.
 
+49. **A heuristic's default mechanism is a means, not the goal** — when following a heuristic's
+    usual mechanism literally costs the user meaningfully more effort (clicks, steps, time) than
+    the problem it exists to solve justifies, prefer the lower-effort presentation instead. A
+    heuristic exists to serve the user; applying its stated mechanism somewhere it doesn't actually
+    help is optimizing for looking compliant, not for being useful. Seen concretely: the
+    "space-dense content on a text-dominant page → `Carousel`" default (see Component-level
+    defaults below) was applied to `Avatar`'s placeholder-portrait gallery — a small set of small
+    images, exactly the case that default's own gallery-page exception already carves out (content
+    that needs to be scannable all at once), just recognized one component later than it should
+    have been. A one-at-a-time carousel forces extra clicks to see a set that would fit in a plain
+    grid with room to spare and zero extra clicks needed to see everything. Component rule:
+    `Avatar`'s placeholder gallery renders as a plain wrapping grid, not a `Carousel`. Applying this
+    heuristic is itself a judgment call, not a license to skip other heuristics whenever they're
+    inconvenient — it fires specifically when a mechanism's *cost* (measured in real user effort)
+    outweighs the *problem* it's solving in this specific case, not merely when a lighter option
+    exists.
+
+## Heuristics from a live field-trial post-mortem
+
+A different kind of source than the two passes above: not a historical-GUI critique or a
+framework-catalogue read, but a root-cause analysis of an actual agent-built consumer app
+(`ref/Tom_v2.md` — Coherence, a vector-DB/chat app built against rebar-ui with no extra direction).
+That file keeps the full, specific findings (exact files/lines, the concrete app-level bug) and a
+"derived heuristics" section phrased as rules for *that* build; what follows here is the subset of
+those that generalize into real, design-system-agnostic component/behavior heuristics, restated at
+that level rather than left as one project's specific post-mortem. Three of the nine derived
+findings there did **not** qualify for a numbered entry here, on the same "stay in genre" basis
+`ref/HEURISTICS.md` already applies to the wider research pass above: shipping a default favicon/
+logo asset is a packaging/distribution concern (`ARCHITECTURE.md` territory, if anywhere — not a
+component behavioral contract); "search the component catalog before declaring a requested feature
+out of scope" is agent-conduct, not a component design heuristic (it belongs with the Framework
+Rules in `robot.md`/`AGENTS.md`); and the chat-view state-clobbering bug was a plain app-specific
+React state/routing bug with no generalizable component-design lesson in it at all. This section is
+appendable the same way the wider-research-pass one above is — future field-trial post-mortems
+should add to it, not spawn a parallel document.
+
+50. **A variant-switching control never exposes a variant with nothing loaded behind it** — before
+    shipping or offering a toggle between visual or behavioral variants (a theme, a locale, a
+    density mode), every variant the control can switch *to* needs its runtime dependency actually
+    present. A toggle like this typically only flips a pointer or attribute; loading what each
+    variant actually needs is a separate step nothing does automatically, and offering the switch
+    is not the same as making every state it can reach real. Seen failing in: a live field build
+    whose theme toggle had a "sketch" state with no corresponding stylesheet ever imported —
+    switching to it silently did nothing, indistinguishable from a broken control to the end user,
+    since nothing on screen indicated the missing half. Component rule: `ThemeToggle` documents
+    that using it requires importing every theme package it can switch between, not just whichever
+    one is the current default; the same discipline generalizes to any future multi-variant switch
+    (locale, density, mode) a component ships.
+
+51. **A frequently-recurring compound UI shape belongs in the library as one composed unit, not
+    left for every consumer to hand-assemble from primitives** — when a shape (an app shell of
+    side-nav plus header/logo plus a control cluster plus footer, say) recurs across real builds
+    and no existing component or block already covers it, that absence is itself the signal to add
+    one — not a reason to assume every consumer will independently reassemble (and likely
+    under-refine) the same composition from scratch. Seen failing in: a live field build
+    hand-assembling its own header/logo/sub-header/footer chrome around a bare navigation-list
+    component, because nothing in the catalog composed those slots together — a reasonable
+    in-the-moment choice, but exactly the kind of one-off a shared component exists to prevent.
+    Component rule: catalog gaps surfaced this way get tracked and closed at the component or block
+    layer, whichever fits the shape, rather than patched per-consumer or per-page.
+
+52. **Loading indicators need a minimum-display or show-delay guard, not a raw boolean wired straight
+    through** — a skeleton or spinner driven directly by an unguarded `loading` flag will flash for
+    a single frame whenever the underlying operation resolves faster than a human can register a
+    loading state at all, reading as broken rather than fast. A loading indicator should either wait
+    briefly before appearing (so a near-instant operation shows nothing) or, once shown, hold for a
+    minimum duration (so it can't flicker off before it was ever really seen) — the same
+    "perceived stability over raw accuracy" reasoning behind #21's animation-duration floor, applied
+    to loading states rather than transitions. Seen failing in: a live field build whose local,
+    near-instant data loads triggered a skeleton that flashed for a single frame on every view, on
+    every load, because nothing debounced the raw loading boolean feeding it. Component rule
+    (forward-looking): `Skeleton`/`Spin` take an optional delay/minimum-duration prop, or a shared
+    `useDelayedLoading(loading, { delay, minDuration })` hook sits between any raw loading boolean
+    and either component — neither exists yet.
+
+53. **A searchable or filterable list defaults to its full (paginated) content; search narrows what's
+    already visible, it never gates initial visibility** — a list, table, or gallery over a bounded,
+    already-available dataset should render populated from the moment it mounts; a search or filter
+    control refines that view, but treating it as a precondition for showing anything at all (an
+    empty state until a query is submitted) turns a convenience into a requirement, forcing every
+    user to guess a query before they can even browse. This is #11 (IA as pyramid) and #17
+    (progressive disclosure)'s reasoning applied specifically to the search-vs-populate ordering,
+    not a new principle about disclosure itself. Seen failing in: a live field build's search view,
+    which rendered an empty table and a bare search bar until a query was submitted, with no way to
+    just browse what was already there. Component rule: the `table` archetype (`@rebar-ui/
+    placement`) already gets this right — `rows` populates up front and `searchPlaceholder` filters
+    over what's already loaded; a raw-component build reaching for `Table` directly should follow
+    the same convention rather than inventing "empty until searched."
+
+54. **A displayed count or aggregate that names a browsable set elsewhere in the same app defaults to
+    a drill-down link into that set, not inert text** — when a number on screen (an item count, a
+    total) corresponds to a real, navigable detail view showing those exact items, rendering it as
+    plain text discards a nearly-free navigation opportunity and forces the user to independently
+    relocate and re-filter that same view by hand. This sharpens #28 (information scent) with a
+    concrete default: a summary number is itself a piece of navigation, not just a statistic,
+    whenever a matching detail view exists. Seen failing in: a live field build's document list,
+    whose chunk-count column rendered as a bare, unlinked number even though a dedicated,
+    pre-filterable chunk-search view existed one click away — confirmed recurring even in a rebuild
+    of the same app against a rebar-ui version with this heuristic already written down (see
+    `ref/Tom_v2.md`'s rebuild comparison), because nothing short of a real signal at the point of
+    use catches it. Component rule: `Table` now does exactly that — a column with no `render`
+    whose `key`/`header` reads like a count/aggregate (`count`, `total`) triggers a **dev-mode-only
+    console warning** suggesting a drill-down `render`, not a build error (there's no way to know
+    for certain whether a matching detail view actually exists, so this can only ever be a nudge,
+    never a hard enforcement) — pass a `render` returning the plain value unchanged to silence a
+    genuinely non-linkable count.
+
+55. **A prop that swaps content by display mode requires every mode's variant — never lets one be
+    optional** — when a component's own prop shape is specifically "different content for
+    different states" (collapsed vs. expanded, light vs. dark, compact vs. full), every state's
+    content is a required field, not an optional one a caller can leave out and get silent,
+    mode-dependent blankness instead. The fix belongs in the type itself, not a runtime check or a
+    documentation note: if a caller genuinely wants the same content in every mode, they pass the
+    same value for each field — cheap, explicit, and impossible to accidentally skip. Sharpens #20
+    (all states are designed) for the specific case of a prop whose entire reason to exist is
+    mode-switching. Component rule: `SidebarNav`'s `logo` prop (`{ full: ReactNode; compact:
+    ReactNode }`) makes both fields required for exactly this reason — TypeScript itself refuses a
+    `logo` with only one side supplied, rather than leaving it to a code review or a runtime
+    surprise. Any future collapsed/expanded- or theme-swapping prop should follow the same shape.
+
+56. **A chat/messaging component spans the full width of its own container by default** — a chat
+    transcript and its input are read top-to-bottom in a single continuous flow the user's eyes
+    track vertically; there's no readable-line-length argument for capping their width the way
+    there is for a paragraph of prose, and an arbitrary cap just wastes the surrounding layout's
+    own space for no benefit. Seen failing in: a live field build's chat view, which wrapped
+    `ChatThread`/`AiChatInput` in a `maxWidth: 860` container for no stated reason, leaving unused
+    space on a plausible outer layout. Component rule: neither `ChatThread` nor `AiChatInput` sets
+    its own `max-width` anywhere in `packages/core`'s stylesheet — both take `width: 100%` of
+    whatever container they're given by default; a consumer who genuinely wants a narrower reading
+    column applies that constraint explicitly on their own wrapper, it's never rebar-ui's own
+    default to impose.
+
+A third round of the same field trial — Coherence's `web-v3` rebuild, live-tested rather than just
+read — surfaced four more (`ref/Tom_v3.md`), continuing this section exactly as its own intro says
+future rounds should:
+
+57. **A streaming chat message owns its own loading-to-streaming transition — never a separate
+    "is typing" indicator stacked alongside it** — the moment a caller appends an empty,
+    `status: "streaming"` placeholder message and starts filling its `content` as tokens arrive
+    (the standard pattern this library's own docs recommend), that single message already needs to
+    show two different things at two different times: "waiting, nothing yet" and "receiving,
+    here's what's arrived so far" — never both at once, and never neither. Leaving the swap between
+    them to the caller invites exactly the failure seen: a separate `isTyping` bubble (or an
+    app's own loading indicator) rendered *alongside* the same message's own cursor, because
+    nothing forced the two to be mutually exclusive. Seen failing in: a live field build's chat
+    view, showing a loading cursor and a streaming cursor at the same time, with no clear reason
+    either was more correct than the other. Component rule: `ChatThread`'s own `MessageBubble`
+    now makes this swap itself — a `status: "streaming"` message with empty `content` renders the
+    bouncing-dots wait indicator (the same visual `isTyping`'s separate bubble uses, just inside
+    the message's own bubble instead of a second one below it); the instant `content` is non-empty,
+    it swaps to the trailing blink cursor. `isTyping` still exists for the genuinely different case
+    (no message object created yet at all) but its own doc comment now warns against combining it
+    with an already-appended empty streaming placeholder.
+
+58. **A sidebar's header and the main content area's own header default to the same height, so the
+    two read as one contiguous bar, not two misaligned ones** — when an app shell has both a
+    vertical nav with its own header/logo row and a horizontal top bar for the main content, a
+    visual seam appears the instant their heights don't match, even if each one is internally
+    correct. Seen failing in: a live field build whose `SidebarNav` header/logo row and its own
+    hand-built top bar were two different heights, with no shared reference either was measured
+    against. Component rule: `SidebarNav`'s `header`/`logo` rows default to
+    `min-height: var(--rebar-app-shell-header-height, 64px)` — a new, real, overridable token: a
+    consumer building their own top bar alongside it sets that same variable once (or just matches
+    the same explicit height by hand) rather than picking an independent value for each side.
+
+59. **Any entity a user can create needs a real CRUD view — list, edit, and delete — not just a
+    create-and-select control** — a "New X" button plus a picker to switch between existing ones
+    covers creation and selection, but omits the other two-thirds of managing real records: seeing
+    them all in one place, correcting one after the fact, and removing one that's no longer needed.
+    A picker dropdown is discovery-by-recall (you already have to know the name you're looking
+    for); a real list view is discovery-by-recognition (#6, recognition over recall), and neither
+    edit nor delete has anywhere to live at all without one. Seen failing in: a live field build
+    that gave knowledge bases a create dialog and a `Select` to switch between them, with no way to
+    rename or remove one short of editing the database directly. Component rule (forward-looking,
+    an app-architecture pattern rather than a single component fix): pair a create control with a
+    real management view built from `Table` (or the `table` block, now with live `source`/
+    `onRowAction` bindings) — a row per record, edit/delete as real row actions — rather than
+    treating create-and-select as the whole feature.
+
+60. **Form controls share one consistent size scale by default — never an independently-chosen
+    height per component** — `Button` already defines a real three-tier scale (`sm`=32px,
+    `md`=44px, `lg`=48px); any other control that can sit beside a `Button` in the same toolbar or
+    form row needs to default to the *same* scale, not a plausible-looking value picked in
+    isolation, or the two will misalign the instant they're placed next to each other regardless of
+    which size either one requests. Seen failing in: a live field build's knowledge-base `Select`
+    sitting next to a `Button`, visibly a different height with no `size` prop on `Select` at all to
+    fix it. Component rule: `Select` now takes the identical `size?: "sm" | "md" | "lg"` prop as
+    `Button`, mapped to the exact same three heights — the fix belongs in the shared scale, not a
+    per-app CSS override. Any future form control (`Combobox`, `MultiSelect`, `NumberInput`, ...)
+    found not to follow this scale is the same bug, not a new one.
+
 ## Token values (defaults, fully overridable)
 
 ### Spacing — 8pt grid
@@ -657,6 +861,14 @@ drops below that ratio.
 --rebar-breakpoint-lg: 1024px;
 --rebar-breakpoint-xl: 1280px;
 ```
+
+### App shell
+```css
+--rebar-app-shell-header-height: 64px;
+```
+Shared between `SidebarNav`'s own `header`/`logo` rows and whatever a consumer's own main-content
+header uses, so the two align by default instead of needing a one-off height match — see
+heuristic #58.
 
 ## Component-level defaults (behavior, not just tokens)
 
@@ -726,6 +938,17 @@ drops below that ratio.
   the 50%-of-header budget itself is enforced by whoever places it, via a `max-width: 50%`
   container — see `packages/core/src/components/NavBar.tsx`'s own doc comment for why that split
   exists. Dogfooded on this site's own header (`SiteHeader.tsx`).
+
+- **Diagram/chart canvases default to visible padding at their own edge, never flush** — a
+  diagram or chart's content shouldn't touch its own container's border at 100% zoom/fit by
+  default; there's essentially no case where a viewer wants a node or plotted mark to start
+  exactly on the container's edge. This is heuristic #24 (whitespace as an active design element)
+  applied specifically to zoomable/pannable canvases (`Flowchart`, `MindMap`, `OrgChart`,
+  `NodeLinkGraph`, `DiagramMinimap`), which otherwise tend to fit content edge-to-edge since
+  "100%" reads as a literal, exact-fit measurement. Component rule: every diagram canvas takes a
+  `padding` prop (a CSS-length or number of px) defaulting to a real non-zero value, applied as
+  inset space the initial fit/zoom-to-fit never fills past — a prop, not a hard-coded constant,
+  so a genuine edge-to-edge use case can still opt out.
 
 These defaults live in `packages/core` component implementations and `packages/theme-*`
 stylesheets — this document is the reference for what those values *should* be and why, kept in

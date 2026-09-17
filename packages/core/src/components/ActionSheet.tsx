@@ -60,6 +60,7 @@ export function ActionSheet({
       title={title}
       side="bottom"
       dataComponent="action-sheet"
+      dragToDismiss
       handle={<div className="rebar-bottom-sheet-handle" data-rebar-part="handle" aria-hidden="true" />}
     >
       <div className="rebar-action-sheet-list" data-rebar-part="actions">

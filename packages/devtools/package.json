@@ -1,6 +1,6 @@
 {
   "name": "@rebar-ui/devtools",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "description": "Dev-only floating panel: real component-usage counts, theme/grid toggles, a rough migration-effort estimate. Tree-shaken from production builds.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -14,8 +14,12 @@
     },
     "./style.css": "./dist/style.css"
   },
-  "files": ["dist"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

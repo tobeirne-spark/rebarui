@@ -1,15 +1,16 @@
-import { Box, Heading, Stack, Text } from "rebar-ui";
-import type { Block } from "@rebar-ui/placement";
+import { Box, Heading, Image, Stack, Text } from "rebar-ui";
+import type { Construct } from "@rebar-ui/placement";
 import { NextBlockRenderer } from "@/components/NextBlockRenderer";
+import Link from "next/link";
 
-const BLOCKS: Block[] = [
+const BLOCKS: Construct[] = [
   {
     type: "doc-section",
     heading: "Making AI-assisted UI work cheaper and more predictable",
     body: [
       {
         kind: "text",
-        text: "Most of what makes AI-assisted coding expensive and unpredictable isn't logic — it's UI. Layout, spacing, and composition decisions are exactly the kind of open-ended judgment call a model has to re-solve from scratch on every request, and the cost shows up twice: in tokens spent deciding, and in the variance between one run and the next. Rebar removes that decision from the job entirely — an LLM picks a named block and supplies content, the Packer decides the rest. [The measured result](/benchmarks) is a real, repeated (n=15) one: cheaper than hand-authored Ant Design outright, faster, and close to zero run-to-run variance, not just cheaper than hand-authoring the same thing without a design system at all.",
+        text: "Most of what makes AI-assisted coding expensive and unpredictable isn't logic — it's UI. Layout, spacing, and composition decisions are exactly the kind of open-ended judgment call a model has to re-solve from scratch on every request, and the cost shows up twice: in tokens spent deciding, and in the variance between one run and the next. Rebar removes that decision from the job entirely — an LLM picks a named block and supplies content, the Packer decides the rest. [The measured result](/about/benchmarks) is a real, repeated (n=15) one: cheaper than hand-authored Ant Design outright, faster, and close to zero run-to-run variance, not just cheaper than hand-authoring the same thing without a design system at all.",
       },
     ],
   },
@@ -49,7 +50,7 @@ const BLOCKS: Block[] = [
     body: [
       {
         kind: "text",
-        text: "A core use case for Rebar is decomposing an incumbent enterprise platform — a large, entrenched system (a CRM, an ERP, a legacy internal tool) that's expensive to replace wholesale but painful to keep extending. Reverse-engineering the pieces you actually need into a placement-layer document is cheap precisely because the composition step is free: describe what a screen needs to do, not how it should look, and rebuild it incrementally rather than committing to a single, all-or-nothing migration. [Scenario 6 on /benchmarks](/benchmarks/scenarios) works through this directly, with real numbers, not just the idea of it.",
+        text: "A core use case for Rebar is decomposing an incumbent enterprise platform — a large, entrenched system (a CRM, an ERP, a legacy internal tool) that's expensive to replace wholesale but painful to keep extending. Reverse-engineering the pieces you actually need into a placement-layer document is cheap precisely because the composition step is free: describe what a screen needs to do, not how it should look, and rebuild it incrementally rather than committing to a single, all-or-nothing migration. [Scenario 6 on /benchmarks](/about/benchmarks/scenarios) works through this directly, with real numbers, not just the idea of it.",
       },
     ],
   },
@@ -80,12 +81,20 @@ export default function AboutPage() {
   return (
     <Box as="main" style={{ maxWidth: 800, margin: "0 auto", padding: "var(--rebar-space-xl)" }}>
       <Stack gap="lg">
+        <Image src="/catalogue-heros/about.jpeg" alt="About hero" style={{ width: "100%", borderRadius: "8px" }} />
         <Stack gap="xs">
           <Heading level={1}>About</Heading>
           <Text color="secondary">
-            The technical docs are at <code>/docs</code> — this page is about why Rebar exists at
+            The technical docs are at <code>/imitations</code>, <code>/synthetics</code>, <code>/opinions</code>, and <code>/orders</code> — this page is about why Rebar exists at
             all.
           </Text>
+        </Stack>
+        <Stack gap="sm">
+          <Heading level={2}>Explore</Heading>
+          <Stack gap="xs">
+            <Link href="/about/agent">Agent Context</Link>
+            <Link href="/about/benchmarks">Benchmarks</Link>
+          </Stack>
         </Stack>
         <NextBlockRenderer blocks={BLOCKS} />
       </Stack>

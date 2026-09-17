@@ -1,6 +1,6 @@
 {
   "name": "@rebar-ui/placement",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "description": "The placement layer: a small typed schema of named archetypes (banner, checklist, callout, feature-grid, pillar-grid, ...) plus a deterministic renderer built from rebar-ui's own components. An LLM authors the schema, never the layout — see ref/ARCHITECTURE.md#the-placement-layer.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -13,7 +13,11 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist", "AGENTS.md", "llms.txt"],
+  "files": [
+    "dist",
+    "AGENTS.md",
+    "llms.txt"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

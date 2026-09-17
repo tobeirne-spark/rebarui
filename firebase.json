@@ -3,6 +3,862 @@
     "public": "apps/docs/out",
     "cleanUrls": true,
     "trailingSlash": false,
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "redirects": [
+      {
+        "source": "/components/avatar",
+        "destination": "/imitations/avatar",
+        "type": 301
+      },
+      {
+        "source": "/components/aspect-ratio",
+        "destination": "/synthetics/aspect-ratio",
+        "type": 301
+      },
+      {
+        "source": "/components/badge",
+        "destination": "/imitations/badge",
+        "type": 301
+      },
+      {
+        "source": "/components/breadcrumb",
+        "destination": "/orders/breadcrumb",
+        "type": 301
+      },
+      {
+        "source": "/components/button",
+        "destination": "/imitations/button",
+        "type": 301
+      },
+      {
+        "source": "/components/card",
+        "destination": "/synthetics/card",
+        "type": 301
+      },
+      {
+        "source": "/components/carousel",
+        "destination": "/imitations/carousel",
+        "type": 301
+      },
+      {
+        "source": "/components/code-block",
+        "destination": "/synthetics/code-block",
+        "type": 301
+      },
+      {
+        "source": "/components/descriptions",
+        "destination": "/synthetics/descriptions",
+        "type": 301
+      },
+      {
+        "source": "/components/dialog",
+        "destination": "/opinions/dialog",
+        "type": 301
+      },
+      {
+        "source": "/components/divider",
+        "destination": "/imitations/divider",
+        "type": 301
+      },
+      {
+        "source": "/components/empty",
+        "destination": "/synthetics/empty",
+        "type": 301
+      },
+      {
+        "source": "/components/form",
+        "destination": "/opinions/form",
+        "type": 301
+      },
+      {
+        "source": "/components/hover-card",
+        "destination": "/opinions/hover-card",
+        "type": 301
+      },
+      {
+        "source": "/components/nav-bar",
+        "destination": "/orders/nav-bar",
+        "type": 301
+      },
+      {
+        "source": "/components/sidebar-nav",
+        "destination": "/orders/sidebar-nav",
+        "type": 301
+      },
+      {
+        "source": "/components/nav-index",
+        "destination": "/orders/nav-index",
+        "type": 301
+      },
+      {
+        "source": "/components/section-nav",
+        "destination": "/orders/section-nav",
+        "type": 301
+      },
+      {
+        "source": "/components/popover",
+        "destination": "/opinions/popover",
+        "type": 301
+      },
+      {
+        "source": "/components/rate",
+        "destination": "/imitations/rate",
+        "type": 301
+      },
+      {
+        "source": "/components/result",
+        "destination": "/synthetics/result",
+        "type": 301
+      },
+      {
+        "source": "/components/skeleton",
+        "destination": "/imitations/skeleton",
+        "type": 301
+      },
+      {
+        "source": "/components/spin",
+        "destination": "/imitations/spin",
+        "type": 301
+      },
+      {
+        "source": "/components/statistic",
+        "destination": "/imitations/statistic",
+        "type": 301
+      },
+      {
+        "source": "/components/steps",
+        "destination": "/synthetics/steps",
+        "type": 301
+      },
+      {
+        "source": "/components/tag",
+        "destination": "/imitations/tag",
+        "type": 301
+      },
+      {
+        "source": "/components/timeline",
+        "destination": "/synthetics/timeline",
+        "type": 301
+      },
+      {
+        "source": "/components/wizard",
+        "destination": "/opinions/wizard",
+        "type": 301
+      },
+      {
+        "source": "/components/number-input",
+        "destination": "/imitations/number-input",
+        "type": 301
+      },
+      {
+        "source": "/components/pin-input",
+        "destination": "/imitations/pin-input",
+        "type": 301
+      },
+      {
+        "source": "/components/segmented-control",
+        "destination": "/imitations/segmented-control",
+        "type": 301
+      },
+      {
+        "source": "/components/editable",
+        "destination": "/opinions/editable",
+        "type": 301
+      },
+      {
+        "source": "/components/color-picker",
+        "destination": "/opinions/color-picker",
+        "type": 301
+      },
+      {
+        "source": "/components/combobox",
+        "destination": "/opinions/combobox",
+        "type": 301
+      },
+      {
+        "source": "/components/multi-select",
+        "destination": "/opinions/multi-select",
+        "type": 301
+      },
+      {
+        "source": "/components/cascader",
+        "destination": "/opinions/cascader",
+        "type": 301
+      },
+      {
+        "source": "/components/pagination",
+        "destination": "/imitations/pagination",
+        "type": 301
+      },
+      {
+        "source": "/components/tree-view",
+        "destination": "/opinions/tree-view",
+        "type": 301
+      },
+      {
+        "source": "/components/kanban",
+        "destination": "/opinions/kanban",
+        "type": 301
+      },
+      {
+        "source": "/components/sticky",
+        "destination": "/synthetics/sticky",
+        "type": 301
+      },
+      {
+        "source": "/components/scatter-chart",
+        "destination": "/opinions/scatter-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/line-chart",
+        "destination": "/opinions/line-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/stacked-bar-chart",
+        "destination": "/opinions/stacked-bar-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/table",
+        "destination": "/opinions/table",
+        "type": 301
+      },
+      {
+        "source": "/components/qr-code",
+        "destination": "/imitations/qr-code",
+        "type": 301
+      },
+      {
+        "source": "/components/watermark",
+        "destination": "/imitations/watermark",
+        "type": 301
+      },
+      {
+        "source": "/components/bar-chart",
+        "destination": "/synthetics/bar-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/area-chart",
+        "destination": "/opinions/area-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/sparkline",
+        "destination": "/synthetics/sparkline",
+        "type": 301
+      },
+      {
+        "source": "/components/pie-chart",
+        "destination": "/synthetics/pie-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/gauge-chart",
+        "destination": "/synthetics/gauge-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/funnel-chart",
+        "destination": "/synthetics/funnel-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/waterfall-chart",
+        "destination": "/synthetics/waterfall-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/distribution-chart",
+        "destination": "/opinions/distribution-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/radar-chart",
+        "destination": "/opinions/radar-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/box-plot",
+        "destination": "/opinions/box-plot",
+        "type": 301
+      },
+      {
+        "source": "/components/drawer",
+        "destination": "/opinions/drawer",
+        "type": 301
+      },
+      {
+        "source": "/components/side-panel",
+        "destination": "/orders/side-panel",
+        "type": 301
+      },
+      {
+        "source": "/components/bottom-sheet",
+        "destination": "/opinions/bottom-sheet",
+        "type": 301
+      },
+      {
+        "source": "/components/action-sheet",
+        "destination": "/opinions/action-sheet",
+        "type": 301
+      },
+      {
+        "source": "/components/mobile-tab-bar",
+        "destination": "/orders/mobile-tab-bar",
+        "type": 301
+      },
+      {
+        "source": "/components/scroll-area",
+        "destination": "/imitations/scroll-area",
+        "type": 301
+      },
+      {
+        "source": "/components/footer",
+        "destination": "/orders/footer",
+        "type": 301
+      },
+      {
+        "source": "/components/scroll-mask",
+        "destination": "/synthetics/scroll-mask",
+        "type": 301
+      },
+      {
+        "source": "/components/ellipsis",
+        "destination": "/opinions/ellipsis",
+        "type": 301
+      },
+      {
+        "source": "/components/floating-bubble",
+        "destination": "/opinions/floating-bubble",
+        "type": 301
+      },
+      {
+        "source": "/components/floating-panel",
+        "destination": "/opinions/floating-panel",
+        "type": 301
+      },
+      {
+        "source": "/components/split-button",
+        "destination": "/opinions/split-button",
+        "type": 301
+      },
+      {
+        "source": "/components/calendar",
+        "destination": "/opinions/calendar",
+        "type": 301
+      },
+      {
+        "source": "/components/time-picker",
+        "destination": "/opinions/time-picker",
+        "type": 301
+      },
+      {
+        "source": "/components/resizable-panels",
+        "destination": "/opinions/resizable-panels",
+        "type": 301
+      },
+      {
+        "source": "/components/transfer",
+        "destination": "/opinions/transfer",
+        "type": 301
+      },
+      {
+        "source": "/components/command-palette",
+        "destination": "/opinions/command-palette",
+        "type": 301
+      },
+      {
+        "source": "/components/barcode",
+        "destination": "/imitations/barcode",
+        "type": 301
+      },
+      {
+        "source": "/components/date-picker",
+        "destination": "/opinions/date-picker",
+        "type": 301
+      },
+      {
+        "source": "/components/image",
+        "destination": "/opinions/image",
+        "type": 301
+      },
+      {
+        "source": "/components/lightbox",
+        "destination": "/opinions/lightbox",
+        "type": 301
+      },
+      {
+        "source": "/components/file-upload",
+        "destination": "/opinions/file-upload",
+        "type": 301
+      },
+      {
+        "source": "/components/bubble-chart",
+        "destination": "/opinions/bubble-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/heatmap",
+        "destination": "/opinions/heatmap",
+        "type": 301
+      },
+      {
+        "source": "/components/stacked-line-chart",
+        "destination": "/opinions/stacked-line-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/stacked-area-chart",
+        "destination": "/opinions/stacked-area-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/stepped-bar-chart",
+        "destination": "/synthetics/stepped-bar-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/step-chart",
+        "destination": "/opinions/step-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/index-chart",
+        "destination": "/opinions/index-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/histogram",
+        "destination": "/opinions/histogram",
+        "type": 301
+      },
+      {
+        "source": "/components/ribbon-chart",
+        "destination": "/opinions/ribbon-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/calendar-heatmap",
+        "destination": "/opinions/calendar-heatmap",
+        "type": 301
+      },
+      {
+        "source": "/components/bullet-graph",
+        "destination": "/synthetics/bullet-graph",
+        "type": 301
+      },
+      {
+        "source": "/components/packed-bubble-chart",
+        "destination": "/opinions/packed-bubble-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/umap-plot",
+        "destination": "/opinions/umap-plot",
+        "type": 301
+      },
+      {
+        "source": "/components/rich-text-editor",
+        "destination": "/opinions/rich-text-editor",
+        "type": 301
+      },
+      {
+        "source": "/components/pull-to-refresh",
+        "destination": "/opinions/pull-to-refresh",
+        "type": 301
+      },
+      {
+        "source": "/components/picker-wheel",
+        "destination": "/opinions/picker-wheel",
+        "type": 301
+      },
+      {
+        "source": "/components/swipe-actions",
+        "destination": "/opinions/swipe-actions",
+        "type": 301
+      },
+      {
+        "source": "/components/treemap",
+        "destination": "/synthetics/treemap",
+        "type": 301
+      },
+      {
+        "source": "/components/candlestick-chart",
+        "destination": "/synthetics/candlestick-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/geo-chart",
+        "destination": "/synthetics/geo-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/gantt-chart",
+        "destination": "/synthetics/gantt-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/pert-chart",
+        "destination": "/opinions/pert-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/wayback-slider",
+        "destination": "/synthetics/wayback-slider",
+        "type": 301
+      },
+      {
+        "source": "/components/sankey-diagram",
+        "destination": "/synthetics/sankey-diagram",
+        "type": 301
+      },
+      {
+        "source": "/components/word-cloud",
+        "destination": "/synthetics/word-cloud",
+        "type": 301
+      },
+      {
+        "source": "/components/node-link-graph",
+        "destination": "/opinions/node-link-graph",
+        "type": 301
+      },
+      {
+        "source": "/components/data-grid",
+        "destination": "/opinions/data-grid",
+        "type": 301
+      },
+      {
+        "source": "/components/pivot-table",
+        "destination": "/synthetics/pivot-table",
+        "type": 301
+      },
+      {
+        "source": "/components/org-chart",
+        "destination": "/opinions/org-chart",
+        "type": 301
+      },
+      {
+        "source": "/components/mind-map",
+        "destination": "/opinions/mind-map",
+        "type": 301
+      },
+      {
+        "source": "/components/flowchart",
+        "destination": "/opinions/flowchart",
+        "type": 301
+      },
+      {
+        "source": "/components/diagram-minimap",
+        "destination": "/synthetics/diagram-minimap",
+        "type": 301
+      },
+      {
+        "source": "/components/popconfirm",
+        "destination": "/opinions/popconfirm",
+        "type": 301
+      },
+      {
+        "source": "/components/tree-select",
+        "destination": "/opinions/tree-select",
+        "type": 301
+      },
+      {
+        "source": "/components/tour",
+        "destination": "/opinions/tour",
+        "type": 301
+      },
+      {
+        "source": "/components/mentions",
+        "destination": "/opinions/mentions",
+        "type": 301
+      },
+      {
+        "source": "/components/back-top",
+        "destination": "/synthetics/back-top",
+        "type": 301
+      },
+      {
+        "source": "/components/affix",
+        "destination": "/synthetics/affix",
+        "type": 301
+      },
+      {
+        "source": "/components/avatar-group",
+        "destination": "/synthetics/avatar-group",
+        "type": 301
+      },
+      {
+        "source": "/components/button-group",
+        "destination": "/synthetics/button-group",
+        "type": 301
+      },
+      {
+        "source": "/components/speed-dial",
+        "destination": "/opinions/speed-dial",
+        "type": 301
+      },
+      {
+        "source": "/components/masonry",
+        "destination": "/synthetics/masonry",
+        "type": 301
+      },
+      {
+        "source": "/components/collapsible",
+        "destination": "/opinions/collapsible",
+        "type": 301
+      },
+      {
+        "source": "/components/toggle",
+        "destination": "/imitations/toggle",
+        "type": 301
+      },
+      {
+        "source": "/components/toggle-group",
+        "destination": "/imitations/toggle-group",
+        "type": 301
+      },
+      {
+        "source": "/components/context-menu",
+        "destination": "/opinions/context-menu",
+        "type": 301
+      },
+      {
+        "source": "/components/menubar",
+        "destination": "/opinions/menubar",
+        "type": 301
+      },
+      {
+        "source": "/components/git-graph",
+        "destination": "/synthetics/git-graph",
+        "type": 301
+      },
+      {
+        "source": "/components/version-history",
+        "destination": "/opinions/version-history",
+        "type": 301
+      },
+      {
+        "source": "/components/index-bar",
+        "destination": "/opinions/index-bar",
+        "type": 301
+      },
+      {
+        "source": "/components/graph-explorer",
+        "destination": "/opinions/graph-explorer",
+        "type": 301
+      },
+      {
+        "source": "/components/error-block",
+        "destination": "/synthetics/error-block",
+        "type": 301
+      },
+      {
+        "source": "/components/notice-bar",
+        "destination": "/synthetics/notice-bar",
+        "type": 301
+      },
+      {
+        "source": "/components/progress-circle",
+        "destination": "/imitations/progress-circle",
+        "type": 301
+      },
+      {
+        "source": "/components/selector",
+        "destination": "/imitations/selector",
+        "type": 301
+      },
+      {
+        "source": "/components/number-keyboard",
+        "destination": "/opinions/number-keyboard",
+        "type": 301
+      },
+      {
+        "source": "/components/chat-thread",
+        "destination": "/synthetics/chat-thread",
+        "type": 301
+      },
+      {
+        "source": "/components/waveform-audio-player",
+        "destination": "/opinions/waveform-audio-player",
+        "type": 301
+      },
+      {
+        "source": "/components/upload-queue",
+        "destination": "/opinions/upload-queue",
+        "type": 301
+      },
+      {
+        "source": "/components/infinite-scroll-grid",
+        "destination": "/synthetics/infinite-scroll-grid",
+        "type": 301
+      },
+      {
+        "source": "/components/todo-item",
+        "destination": "/opinions/todo-item",
+        "type": 301
+      },
+      {
+        "source": "/components/text-to-speech-bar",
+        "destination": "/opinions/text-to-speech-bar",
+        "type": 301
+      },
+      {
+        "source": "/components/floating-selection-toolbar",
+        "destination": "/opinions/floating-selection-toolbar",
+        "type": 301
+      },
+      {
+        "source": "/components/slash-command-menu",
+        "destination": "/opinions/slash-command-menu",
+        "type": 301
+      },
+      {
+        "source": "/components/voice-composer",
+        "destination": "/opinions/voice-composer",
+        "type": 301
+      },
+      {
+        "source": "/components/ai-chat-input",
+        "destination": "/imitations/ai-chat-input",
+        "type": 301
+      },
+      {
+        "source": "/components/shape-gallery",
+        "destination": "/opinions/shape-gallery",
+        "type": 301
+      },
+      {
+        "source": "/components/file-manager",
+        "destination": "/opinions/file-manager",
+        "type": 301
+      },
+      {
+        "source": "/components/layers-panel",
+        "destination": "/opinions/layers-panel",
+        "type": 301
+      },
+      {
+        "source": "/components/box",
+        "destination": "/imitations/box",
+        "type": 301
+      },
+      {
+        "source": "/components/stack",
+        "destination": "/imitations/stack",
+        "type": 301
+      },
+      {
+        "source": "/components/text",
+        "destination": "/imitations/text",
+        "type": 301
+      },
+      {
+        "source": "/components/heading",
+        "destination": "/imitations/heading",
+        "type": 301
+      },
+      {
+        "source": "/components/input",
+        "destination": "/imitations/input",
+        "type": 301
+      },
+      {
+        "source": "/components/checkbox",
+        "destination": "/imitations/checkbox",
+        "type": 301
+      },
+      {
+        "source": "/components/radio-group",
+        "destination": "/imitations/radio-group",
+        "type": 301
+      },
+      {
+        "source": "/components/switch",
+        "destination": "/imitations/switch",
+        "type": 301
+      },
+      {
+        "source": "/components/select",
+        "destination": "/opinions/select",
+        "type": 301
+      },
+      {
+        "source": "/components/tooltip",
+        "destination": "/opinions/tooltip",
+        "type": 301
+      },
+      {
+        "source": "/components/dropdown",
+        "destination": "/opinions/dropdown",
+        "type": 301
+      },
+      {
+        "source": "/components/slider",
+        "destination": "/imitations/slider",
+        "type": 301
+      },
+      {
+        "source": "/components/progress",
+        "destination": "/imitations/progress",
+        "type": 301
+      },
+      {
+        "source": "/components/accordion",
+        "destination": "/opinions/accordion",
+        "type": 301
+      },
+      {
+        "source": "/components/toast",
+        "destination": "/opinions/toast",
+        "type": 301
+      },
+      {
+        "source": "/components/tabs",
+        "destination": "/opinions/tabs",
+        "type": 301
+      },
+      {
+        "source": "/components/alert",
+        "destination": "/synthetics/alert",
+        "type": 301
+      },
+      {
+        "source": "/components/iframe",
+        "destination": "/imitations/iframe",
+        "type": 301
+      },
+      {
+        "source": "/components/theme-toggle",
+        "destination": "/opinions/theme-toggle",
+        "type": 301
+      },
+      {
+        "source": "/components",
+        "destination": "/about/agent",
+        "type": 301
+      },
+      {
+        "source": "/components/planned/:slug",
+        "destination": "/planned/:slug",
+        "type": 301
+      },
+      {
+        "source": "/blocks",
+        "destination": "/about/agent",
+        "type": 301
+      },
+      {
+        "source": "/tiers",
+        "destination": "/about/agent",
+        "type": 301
+      }
+    ]
   }
 }

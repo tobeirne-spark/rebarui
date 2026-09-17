@@ -74,6 +74,16 @@ describe("SpeedDial", () => {
     expect(screen.getByRole("button", { name: "Open actions" })).toHaveTextContent("+");
   });
 
+  it("bumps the icon span's font-size when a custom icon is given, but not for the default + glyph", () => {
+    const { rerender } = render(<SpeedDial actions={ACTIONS} />);
+    const plusGlyph = screen.getByRole("button", { name: "Open actions" }).querySelector("span");
+    expect(plusGlyph?.style.fontSize).toBe("");
+
+    rerender(<SpeedDial actions={ACTIONS} icon={<svg width="1em" height="1em" aria-hidden="true" />} />);
+    const customGlyph = screen.getByRole("button", { name: "Open actions" }).querySelector("span");
+    expect(customGlyph?.style.fontSize).toBe("1.5em");
+  });
+
   it("applies the direction attribute", () => {
     render(<SpeedDial actions={ACTIONS} direction="left" />);
     expect(document.querySelector('[data-rebar-component="speed-dial"]')).toHaveAttribute(
