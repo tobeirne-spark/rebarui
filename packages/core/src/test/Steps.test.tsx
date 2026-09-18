@@ -54,4 +54,22 @@ describe("Steps", () => {
     fireEvent.click(screen.getByText("Review"));
     expect(onItemClick).toHaveBeenCalledWith(2);
   });
+
+  it("gives only the process (current) step's icon the traveling-beam active-border flag", () => {
+    const { container } = render(<Steps items={items} current={1} />);
+    const icons = container.querySelectorAll('[data-rebar-part="icon"]');
+    expect(icons[0]).not.toHaveClass("rebar-active-border");
+    expect(icons[1]).toHaveClass("rebar-active-border");
+    expect(icons[2]).not.toHaveClass("rebar-active-border");
+  });
+
+  it("lets a caller-supplied status fully replace the derived one (e.g. 'finish' only once explicitly committed)", () => {
+    const { container } = render(
+      <Steps items={[{ title: "Team", status: "wait" }, { title: "Details", status: "process" }]} current={0} />,
+    );
+    const icons = container.querySelectorAll('[data-rebar-part="icon"]');
+    expect(icons[0]).toHaveTextContent("1");
+    expect(icons[0]).not.toHaveClass("rebar-active-border");
+    expect(icons[1]).toHaveClass("rebar-active-border");
+  });
 });
