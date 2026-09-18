@@ -706,12 +706,13 @@ body {
 
 /* NavBar */
 .rebar-navbar-link {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--rebar-font-size-sm, 14px);
+  line-height: 1;
   color: var(--rebar-color-text-secondary, #757575);
   text-decoration: none;
   font-family: inherit;
-  line-height: inherit;
-  vertical-align: middle;
 }
 
 .rebar-navbar-link:hover {

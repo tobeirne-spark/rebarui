@@ -84,7 +84,10 @@ function MegaMenuTrigger({
             padding: 0,
           }}
         >
-          {renderLabel(item.label)} ▾
+          {renderLabel(item.label)}
+          <span aria-hidden="true" style={{ display: "inline-block", lineHeight: 1, marginLeft: "var(--rebar-space-xs, 4px)" }}>
+            ▾
+          </span>
         </button>
       }
       sideOffset={8}
