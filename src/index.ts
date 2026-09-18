@@ -48,6 +48,9 @@ export type { ImageCropperProps } from "./components/ImageCropper";
 export { VideoPlayer } from "./components/VideoPlayer";
 export type { VideoPlayerProps } from "./components/VideoPlayer";
 
+export { CommentThread } from "./components/CommentThread";
+export type { CommentThreadProps, CommentThreadComment } from "./components/CommentThread";
+
 export { PhoneInput, DEFAULT_PHONE_COUNTRIES } from "./components/PhoneInput";
 export type { PhoneInputProps, PhoneCountry } from "./components/PhoneInput";
 

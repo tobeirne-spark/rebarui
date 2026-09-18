@@ -5144,6 +5144,77 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-video-player-volume { width: 80px; flex-shrink: 0; }
 .rebar-video-player-error { color: var(--rebar-color-danger, #d32f2f); }
 
+/* CommentThread */
+.rebar-comment-thread-list,
+.rebar-comment-thread-replies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-md, 16px);
+}
+
+.rebar-comment-thread-replies {
+  margin-top: var(--rebar-space-md, 16px);
+  padding-left: var(--rebar-space-md, 16px);
+  border-left: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+
+.rebar-comment-thread-row {
+  display: flex;
+  gap: var(--rebar-space-sm, 8px);
+}
+
+.rebar-comment-thread-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rebar-comment-thread-meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rebar-space-sm, 8px);
+}
+
+.rebar-comment-thread-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rebar-space-md, 16px);
+}
+
+.rebar-comment-thread-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--rebar-font-size-xs, 12px);
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-comment-thread-action:hover {
+  color: var(--rebar-color-text-primary, #212121);
+}
+
+.rebar-comment-thread-action[aria-pressed="true"] {
+  color: var(--rebar-color-danger, #d32f2f);
+}
+
+.rebar-comment-thread-reply-form {
+  display: flex;
+  gap: var(--rebar-space-xs, 4px);
+  margin-top: var(--rebar-space-xs, 4px);
+}
+
+.rebar-comment-thread-reply-input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* UploadQueue */
 .rebar-upload-queue { position: fixed; left: var(--rebar-space-lg, 24px); bottom: var(--rebar-space-lg, 24px); z-index: 1000; }
 .rebar-upload-queue-pill {
