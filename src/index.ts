@@ -30,6 +30,18 @@ export type { ContainerProps, ContainerMaxWidth } from "./components/Container";
 export { Grid } from "./components/Grid";
 export type { GridProps } from "./components/Grid";
 
+export { Row, Col } from "./components/Row";
+export type { RowProps, ColProps } from "./components/Row";
+
+export { Kbd } from "./components/Kbd";
+export type { KbdProps } from "./components/Kbd";
+
+export { Countdown } from "./components/Countdown";
+export type { CountdownProps } from "./components/Countdown";
+
+export { DiffViewer } from "./components/DiffViewer";
+export type { DiffViewerProps } from "./components/DiffViewer";
+
 export { Stack } from "./components/Stack";
 export type { StackProps } from "./components/Stack";
 

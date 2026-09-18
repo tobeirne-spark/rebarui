@@ -27,10 +27,12 @@ function initials(name: string): string {
 }
 
 /**
- * An org/workspace/tenant switcher — the Slack/Notion/Linear header pattern: page-level governance
- * of which tenant context the whole app is currently in, the same Order-tier role `NavBar`/
- * `SidebarNav` already play for navigation. Built on the real `Dropdown` (a Radix menu, correct
- * focus/keyboard handling for free) rather than a hand-rolled popover.
+ * An org/workspace/tenant switcher — the Slack/Notion/Linear header pattern. Opinion-tier, not
+ * Order: despite sitting in the same header-utility slot `NavBar`/`SidebarNav` occupy, its real
+ * open/closed dropdown + selection state (delegated to `Dropdown`/Radix) is the same shape as
+ * `ThemeToggle` (also a small header control toggling a value, also Opinion) — a settings widget,
+ * not page-arrangement governance. Built on the real `Dropdown` (correct focus/keyboard handling
+ * for free) rather than a hand-rolled popover.
  */
 export function WorkspaceSwitcher({
   workspaces,

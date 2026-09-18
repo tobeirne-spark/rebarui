@@ -6101,3 +6101,72 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   line-height: 1;
   color: var(--rebar-color-text-secondary, #757575);
 }
+
+/* Kbd */
+.rebar-kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0.1em 0.4em;
+  font-family: monospace;
+  font-size: 0.85em;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--rebar-color-text-secondary, #757575);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-bottom-width: 2px;
+  border-radius: var(--rebar-radius-sm, 3px);
+}
+
+/* DiffViewer */
+.rebar-diff-viewer {
+  font-family: monospace;
+  font-size: var(--rebar-font-size-sm, 14px);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  overflow: hidden;
+}
+
+.rebar-diff-viewer-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.rebar-diff-viewer-column:first-child {
+  border-right: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+
+.rebar-diff-viewer-column-label {
+  padding: var(--rebar-space-xs, 4px) var(--rebar-space-sm, 8px);
+  font-family: var(--rebar-font-family-sans, sans-serif);
+  font-size: var(--rebar-font-size-xs, 12px);
+  font-weight: var(--rebar-font-weight-semibold, 600);
+  color: var(--rebar-color-text-secondary, #757575);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  border-bottom: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+
+.rebar-diff-viewer-line {
+  display: flex;
+  padding: 0 var(--rebar-space-sm, 8px);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rebar-diff-viewer-marker {
+  flex-shrink: 0;
+  width: 1.2em;
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-diff-viewer-line[data-rebar-line-type="add"] {
+  background: var(--rebar-color-success-bg, #e8f5e9);
+}
+
+.rebar-diff-viewer-line[data-rebar-line-type="remove"] {
+  background: var(--rebar-color-danger-bg, #ffebee);
+}
+
+.rebar-diff-viewer-line[data-rebar-line-type="empty"] {
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}
