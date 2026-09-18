@@ -485,6 +485,9 @@ export type { TransferProps, TransferItem } from "./components/Transfer";
 export { CommandPalette } from "./components/CommandPalette";
 export type { CommandPaletteProps, CommandPaletteCommand } from "./components/CommandPalette";
 
+export { ConstructSearch } from "./components/ConstructSearch";
+export type { ConstructSearchProps, ConstructSearchResult } from "./components/ConstructSearch";
+
 export { ButtonGroup } from "./components/ButtonGroup";
 export type { ButtonGroupProps } from "./components/ButtonGroup";
 

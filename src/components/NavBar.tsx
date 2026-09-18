@@ -23,6 +23,12 @@ export interface NavBarProps extends Omit<ComponentPropsWithoutRef<"div">, "clas
   items: NavBarItem[];
   /** Renders a link — defaults to a plain `<a href>`. Pass your framework's Link (e.g. Next.js's) for client-side routing, same convention as `@rebar-ui/placement`'s `renderLink`. */
   renderLink?: (props: { href: string; children: ReactNode; className?: string; onClick?: () => void }) => ReactNode;
+  /** Resolves a mega-menu item's `icon` (a plain string name, e.g. `"orders"`) to a real element.
+   * `NavBar` itself owns no icon registry — a consuming app (or `@rebar-ui/placement`'s
+   * `BlockRenderer`, which resolves it against its own `ICONS` map) supplies this the same way
+   * `renderLink` is supplied, so `packages/core` never needs a dependency on any particular icon
+   * set. Omit it and an item's `icon` is simply not rendered, rather than throwing. */
+  renderIcon?: (icon: string) => ReactNode;
   /** Label for the overflow trigger button. */
   moreLabel?: string;
   "aria-label"?: string;
@@ -52,10 +58,12 @@ function MegaMenuTrigger({
   item,
   renderLabel,
   renderLink,
+  renderIcon,
 }: {
   item: NavBarItem;
   renderLabel: (label: string) => ReactNode;
   renderLink: NonNullable<NavBarProps["renderLink"]>;
+  renderIcon?: NavBarProps["renderIcon"];
 }) {
   const [open, setOpen] = useState(false);
   const megaMenu = item.megaMenu!;
@@ -115,7 +123,16 @@ function MegaMenuTrigger({
                   href: mi.href,
                   children: (
                     <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "4px 0" }}>
-                      <span style={{ fontSize: "var(--rebar-font-size-sm, 14px)", fontWeight: "var(--rebar-font-weight-medium, 500)" }}>
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--rebar-space-xs, 4px)",
+                          fontSize: "var(--rebar-font-size-sm, 14px)",
+                          fontWeight: "var(--rebar-font-weight-medium, 500)",
+                        }}
+                      >
+                        {mi.icon && renderIcon ? renderIcon(mi.icon) : null}
                         {renderLabel(mi.label)}
                         {mi.external ? " ↗" : null}
                       </span>
@@ -179,6 +196,7 @@ function MegaMenuTrigger({
 export function NavBar({
   items,
   renderLink = defaultRenderLink,
+  renderIcon,
   moreLabel = "More",
   "aria-label": ariaLabel = "Main",
   className,
@@ -270,6 +288,7 @@ export function NavBar({
               item={item}
               renderLabel={renderLabel}
               renderLink={renderLink}
+              renderIcon={renderIcon}
             />
           ) : (
             <span key={`${item.label}-${i}`}>
