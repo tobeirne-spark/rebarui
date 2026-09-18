@@ -6229,3 +6229,52 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   border-radius: var(--rebar-radius, 4px);
   max-width: 100%;
 }
+
+/* ImageCropper */
+.rebar-image-cropper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rebar-space-sm, 8px);
+}
+
+.rebar-image-cropper-stage {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}
+
+.rebar-image-cropper-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
+.rebar-image-cropper-rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--rebar-color-bg-primary, #ffffff);
+  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.45);
+  cursor: move;
+}
+
+.rebar-image-cropper-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--rebar-color-bg-primary, #ffffff);
+  border: 2px solid var(--rebar-color-primary, #0066cc);
+  border-radius: 999px;
+}
+
+.rebar-image-cropper-handle[data-rebar-corner="nw"] { top: -7px; left: -7px; cursor: nwse-resize; }
+.rebar-image-cropper-handle[data-rebar-corner="ne"] { top: -7px; right: -7px; cursor: nesw-resize; }
+.rebar-image-cropper-handle[data-rebar-corner="sw"] { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.rebar-image-cropper-handle[data-rebar-corner="se"] { bottom: -7px; right: -7px; cursor: nwse-resize; }
