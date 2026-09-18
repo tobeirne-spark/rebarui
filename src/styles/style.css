@@ -706,6 +706,13 @@ body {
 
 /* NavBar */
 .rebar-navbar-link {
+  /* A plain <a> and the mega-menu's <button> trigger share this class, and browsers give
+     form-control elements their own internal font-metric/baseline handling that can differ from a
+     plain inline <a> by a device pixel even once font/line-height/display are all forced to match
+     (matching those alone wasn't enough in practice). A fixed height, not just line-height, forces
+     both to the exact same box regardless of how each element's own metrics would otherwise round. */
+  height: 20px;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   font-size: var(--rebar-font-size-sm, 14px);
