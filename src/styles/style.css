@@ -6215,3 +6215,17 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* SignaturePad */
+.rebar-signature-pad {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rebar-space-sm, 8px);
+}
+
+.rebar-signature-pad-canvas {
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  max-width: 100%;
+}
