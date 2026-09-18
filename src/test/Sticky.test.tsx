@@ -55,4 +55,23 @@ describe("Sticky", () => {
     expect(container.querySelector('[data-rebar-part="body"]')).not.toBeInTheDocument();
     expect(container.querySelector('[data-rebar-part="tags"]')).not.toBeInTheDocument();
   });
+
+  it("accepts a tag object with its own tone, alongside plain string tags", () => {
+    const { container } = render(<Sticky title="Note" tags={[{ label: "Ada Lovelace", tone: "info" }, "retro"]} />);
+    const [assigneeTag, plainTag] = container.querySelectorAll('[data-rebar-component="tag"]');
+    expect(assigneeTag).toHaveAttribute("data-rebar-tone", "info");
+    expect(plainTag).toHaveAttribute("data-rebar-tone", "default");
+  });
+
+  it("renders no close control on any tag when onTagClose is unset", () => {
+    const { container } = render(<Sticky title="Note" tags={["retro"]} />);
+    expect(container.querySelector('[data-rebar-part="close"]')).not.toBeInTheDocument();
+  });
+
+  it("gives every tag a close control that reports its own label when onTagClose is set", () => {
+    const onTagClose = vi.fn();
+    render(<Sticky title="Note" tags={["retro", "urgent"]} onTagClose={onTagClose} />);
+    screen.getAllByLabelText("Remove")[1]?.click();
+    expect(onTagClose).toHaveBeenCalledWith("urgent");
+  });
 });

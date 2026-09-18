@@ -10,6 +10,7 @@ import { Dialog } from "./Dialog";
 import { Input } from "./Input";
 import { Sticky } from "./Sticky";
 import { Text } from "./Text";
+import { Tooltip } from "./Tooltip";
 
 export interface KanbanCard {
   id: string;
@@ -82,10 +83,18 @@ export interface KanbanProps {
    * a full column look like it has room. */
   search?: string;
   /** "sticky" renders each card as a postit — procedurally varied rotation/shadow, a
-   * caller-or-auto-assigned color, and a hard 3-per-column cap (a `limit` above 3 is clamped down
-   * to it; unset defaults to it) — the same board underneath, not a separate component. Clicking
-   * a sticky (not dragging it) opens an edit form for its title/description/tags/color. */
+   * caller-or-auto-assigned color, and (by default, see `stickyDefaultLimit`) a hard 3-per-column
+   * cap — the same board underneath, not a separate component. Clicking a sticky (not dragging it)
+   * opens an edit form for its title/description/tags/color. */
   cardVariant?: "default" | "sticky";
+  /** The cap applied in sticky mode to a column/section that has no explicit `limit` of its own
+   * (an explicit `limit` is never altered by this — it's respected exactly, in both variants).
+   * Defaults to 3, the realistic "how many postits actually fit" heuristic a sticky board without
+   * its own configured limits should still have. Pass `false` when a caller lets its own users
+   * configure every column's real limit (including "no cap," i.e. `limit: undefined`) and sticky
+   * mode should respect that choice exactly like the default variant does, rather than silently
+   * substituting 3 for an intentionally-unlimited column. */
+  stickyDefaultLimit?: number | false;
   /** Replaces the built-in `Card`/`Sticky` rendering (and its double-click/click-opens-edit-modal
    * behavior) for every visible card, when set — the caller takes full ownership of the card's
    * face and of whatever click/double-click should do instead, while Kanban still owns column/
@@ -97,14 +106,46 @@ export interface KanbanProps {
    * interactive (e.g. click-to-rename) without rebuilding the whole header. Omit to keep today's
    * plain-text title. */
   renderColumnTitle?: (column: KanbanColumn) => ReactNode;
+  /** Called on a long-press instead of opening the built-in edit dialog — the real touch
+   * equivalent of `onDoubleClick`, since a touch device never fires a real double-click. Only
+   * meaningful alongside `renderCard` (which already takes over double-click for the mouse case);
+   * omit to keep the built-in behavior (long-press opens the built-in title/description/tags/color
+   * edit dialog, same as always). */
+  onCardLongPress?: (card: KanbanCard) => void;
   className?: string;
 }
 
-const STICKY_CAP = 3;
+// Plain inline SVG (no icon-library dependency, same convention as the sort button's own "⇅"/
+// "A→Z" text glyphs above) -- an eye-slash, toggling a column between its normal body and the
+// collapsed tray below.
+function EyeOffIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
 
-function effectiveLimit(limit: number | undefined, sticky: boolean): number | undefined {
-  if (!sticky) return limit;
-  return limit === undefined ? STICKY_CAP : Math.min(limit, STICKY_CAP);
+// A small tray/container glyph shown in a collapsed column's body, next to its card count --
+// same plain-inline-SVG convention as EyeOffIcon above.
+function TrayIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 9h8M8 13h8" />
+      <path d="M8 17c1.2 1 2.4 1.5 4 1.5s2.8-.5 4-1.5" />
+    </svg>
+  );
+}
+
+const STICKY_CAP_DEFAULT = 3;
+// How far (px) a touch must move before it counts as a drag rather than a tap or a long-press.
+const TOUCH_DRAG_THRESHOLD = 10;
+
+function effectiveLimit(limit: number | undefined, sticky: boolean, stickyDefaultLimit: number | false): number | undefined {
+  if (!sticky || stickyDefaultLimit === false) return limit;
+  return limit === undefined ? stickyDefaultLimit : Math.min(limit, stickyDefaultLimit);
 }
 
 function columnCount(column: KanbanColumn): number {
@@ -180,14 +221,20 @@ export function Kanban({
   onChange,
   search = "",
   cardVariant = "default",
+  stickyDefaultLimit = STICKY_CAP_DEFAULT,
   renderCard,
   renderColumnTitle,
+  onCardLongPress,
   className,
 }: KanbanProps) {
   const sticky = cardVariant === "sticky";
   const [dragCard, setDragCard] = useState<DragCard | null>(null);
   const [dragColumnId, setDragColumnId] = useState<string | null>(null);
   const [sortOrders, setSortOrders] = useState<Record<string, KanbanSortOrder>>({});
+  // Purely a view preference (which columns are hidden behind their tray) -- not part of the
+  // board's real data, never goes through `onChange`, and resets on remount, same as sortOrders
+  // above.
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
   const [addingTo, setAddingTo] = useState<{ columnId: string; sectionId: string } | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -207,14 +254,21 @@ export function Kanban({
     onChange?.({ columns: columnsNext, cards: cardsNext });
   };
 
-  const canAcceptDrop = (targetColumnId: string, targetSectionId: string): boolean => {
-    if (!dragCard) return false;
+  // Takes the drag source explicitly rather than always reading `dragCard` state internally --
+  // touch dragging needs to call this in the *same* event handler invocation that just called
+  // `setDragCard(...)`, before that state update has actually flushed to a re-render, so reading
+  // the state here would still see the pre-drag (null) value. The mouse call sites already have
+  // the source available in state by the time they call this (drag start and every check after it
+  // happen in separate event/render cycles), so passing `dragCard` explicitly there is equivalent
+  // to the old always-read-state behavior, not a change for them.
+  const canAcceptDrop = (source: DragCard | null, targetColumnId: string, targetSectionId: string): boolean => {
+    if (!source) return false;
     const targetColumn = columns.find((c) => c.id === targetColumnId);
     const targetSection = targetColumn?.sections.find((s) => s.id === targetSectionId);
     if (!targetColumn || !targetSection) return false;
-    if (dragCard.fromColumnId === targetColumnId && dragCard.fromSectionId === targetSectionId) return true;
-    const sectionLimit = effectiveLimit(targetSection.limit, sticky);
-    const columnLimit = effectiveLimit(targetColumn.limit, sticky);
+    if (source.fromColumnId === targetColumnId && source.fromSectionId === targetSectionId) return true;
+    const sectionLimit = effectiveLimit(targetSection.limit, sticky, stickyDefaultLimit);
+    const columnLimit = effectiveLimit(targetColumn.limit, sticky, stickyDefaultLimit);
     if (sectionLimit !== undefined && targetSection.cardIds.length >= sectionLimit) return false;
     if (columnLimit !== undefined && columnCount(targetColumn) >= columnLimit) return false;
     return true;
@@ -223,7 +277,7 @@ export function Kanban({
   const handleCardDrop = (targetColumnId: string, targetSectionId: string, beforeCardId?: string) => {
     if (!dragCard) return;
     setDragOverSection(null);
-    if (!canAcceptDrop(targetColumnId, targetSectionId)) return;
+    if (!canAcceptDrop(dragCard, targetColumnId, targetSectionId)) return;
 
     const withoutCard = removeCard(columns, dragCard.cardId);
     const next = insertCard(withoutCard, targetColumnId, targetSectionId, dragCard.cardId, beforeCardId);
@@ -253,6 +307,16 @@ export function Kanban({
 
   const confirmAdd = () => {
     if (!addingTo || !draftTitle.trim()) return;
+    // The "+ Add card" button's own `disabled` is a visual hint only, bypassable via the title
+    // input's Enter key (a separate code path) -- this is the one real, authoritative capacity
+    // check for the add-card flow, same two limits `canAcceptDrop` already enforces for drag-drop.
+    const targetColumn = columns.find((c) => c.id === addingTo.columnId);
+    const targetSection = targetColumn?.sections.find((s) => s.id === addingTo.sectionId);
+    if (!targetColumn || !targetSection) return;
+    const sectionLimit = effectiveLimit(targetSection.limit, sticky, stickyDefaultLimit);
+    const columnLimit = effectiveLimit(targetColumn.limit, sticky, stickyDefaultLimit);
+    if (sectionLimit !== undefined && targetSection.cardIds.length >= sectionLimit) return;
+    if (columnLimit !== undefined && columnCount(targetColumn) >= columnLimit) return;
     const id = `card-${Math.random().toString(36).slice(2, 10)}`;
     const nextCards = { ...cards, [id]: { id, title: draftTitle.trim() } };
     const nextColumns = insertCard(columns, addingTo.columnId, addingTo.sectionId, id, undefined);
@@ -285,21 +349,70 @@ export function Kanban({
   const longPressCardRef = useRef<KanbanCard | null>(null);
   const longPress = useLongPress({
     onLongPress: () => {
-      if (longPressCardRef.current) openEdit(longPressCardRef.current);
+      if (!longPressCardRef.current) return;
+      if (onCardLongPress) onCardLongPress(longPressCardRef.current);
+      else openEdit(longPressCardRef.current);
     },
   });
+
+  // Real touch drag-and-drop -- native HTML5 drag-and-drop (the dragHandlers above) simply never
+  // fires from a finger on any mobile browser, so touch needs its own parallel implementation
+  // rather than relying on it. Deliberately reuses the *same* dragCard/dragColumnId/dragOverSection
+  // state the mouse path already sets, so canAcceptDrop/handleCardDrop/handleColumnDrop and the
+  // existing drop-target highlight CSS all work unchanged for either input method -- only how that
+  // state gets set differs. A move past TOUCH_DRAG_THRESHOLD is what tells a drag apart from a tap
+  // or a long-press (useLongPress's own onTouchMove already cancels its timer on any movement at
+  // all, so calling it unconditionally here keeps that "moving means this wasn't a press" guarantee
+  // even below the drag threshold).
+  const touchDragRef = useRef<{
+    kind: "card" | "column";
+    cardId?: string;
+    columnId?: string;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+    ghostEl: HTMLElement | null;
+    sourceRect: DOMRect | null;
+    lastColumnHit: string | null;
+  } | null>(null);
+
+  const createTouchGhost = (target: HTMLElement): HTMLElement => {
+    const rect = target.getBoundingClientRect();
+    const ghost = target.cloneNode(true) as HTMLElement;
+    ghost.style.position = "fixed";
+    ghost.style.left = `${rect.left}px`;
+    ghost.style.top = `${rect.top}px`;
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.margin = "0";
+    ghost.style.pointerEvents = "none";
+    ghost.style.opacity = "0.85";
+    ghost.style.zIndex = "9999";
+    ghost.setAttribute("aria-hidden", "true");
+    document.body.appendChild(ghost);
+    return ghost;
+  };
 
   return (
     <div className={clsx("rebar-kanban", className)} data-rebar-component="kanban">
       {columns.map((column) => {
         const sortOrder = sortOrders[column.id] ?? "manual";
         const total = columnCount(column);
-        const columnLimit = effectiveLimit(column.limit, sticky);
+        const columnLimit = effectiveLimit(column.limit, sticky, stickyDefaultLimit);
         return (
           <div
             key={column.id}
             className="rebar-kanban-column"
             data-rebar-part="column"
+            // Touch drag hit-testing (elementFromPoint + closest) reads this back; mouse drag uses
+            // the native dragover/drop events on this same element instead and never needs it.
+            data-column-id={column.id}
+            // True when a column already holds more cards than its own configured `limit` -- set
+            // (say) before the limit was lowered, or before it existed. This never happens through
+            // this component's own drag/add paths (both reject a drop/add past the limit already);
+            // it's purely informational for a caller whose own UI lets a limit be edited after the
+            // fact, so a caller can style the overflow instead of silently hiding it or force-
+            // moving cards the caller has no real destination for.
+            data-rebar-over-limit={columnLimit !== undefined && total > columnLimit ? "true" : undefined}
             onDragOver={(e: DragEvent) => {
               if (dragColumnId) e.preventDefault();
             }}
@@ -311,6 +424,57 @@ export function Kanban({
               draggable
               onDragStart={() => setDragColumnId(column.id)}
               onDragEnd={() => setDragColumnId(null)}
+              onTouchStart={(e: TouchEvent) => {
+                const touch = e.touches[0];
+                if (!touch) return;
+                touchDragRef.current = {
+                  kind: "column",
+                  columnId: column.id,
+                  startX: touch.clientX,
+                  startY: touch.clientY,
+                  dragging: false,
+                  ghostEl: null,
+                  sourceRect: null,
+                  lastColumnHit: null,
+                };
+              }}
+              onTouchMove={(e: TouchEvent) => {
+                const state = touchDragRef.current;
+                const touch = e.touches[0];
+                if (!state || !touch || state.kind !== "column" || state.columnId !== column.id) return;
+                const dx = touch.clientX - state.startX;
+                const dy = touch.clientY - state.startY;
+                if (!state.dragging) {
+                  if (Math.hypot(dx, dy) < TOUCH_DRAG_THRESHOLD) return;
+                  state.dragging = true;
+                  setDragColumnId(column.id);
+                  const target = e.currentTarget as HTMLElement;
+                  state.sourceRect = target.getBoundingClientRect();
+                  state.ghostEl = createTouchGhost(target);
+                }
+                e.preventDefault();
+                if (state.ghostEl && state.sourceRect) {
+                  state.ghostEl.style.left = `${state.sourceRect.left + dx}px`;
+                  state.ghostEl.style.top = `${state.sourceRect.top + dy}px`;
+                }
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                const columnEl = el?.closest<HTMLElement>('[data-rebar-part="column"]');
+                state.lastColumnHit = columnEl?.dataset.columnId ?? null;
+              }}
+              onTouchEnd={() => {
+                const state = touchDragRef.current;
+                if (state?.dragging && state.kind === "column") {
+                  if (state.lastColumnHit) handleColumnDrop(state.lastColumnHit);
+                  state.ghostEl?.remove();
+                  setDragColumnId(null);
+                }
+                touchDragRef.current = null;
+              }}
+              onTouchCancel={() => {
+                touchDragRef.current?.ghostEl?.remove();
+                setDragColumnId(null);
+                touchDragRef.current = null;
+              }}
             >
               {renderColumnTitle ? (
                 renderColumnTitle(column)
@@ -325,6 +489,16 @@ export function Kanban({
                 ) : null}
                 <button
                   type="button"
+                  className="rebar-kanban-collapse-button"
+                  data-rebar-part="collapse-button"
+                  aria-label={collapsedColumns[column.id] ? `Show ${column.title} cards` : `Hide ${column.title} cards`}
+                  aria-pressed={Boolean(collapsedColumns[column.id])}
+                  onClick={() => setCollapsedColumns((prev) => ({ ...prev, [column.id]: !prev[column.id] }))}
+                >
+                  <EyeOffIcon />
+                </button>
+                <button
+                  type="button"
                   className="rebar-kanban-sort-button"
                   data-rebar-part="sort-button"
                   aria-label={`Sort ${column.title}`}
@@ -335,14 +509,22 @@ export function Kanban({
               </div>
             </div>
             {column.sections.map((section) => {
-              const sectionLimit = effectiveLimit(section.limit, sticky);
-              const visibleIds = sortCardIds(section.cardIds, cards, sortOrder).filter((id) => {
+              const collapsed = Boolean(collapsedColumns[column.id]);
+              const sectionLimit = effectiveLimit(section.limit, sticky, stickyDefaultLimit);
+              const searchActive = search.trim().length > 0;
+              const matchingIds = sortCardIds(section.cardIds, cards, sortOrder).filter((id) => {
                 const card = cards[id];
                 return card ? matchesSearch(card, search) : false;
               });
+              // A collapsed column stays empty except for its tray -- unless a search is actually
+              // narrowing the board down, in which case whichever of its own cards match surface
+              // as "ghost" cards (styled via .rebar-kanban-section-cards-collapsed below) so a
+              // search doesn't silently look like it missed something that's just hidden. Clearing
+              // the search, or narrowing it to no longer match, goes straight back to tray-only.
+              const visibleIds = collapsed ? (searchActive ? matchingIds : []) : matchingIds;
               return (
                 <div key={section.id} className="rebar-kanban-section" data-rebar-part="section">
-                  {section.label ? (
+                  {section.label && !collapsed ? (
                     <Text
                       size="xs"
                       color="secondary"
@@ -360,12 +542,15 @@ export function Kanban({
                       <div
                         className={clsx(
                           "rebar-kanban-section-cards",
+                          collapsed && "rebar-kanban-section-cards-collapsed",
                           isDragOverThis && "rebar-kanban-section-cards-active rebar-active-border",
                         )}
                         data-rebar-part="section-cards"
+                        data-column-id={column.id}
+                        data-section-id={section.id}
                         onDragEnter={(_e: DragEvent) => {
                           if (!dragCard) return;
-                          if (canAcceptDrop(column.id, section.id)) setDragOverSection({ columnId: column.id, sectionId: section.id });
+                          if (canAcceptDrop(dragCard, column.id, section.id)) setDragOverSection({ columnId: column.id, sectionId: section.id });
                         }}
                         onDragOver={(e: DragEvent) => {
                           if (dragCard) e.preventDefault();
@@ -383,6 +568,18 @@ export function Kanban({
                           handleCardDrop(column.id, section.id);
                         }}
                       >
+                        {collapsed ? (
+                          <div className="rebar-kanban-collapsed-tray" data-rebar-part="collapsed-tray">
+                            <Tooltip content="This column's contents are hidden. Click the eye icon to show them again.">
+                              <span className="rebar-kanban-collapsed-tray-label">
+                                <TrayIcon />
+                                <Text size="sm" color="secondary">
+                                  {section.cardIds.length} card{section.cardIds.length === 1 ? "" : "s"}
+                                </Text>
+                              </span>
+                            </Tooltip>
+                          </div>
+                        ) : null}
                         {visibleIds.map((cardId) => {
                           const card = cards[cardId];
                           if (!card) return null;
@@ -411,10 +608,83 @@ export function Kanban({
                             onTouchStart: (e: TouchEvent) => {
                               longPressCardRef.current = card;
                               longPress.onTouchStart(e);
+                              const touch = e.touches[0];
+                              if (!touch) return;
+                              touchDragRef.current = {
+                                kind: "card",
+                                cardId,
+                                startX: touch.clientX,
+                                startY: touch.clientY,
+                                dragging: false,
+                                ghostEl: null,
+                                sourceRect: null,
+                                lastColumnHit: null,
+                              };
                             },
-                            onTouchEnd: longPress.onTouchEnd,
-                            onTouchMove: longPress.onTouchMove,
-                            onTouchCancel: longPress.onTouchCancel,
+                            onTouchMove: (e: TouchEvent) => {
+                              // Any movement at all means this wasn't a press — cancelling the
+                              // long-press timer unconditionally here (not just past the drag
+                              // threshold below) is what keeps a long-press from firing mid-drag.
+                              longPress.onTouchMove();
+                              const state = touchDragRef.current;
+                              const touch = e.touches[0];
+                              if (!state || !touch || state.kind !== "card" || state.cardId !== cardId) return;
+                              const dx = touch.clientX - state.startX;
+                              const dy = touch.clientY - state.startY;
+                              if (!state.dragging) {
+                                if (Math.hypot(dx, dy) < TOUCH_DRAG_THRESHOLD) return;
+                                state.dragging = true;
+                                dragOccurredRef.current = true;
+                                setDragCard({ cardId, fromColumnId: column.id, fromSectionId: section.id });
+                                const target = e.currentTarget as HTMLElement;
+                                state.sourceRect = target.getBoundingClientRect();
+                                state.ghostEl = createTouchGhost(target);
+                              }
+                              e.preventDefault();
+                              if (state.ghostEl && state.sourceRect) {
+                                state.ghostEl.style.left = `${state.sourceRect.left + dx}px`;
+                                state.ghostEl.style.top = `${state.sourceRect.top + dy}px`;
+                              }
+                              const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                              const sectionEl = el?.closest<HTMLElement>('[data-rebar-part="section-cards"]');
+                              const hitColumnId = sectionEl?.dataset.columnId;
+                              const hitSectionId = sectionEl?.dataset.sectionId;
+                              const dragSource = { cardId, fromColumnId: column.id, fromSectionId: section.id };
+                              if (hitColumnId && hitSectionId && canAcceptDrop(dragSource, hitColumnId, hitSectionId)) {
+                                setDragOverSection({ columnId: hitColumnId, sectionId: hitSectionId });
+                              } else {
+                                setDragOverSection(null);
+                              }
+                            },
+                            onTouchEnd: () => {
+                              longPress.onTouchEnd();
+                              const state = touchDragRef.current;
+                              if (state?.dragging && state.kind === "card") {
+                                if (dragOverSection) handleCardDrop(dragOverSection.columnId, dragOverSection.sectionId);
+                                else {
+                                  setDragCard(null);
+                                  setDragOverSection(null);
+                                }
+                                state.ghostEl?.remove();
+                                setTimeout(() => {
+                                  dragOccurredRef.current = false;
+                                }, 0);
+                              }
+                              touchDragRef.current = null;
+                            },
+                            onTouchCancel: () => {
+                              longPress.onTouchCancel();
+                              const state = touchDragRef.current;
+                              state?.ghostEl?.remove();
+                              if (state?.dragging) {
+                                setDragCard(null);
+                                setDragOverSection(null);
+                                setTimeout(() => {
+                                  dragOccurredRef.current = false;
+                                }, 0);
+                              }
+                              touchDragRef.current = null;
+                            },
                           };
 
                           if (renderCard) {
@@ -470,7 +740,7 @@ export function Kanban({
                       </div>
                     );
                   })()}
-                  {addingTo?.columnId === column.id && addingTo.sectionId === section.id ? (
+                  {collapsed ? null : addingTo?.columnId === column.id && addingTo.sectionId === section.id ? (
                     <div className="rebar-kanban-add-form" data-rebar-part="add-form">
                       <Input
                         aria-label="New card title"
@@ -506,7 +776,10 @@ export function Kanban({
                       type="button"
                       className="rebar-kanban-add-button"
                       data-rebar-part="add-card-button"
-                      disabled={sectionLimit !== undefined && section.cardIds.length >= sectionLimit}
+                      disabled={
+                        (sectionLimit !== undefined && section.cardIds.length >= sectionLimit) ||
+                        (columnLimit !== undefined && total >= columnLimit)
+                      }
                       onClick={() => {
                         setAddingTo({ columnId: column.id, sectionId: section.id });
                         setDraftTitle("");

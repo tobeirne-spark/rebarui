@@ -2,14 +2,23 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
 import { resolveStickyColor, resolveStickyRotation, resolveStickyTextColor } from "../stickyColor";
 import { Tag } from "./Tag";
+import type { TagTone } from "./Tag";
 import { Text } from "./Text";
 
 export interface StickyProps extends Omit<ComponentPropsWithoutRef<"div">, "title" | "color"> {
-  title: string;
+  /** Usually plain text, but any `ReactNode` works too (e.g. a caller's own inline-editable title
+   * control) — when it isn't a plain string, pass `seed` explicitly, since the deterministic
+   * color/rotation hash can't be derived from non-string content. */
+  title: ReactNode;
   /** The note's body text — kept plain (a `ReactNode`, not required to be a string) so a caller
    * can pass whatever short context fits, matching every other component's `children` slot. */
   children?: ReactNode;
-  tags?: string[];
+  /** A plain string keeps today's default-tone tag; pass `{ label, tone }` for one that needs its
+   * own tone (e.g. a caller distinguishing an assignee's name from its own tag vocabulary). */
+  tags?: (string | { label: string; tone?: TagTone })[];
+  /** When set, every tag gets the same small "×" control `Card`'s own tags have — omit to keep
+   * today's plain, read-only tags. */
+  onTagClose?: (tag: string) => void;
   /** A hex background color. Unset picks one deterministically from a small pastel palette, keyed
    * off `seed` — the same seed always gets the same color. */
   color?: string;
@@ -33,9 +42,21 @@ export interface StickyProps extends Omit<ComponentPropsWithoutRef<"div">, "titl
  * with the room's lighting, and neither should its ink) — see the comment on
  * `resolveStickyTextColor` for the dark-mode bug this specifically fixes.
  */
-export function Sticky({ title, children, tags, color, seed = title, activeBorder, className, style, ...props }: StickyProps) {
+export function Sticky({
+  title,
+  children,
+  tags,
+  onTagClose,
+  color,
+  seed = typeof title === "string" ? title : "sticky",
+  activeBorder,
+  className,
+  style,
+  ...props
+}: StickyProps) {
   const resolvedColor = resolveStickyColor(seed, color);
   const textColor = resolveStickyTextColor(resolvedColor);
+  const normalizedTags = tags?.map((tag) => (typeof tag === "string" ? { label: tag, tone: undefined } : tag));
 
   return (
     <div
@@ -56,10 +77,12 @@ export function Sticky({ title, children, tags, color, seed = title, activeBorde
           {children}
         </Text>
       ) : null}
-      {tags?.length ? (
+      {normalizedTags?.length ? (
         <div className="rebar-sticky-tags" data-rebar-part="tags">
-          {tags.map((tag) => (
-            <Tag key={tag}>{tag}</Tag>
+          {normalizedTags.map(({ label, tone }) => (
+            <Tag key={label} tone={tone} closable={Boolean(onTagClose)} onClose={onTagClose ? () => onTagClose(label) : undefined}>
+              {label}
+            </Tag>
           ))}
         </div>
       ) : null}
