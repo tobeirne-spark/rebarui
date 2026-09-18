@@ -6016,6 +6016,22 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   flex-direction: column;
 }
 
+.rebar-app-shell--top-nav-sidebar {
+  flex-direction: column;
+}
+
+.rebar-app-shell--three-pane {
+  flex-direction: row;
+}
+
+.rebar-app-shell--mobile {
+  flex-direction: column;
+}
+
+.rebar-app-shell--tablet {
+  flex-direction: row;
+}
+
 .rebar-app-shell-content {
   flex: 1;
   display: flex;
