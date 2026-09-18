@@ -1840,6 +1840,31 @@ body {
   flex-direction: column;
 }
 
+/* When `onItemClick` is passed, each item's content renders inside this button instead of
+   directly inside the `<li>` -- reset it back to looking like the plain content it replaces. */
+.rebar-steps-item-button {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rebar-space-sm, 8px);
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.rebar-steps-item-button:hover .rebar-steps-title {
+  color: var(--rebar-color-primary, #0066cc);
+}
+.rebar-steps-item-button:focus-visible {
+  outline: 2px solid var(--rebar-color-primary, #0066cc);
+  outline-offset: 2px;
+  border-radius: var(--rebar-radius, 4px);
+}
+
 .rebar-steps-item {
   display: flex;
   align-items: flex-start;

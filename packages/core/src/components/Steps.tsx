@@ -24,6 +24,10 @@ export interface StepsProps {
   /** Force bionic reading on/off for all items, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
+  /** Makes every step clickable (e.g. free navigation in a checklist, or a caller windowing a
+   * long step list down to a visible slice) — omit for the original, purely presentational
+   * behavior. */
+  onItemClick?: (index: number) => void;
 }
 
 function resolveStatus(item: StepItem, index: number, current: number): StepStatus {
@@ -34,7 +38,7 @@ function resolveStatus(item: StepItem, index: number, current: number): StepStat
 }
 
 export const Steps = forwardRef<HTMLOListElement, StepsProps>(function Steps(
-  { items, current = 0, direction = "horizontal", className, bionic, bionicOptions },
+  { items, current = 0, direction = "horizontal", className, bionic, bionicOptions, onItemClick },
   ref,
 ) {
   const ambient = useAmbientBionic();
@@ -43,20 +47,14 @@ export const Steps = forwardRef<HTMLOListElement, StepsProps>(function Steps(
   return (
     <ol
       ref={ref}
-      className={clsx("rebar-steps", `rebar-steps-${direction}`, className)}
+      className={clsx("rebar-steps", `rebar-steps-${direction}`, onItemClick && "rebar-steps-clickable", className)}
       data-rebar-component="steps"
       data-rebar-direction={direction}
     >
       {items.map((item, index) => {
         const status = resolveStatus(item, index, current);
-        return (
-          <li
-            key={index}
-            className="rebar-steps-item"
-            data-rebar-part="item"
-            data-rebar-status={status}
-            aria-current={status === "process" ? "step" : undefined}
-          >
+        const content = (
+          <>
             <span className="rebar-steps-icon" data-rebar-part="icon" aria-hidden="true">
               {item.icon ?? (status === "finish" ? "✓" : status === "error" ? "✕" : index + 1)}
             </span>
@@ -70,6 +68,23 @@ export const Steps = forwardRef<HTMLOListElement, StepsProps>(function Steps(
                 </span>
               ) : null}
             </span>
+          </>
+        );
+        return (
+          <li
+            key={index}
+            className="rebar-steps-item"
+            data-rebar-part="item"
+            data-rebar-status={status}
+            aria-current={status === "process" ? "step" : undefined}
+          >
+            {onItemClick ? (
+              <button type="button" className="rebar-steps-item-button" onClick={() => onItemClick(index)}>
+                {content}
+              </button>
+            ) : (
+              content
+            )}
           </li>
         );
       })}
