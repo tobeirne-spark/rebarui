@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Steps } from "../components/Steps";
 
 const items = [
@@ -41,5 +41,17 @@ describe("Steps", () => {
   it("lets an explicit icon override the derived index/✓/✕", () => {
     const { container } = render(<Steps items={[{ title: "Bucket", status: "wait", icon: "⋯" }]} />);
     expect(container.querySelector('[data-rebar-part="icon"]')).toHaveTextContent("⋯");
+  });
+
+  it("renders plain, unclickable content when onItemClick is omitted", () => {
+    const { container } = render(<Steps items={items} current={0} />);
+    expect(container.querySelector(".rebar-steps-item-button")).not.toBeInTheDocument();
+  });
+
+  it("makes every item a button that calls onItemClick with its index", () => {
+    const onItemClick = vi.fn();
+    render(<Steps items={items} current={0} onItemClick={onItemClick} />);
+    fireEvent.click(screen.getByText("Review"));
+    expect(onItemClick).toHaveBeenCalledWith(2);
   });
 });
