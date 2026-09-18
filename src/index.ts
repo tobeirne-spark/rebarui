@@ -45,6 +45,9 @@ export type { SignaturePadProps } from "./components/SignaturePad";
 export { ImageCropper } from "./components/ImageCropper";
 export type { ImageCropperProps } from "./components/ImageCropper";
 
+export { VideoPlayer } from "./components/VideoPlayer";
+export type { VideoPlayerProps } from "./components/VideoPlayer";
+
 export { PhoneInput, DEFAULT_PHONE_COUNTRIES } from "./components/PhoneInput";
 export type { PhoneInputProps, PhoneCountry } from "./components/PhoneInput";
 

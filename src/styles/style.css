@@ -5119,6 +5119,31 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-waveform-audio-player-time { flex-shrink: 0; white-space: nowrap; color: var(--rebar-color-text-secondary, #757575); }
 .rebar-waveform-audio-player-error { color: var(--rebar-color-danger, #d32f2f); }
 
+/* VideoPlayer */
+.rebar-video-player { display: flex; flex-direction: column; gap: var(--rebar-space-sm, 8px); width: 100%; }
+.rebar-video-player-video {
+  width: 100%;
+  max-height: 360px;
+  background: #000;
+  border-radius: var(--rebar-radius, 4px);
+  cursor: pointer;
+}
+.rebar-video-player-controls { display: flex; align-items: center; gap: var(--rebar-space-xs, 4px); flex-wrap: wrap; }
+.rebar-video-player-scrub {
+  position: relative;
+  flex-grow: 1;
+  min-width: 80px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--rebar-color-border, #e0e0e0);
+  cursor: pointer;
+}
+.rebar-video-player-scrub:focus-visible { outline: 2px solid var(--rebar-color-border-focus, #0066cc); outline-offset: 2px; }
+.rebar-video-player-scrub-fill { height: 100%; border-radius: 999px; background: var(--rebar-color-primary, #0066cc); }
+.rebar-video-player-time { flex-shrink: 0; white-space: nowrap; color: var(--rebar-color-text-secondary, #757575); }
+.rebar-video-player-volume { width: 80px; flex-shrink: 0; }
+.rebar-video-player-error { color: var(--rebar-color-danger, #d32f2f); }
+
 /* UploadQueue */
 .rebar-upload-queue { position: fixed; left: var(--rebar-space-lg, 24px); bottom: var(--rebar-space-lg, 24px); z-index: 1000; }
 .rebar-upload-queue-pill {
