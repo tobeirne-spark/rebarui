@@ -156,6 +156,94 @@ describe("Kanban", () => {
     });
   });
 
+  describe("touch drag-and-drop", () => {
+    // jsdom doesn't implement elementFromPoint (a real-layout-only API) -- stub it to return
+    // whatever element the test wants hit-tested at the touch's current position, the same
+    // "polyfill the specific jsdom gap" convention RichTextEditor.test.tsx already uses for
+    // execCommand.
+    function stubElementFromPoint(el: Element | null) {
+      document.elementFromPoint = vi.fn().mockReturnValue(el);
+    }
+
+    it("moves a card to another section via touch drag, past the movement threshold", () => {
+      const onChange = vi.fn();
+      const { container } = render(<Kanban columns={COLUMNS} cards={CARDS} onChange={onChange} />);
+      const card = screen.getByText("Write spec").closest('[data-rebar-part="card"]')!;
+      const reviewSection = container.querySelectorAll('[data-rebar-part="section-cards"]')[1]!; // unlimited
+      stubElementFromPoint(reviewSection);
+
+      fireEvent.touchStart(card, { touches: [{ clientX: 0, clientY: 0 }] });
+      fireEvent.touchMove(card, { touches: [{ clientX: 0, clientY: 50 }] }); // past the 10px threshold
+      fireEvent.touchEnd(card);
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const next = onChange.mock.calls[0]![0];
+      expect(next.columns[0].sections[0].cardIds).toEqual(["b"]);
+      expect(next.columns[1].sections[0].cardIds).toEqual(["a"]);
+    });
+
+    it("does not treat a touch below the movement threshold as a drag", () => {
+      const onChange = vi.fn();
+      const { container } = render(<Kanban columns={COLUMNS} cards={CARDS} onChange={onChange} />);
+      const card = screen.getByText("Write spec").closest('[data-rebar-part="card"]')!;
+      const reviewSection = container.querySelectorAll('[data-rebar-part="section-cards"]')[1]!;
+      stubElementFromPoint(reviewSection);
+
+      fireEvent.touchStart(card, { touches: [{ clientX: 0, clientY: 0 }] });
+      fireEvent.touchMove(card, { touches: [{ clientX: 0, clientY: 3 }] }); // under the threshold
+      fireEvent.touchEnd(card);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("rejects a touch-dragged drop past a section's limit, same as mouse drag", () => {
+      const onChange = vi.fn();
+      const { container } = render(<Kanban columns={COLUMNS} cards={CARDS} onChange={onChange} />);
+      const card = screen.getByText("Write spec").closest('[data-rebar-part="card"]')!;
+      const doneSection = container.querySelectorAll('[data-rebar-part="section-cards"]')[2]!; // 1/1, full
+      stubElementFromPoint(doneSection);
+
+      fireEvent.touchStart(card, { touches: [{ clientX: 0, clientY: 0 }] });
+      fireEvent.touchMove(card, { touches: [{ clientX: 0, clientY: 50 }] });
+      fireEvent.touchEnd(card);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("reorders columns via a touch drag on the column header", () => {
+      const onChange = vi.fn();
+      const { container } = render(<Kanban columns={COLUMNS} cards={CARDS} onChange={onChange} />);
+      const headers = container.querySelectorAll('[data-rebar-part="column-header"]');
+      const doneColumn = container.querySelectorAll('[data-rebar-part="column"]')[0]!;
+      stubElementFromPoint(doneColumn);
+
+      fireEvent.touchStart(headers[2]!, { touches: [{ clientX: 0, clientY: 0 }] });
+      fireEvent.touchMove(headers[2]!, { touches: [{ clientX: 50, clientY: 0 }] });
+      fireEvent.touchEnd(headers[2]!);
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const next = onChange.mock.calls[0]![0];
+      expect(next.columns.map((c: KanbanColumn) => c.id)).toEqual(["done", "todo", "review"]);
+    });
+
+    it("calls onCardLongPress instead of opening the built-in edit dialog when provided", () => {
+      vi.useFakeTimers();
+      const onCardLongPress = vi.fn();
+      render(<Kanban columns={COLUMNS} cards={CARDS} onCardLongPress={onCardLongPress} />);
+      const card = screen.getByText("Write spec").closest('[data-rebar-component="card"]') as HTMLElement;
+
+      fireEvent.touchStart(card, { touches: [{ clientX: 0, clientY: 0 }] });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(onCardLongPress).toHaveBeenCalledTimes(1);
+      expect(onCardLongPress.mock.calls[0]![0].id).toBe("a");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      vi.useRealTimers();
+    });
+  });
+
   it("reorders columns on drag-drop", () => {
     const onChange = vi.fn();
     const { container } = render(<Kanban columns={COLUMNS} cards={CARDS} onChange={onChange} />);
@@ -207,6 +295,63 @@ describe("Kanban", () => {
     expect(screen.getByText("Write spec")).toBeInTheDocument();
     expect(screen.queryByText("Build UI")).not.toBeInTheDocument();
     expect(screen.getByText("1/2")).toBeInTheDocument();
+  });
+
+  describe("collapsed columns", () => {
+    it("hides its cards and add-card button behind a tray showing the true count, unaffected by search", () => {
+      const { container, rerender } = render(<Kanban columns={COLUMNS} cards={CARDS} />);
+      const todoColumn = container.querySelectorAll('[data-rebar-part="column"]')[0]!;
+      const collapseButton = within(todoColumn as HTMLElement).getByRole("button", { name: "Hide To do cards" });
+
+      fireEvent.click(collapseButton);
+      expect(within(todoColumn as HTMLElement).queryByText("Write spec")).not.toBeInTheDocument();
+      expect(within(todoColumn as HTMLElement).queryByText("Build UI")).not.toBeInTheDocument();
+      expect(within(todoColumn as HTMLElement).queryByText("+ Add card")).not.toBeInTheDocument();
+      expect(within(todoColumn as HTMLElement).getByText("2 cards")).toBeInTheDocument();
+
+      // The tray's count is the section's real count, not a search-filtered one.
+      rerender(<Kanban columns={COLUMNS} cards={CARDS} search="nothing matches this" />);
+      expect(within(todoColumn as HTMLElement).getByText("2 cards")).toBeInTheDocument();
+    });
+
+    it("still accepts a dropped card while collapsed, even though it isn't shown", () => {
+      const onChange = vi.fn();
+      const { container } = render(<Kanban columns={COLUMNS} cards={CARDS} onChange={onChange} />);
+      const todoColumn = container.querySelectorAll('[data-rebar-part="column"]')[0]!;
+      const collapseButton = within(todoColumn as HTMLElement).getByRole("button", { name: "Hide To do cards" });
+      fireEvent.click(collapseButton);
+
+      const card = screen.getByText("Ship it").closest('[data-rebar-part="card"]')!;
+      const todoSection = todoColumn.querySelector('[data-rebar-part="section-cards"]')!;
+      drag(card, todoSection);
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const next = onChange.mock.calls[0]![0];
+      expect(next.columns[0].sections[0].cardIds).toContain("c");
+    });
+
+    it("surfaces a matching card as a ghost while a search matches it, and hides it again once the search stops matching", () => {
+      const { container, rerender } = render(<Kanban columns={COLUMNS} cards={CARDS} search="write" />);
+      const todoColumn = container.querySelectorAll('[data-rebar-part="column"]')[0]!;
+      const collapseButton = within(todoColumn as HTMLElement).getByRole("button", { name: "Hide To do cards" });
+      fireEvent.click(collapseButton);
+
+      // "write" matches card "a" ("Write spec") but not "b" ("Build UI") -- only the match ghosts.
+      expect(within(todoColumn as HTMLElement).getByText("Write spec")).toBeInTheDocument();
+      expect(within(todoColumn as HTMLElement).queryByText("Build UI")).not.toBeInTheDocument();
+      const sectionCards = todoColumn.querySelector('[data-rebar-part="section-cards"]')!;
+      expect(sectionCards).toHaveClass("rebar-kanban-section-cards-collapsed");
+
+      // Narrowing the search to no longer match goes back to tray-only.
+      rerender(<Kanban columns={COLUMNS} cards={CARDS} search="nonexistent term" />);
+      expect(within(todoColumn as HTMLElement).queryByText("Write spec")).not.toBeInTheDocument();
+
+      // Clearing the search entirely also goes back to tray-only.
+      rerender(<Kanban columns={COLUMNS} cards={CARDS} search="write" />);
+      expect(within(todoColumn as HTMLElement).getByText("Write spec")).toBeInTheDocument();
+      rerender(<Kanban columns={COLUMNS} cards={CARDS} search="" />);
+      expect(within(todoColumn as HTMLElement).queryByText("Write spec")).not.toBeInTheDocument();
+    });
   });
 
   describe("sticky variant", () => {

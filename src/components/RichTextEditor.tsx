@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, CSSProperties, DragEvent, MouseEvent } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
 
@@ -13,12 +13,16 @@ export interface RichTextEditorProps
   placeholder?: string;
   /** Minimum height of the editable area, in px. Default 160. */
   minHeight?: number;
+  /** Caps how large a pasted/dropped/uploaded image can be, in bytes, before it's silently
+   * rejected (the image is embedded as a base64 data URL directly in `value`'s HTML, so an
+   * unbounded image would bloat whatever the caller persists that HTML to). Default 4MB. */
+  maxImageBytes?: number;
 }
 
-const COMMANDS: { command: string; label: string; glyph: string }[] = [
-  { command: "bold", label: "Bold", glyph: "B" },
-  { command: "italic", label: "Italic", glyph: "I" },
-  { command: "underline", label: "Underline", glyph: "U" },
+const COMMANDS: { command: string; label: string; glyph: string; glyphStyle?: CSSProperties }[] = [
+  { command: "bold", label: "Bold", glyph: "B", glyphStyle: { fontWeight: 700 } },
+  { command: "italic", label: "Italic", glyph: "I", glyphStyle: { fontStyle: "italic" } },
+  { command: "underline", label: "Underline", glyph: "U", glyphStyle: { textDecoration: "underline" } },
   { command: "insertUnorderedList", label: "Bulleted list", glyph: "•" },
   { command: "insertOrderedList", label: "Numbered list", glyph: "1." },
 ];
@@ -56,16 +60,20 @@ const COMMANDS: { command: string; label: string; glyph: string }[] = [
  * markup at all without a JS mechanism to inject real DOM nodes — and doing that here would mean
  * injecting content into the otherwise-`:empty` region the CSS selector itself depends on.
  */
+const DEFAULT_MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
 export function RichTextEditor({
   value,
   defaultValue = "",
   onValueChange,
   placeholder = "Start typing...",
   minHeight = 160,
+  maxImageBytes = DEFAULT_MAX_IMAGE_BYTES,
   className,
   ...props
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isControlled = value !== undefined;
 
   useEffect(() => {
@@ -98,15 +106,84 @@ export function RichTextEditor({
   const insertLink = () => {
     const url = window.prompt("Link URL");
     if (!url) return;
+    const label = window.prompt("Link text", url);
+    if (!label) return;
     editorRef.current?.focus();
-    document.execCommand("createLink", false, url);
+    // `createLink` only wraps whatever text/selection is already there (nothing, if the caret is
+    // just sitting in empty space) — inserting a real `<a>` with its own chosen label works
+    // regardless of the current selection. `target="_blank"` alone doesn't make it click-to-open
+    // *inside* a contentEditable region though (browsers suppress link navigation there so a
+    // click can place the caret instead) — the content div's own onClick handles that half, see
+    // below.
+    const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    document.execCommand("insertHTML", false, `<a href="${escape(url)}" target="_blank" rel="noopener noreferrer">${escape(label)}</a>`);
     emitChange();
+  };
+
+  // Images embed as base64 data URLs directly inside the saved HTML -- no upload endpoint
+  // required for this to work out of the box, at the cost of bloating whatever the caller
+  // persists `value` to by roughly 4/3 the image's own size. `maxImageBytes` exists specifically
+  // to keep that bloat bounded; a caller storing this HTML in a database row is the intended
+  // audience for that cap, not one serving images from disk/CDN.
+  const insertImageFile = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > maxImageBytes) {
+      window.alert(`That image is too large to insert (max ${Math.round(maxImageBytes / (1024 * 1024))}MB).`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== "string") return;
+      editorRef.current?.focus();
+      document.execCommand("insertHTML", false, `<img src="${dataUrl}" alt="${file.name.replace(/"/g, "&quot;")}" />`);
+      emitChange();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          event.preventDefault();
+          insertImageFile(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    const file = Array.from(event.dataTransfer?.files ?? []).find((f) => f.type.startsWith("image/"));
+    if (!file) return;
+    event.preventDefault();
+    insertImageFile(file);
+  };
+
+  const handleImageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) insertImageFile(file);
+    event.target.value = "";
+  };
+
+  // A plain click on a link inside a contentEditable region normally does nothing but move the
+  // caret (by design, so you can edit text right up against a link) — this is what actually makes
+  // a link open, the one real behavior difference from a link anywhere else on the page.
+  const handleContentClick = (event: MouseEvent<HTMLDivElement>) => {
+    const link = (event.target as HTMLElement).closest("a");
+    if (!link) return;
+    event.preventDefault();
+    window.open(link.href, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div className={clsx("rebar-rich-text-editor", className)} data-rebar-component="rich-text-editor" {...props}>
       <div className="rebar-rich-text-editor-toolbar" data-rebar-part="toolbar" role="toolbar" aria-label="Formatting">
-        {COMMANDS.map(({ command, label, glyph }) => (
+        {COMMANDS.map(({ command, label, glyph, glyphStyle }) => (
           <Button
             key={command}
             type="button"
@@ -114,9 +191,17 @@ export function RichTextEditor({
             size="sm"
             aria-label={label}
             className="rebar-rich-text-editor-toolbar-button"
+            // A native <button> steals focus (and with it, the browser's current selection Range)
+            // on mousedown, before the click handler ever runs — `insertUnorderedList`/
+            // `insertOrderedList` need that Range to still be inside the editable region to have
+            // anything to wrap in a list (unlike bold/italic/underline, which still toggle fine
+            // from a bare collapsed caret after refocusing), so they silently no-op without this.
+            // Blocking the default mousedown behavior is the standard fix for every contentEditable
+            // toolbar for exactly this reason.
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => runCommand(command)}
           >
-            {glyph}
+            <span style={glyphStyle}>{glyph}</span>
           </Button>
         ))}
         <Button
@@ -125,10 +210,30 @@ export function RichTextEditor({
           size="sm"
           aria-label="Insert link"
           className="rebar-rich-text-editor-toolbar-button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={insertLink}
         >
           🔗
         </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          aria-label="Insert image"
+          className="rebar-rich-text-editor-toolbar-button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          🖼
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          aria-hidden="true"
+          style={{ display: "none" }}
+          onChange={handleImageInputChange}
+        />
       </div>
       <div
         ref={editorRef}
@@ -142,6 +247,10 @@ export function RichTextEditor({
         style={{ minHeight }}
         onInput={emitChange}
         onBlur={emitChange}
+        onClick={handleContentClick}
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
         suppressContentEditableWarning
       />
     </div>
