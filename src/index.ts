@@ -36,6 +36,12 @@ export type { RowProps, ColProps } from "./components/Row";
 export { Kbd } from "./components/Kbd";
 export type { KbdProps } from "./components/Kbd";
 
+export { TagInput } from "./components/TagInput";
+export type { TagInputProps } from "./components/TagInput";
+
+export { PhoneInput, DEFAULT_PHONE_COUNTRIES } from "./components/PhoneInput";
+export type { PhoneInputProps, PhoneCountry } from "./components/PhoneInput";
+
 export { Countdown } from "./components/Countdown";
 export type { CountdownProps } from "./components/Countdown";
 
