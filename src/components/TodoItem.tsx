@@ -15,6 +15,12 @@ export interface TodoItemProps extends Omit<ComponentPropsWithoutRef<"div">, "ch
    * `"big"` a larger, more numerous, longer-traveling one, `"none"` disables it entirely. Always
    * skipped outright when `prefers-reduced-motion` is set, regardless of this prop. */
   celebration?: "none" | "small" | "big";
+  /** Renders the toggle as a greyed-out circle with a line struck through it and makes it
+   * non-interactive (no click, no keyboard activation) — e.g. an item marked "not applicable"
+   * elsewhere in the same row, which isn't meant to be tickable at all right now. Takes precedence
+   * over `completed`'s own styling when both are set; the caller decides which one wins by
+   * choosing what `completed` is while this is true (a toggle can't show both at once). */
+  disabled?: boolean;
 }
 
 function prefersReducedMotion(): boolean {
@@ -94,7 +100,7 @@ function ConfettiBurst({ config }: { config: CelebrationConfig }) {
  * pulling in the rest of `GoalTracker`'s aspiration/focus-area hierarchy.
  */
 export const TodoItem = forwardRef<HTMLDivElement, TodoItemProps>(function TodoItem(
-  { label, completed, onToggle, toggleLabel, celebration = "small", className, ...props },
+  { label, completed, onToggle, toggleLabel, celebration = "small", disabled = false, className, ...props },
   ref,
 ) {
   const [burstId, setBurstId] = useState<number | null>(null);
@@ -126,12 +132,18 @@ export const TodoItem = forwardRef<HTMLDivElement, TodoItemProps>(function TodoI
           type="button"
           role="checkbox"
           aria-checked={completed}
+          aria-disabled={disabled || undefined}
           aria-label={toggleLabel}
-          className={clsx("rebar-todo-item-toggle", completed && "rebar-todo-item-toggle-completed")}
+          className={clsx(
+            "rebar-todo-item-toggle",
+            completed && !disabled && "rebar-todo-item-toggle-completed",
+            disabled && "rebar-todo-item-toggle-disabled",
+          )}
           data-rebar-part="toggle"
-          onClick={handleClick}
+          disabled={disabled}
+          onClick={disabled ? undefined : handleClick}
         >
-          {completed ? "✓" : ""}
+          {disabled ? <span className="rebar-todo-item-toggle-strike" aria-hidden="true" /> : completed ? "✓" : ""}
         </button>
         {burstId !== null && celebration !== "none" ? (
           <ConfettiBurst key={burstId} config={CELEBRATION_CONFIG[celebration]} />
