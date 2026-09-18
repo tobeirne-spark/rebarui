@@ -6137,6 +6137,16 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   overflow: auto;
 }
 
+/* NavBar has no chrome of its own by design (see NavBar.tsx) — every other place it's composed
+   into real page chrome (site-header's own block) supplies its own surrounding padding, but
+   AppShell's topNav slot rendered it bare, so its items sat flush against the shell's edge with
+   zero inset. Matches site-header's own padding/border-bottom treatment. */
+.rebar-app-shell-topnav {
+  flex-shrink: 0;
+  padding: var(--rebar-space-md, 16px) var(--rebar-space-xl, 32px);
+  border-bottom: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+
 .rebar-app-shell--top-nav .rebar-app-shell-content {
   overflow: auto;
 }

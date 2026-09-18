@@ -103,7 +103,11 @@ export const AppShell = forwardRef<HTMLDivElement, AppShellProps>(function AppSh
     const effectiveSidebar = variant === "tablet" ? { defaultCollapsed: true, ...sidebar } : sidebar;
     return (
       <Stack direction="row" {...rootProps}>
-        <SidebarNav {...effectiveSidebar} />
+        {/* Keyed by variant: "sidebar" and "tablet" share this exact render branch and differ only
+            in the `defaultCollapsed` value passed in, but `SidebarNav` reads that prop into its own
+            `useState` only once, on mount — switching variants without remounting would otherwise
+            leave a stale collapsed/expanded state behind from whichever variant rendered first. */}
+        <SidebarNav key={variant} {...effectiveSidebar} />
         <Box
           className="rebar-app-shell-content"
           style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}
@@ -131,7 +135,9 @@ export const AppShell = forwardRef<HTMLDivElement, AppShellProps>(function AppSh
     );
     return (
       <Stack direction="column" {...rootProps}>
-        <NavBar {...topNav} />
+        <Box className="rebar-app-shell-topnav">
+          <NavBar {...topNav} />
+        </Box>
         {content}
       </Stack>
     );
@@ -143,7 +149,9 @@ export const AppShell = forwardRef<HTMLDivElement, AppShellProps>(function AppSh
   if (variant === "top-nav-sidebar" && topNav && sidebar) {
     return (
       <Stack direction="column" {...rootProps}>
-        <NavBar {...topNav} />
+        <Box className="rebar-app-shell-topnav">
+          <NavBar {...topNav} />
+        </Box>
         <Stack direction="row" style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
           <SidebarNav {...sidebar} />
           <Box className="rebar-app-shell-content" style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
@@ -183,7 +191,11 @@ export const AppShell = forwardRef<HTMLDivElement, AppShellProps>(function AppSh
   if (variant === "mobile" && tabBar) {
     return (
       <Stack direction="column" {...rootProps} style={{ ...rootProps.style, transform: "translateZ(0)" }}>
-        {topNav ? <NavBar {...topNav} /> : null}
+        {topNav ? (
+          <Box className="rebar-app-shell-topnav">
+            <NavBar {...topNav} />
+          </Box>
+        ) : null}
         <Box className="rebar-app-shell-content" style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
           {children}
         </Box>

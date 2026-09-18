@@ -40,6 +40,19 @@ describe("AppShell", () => {
     expect(screen.getByText("page content")).toBeInTheDocument();
   });
 
+  it("gives topNav its own padded wrapper instead of rendering NavBar's chromeless root bare", () => {
+    // NavBar has no padding of its own by design — every real usage (site-header's own block)
+    // supplies it from the surrounding chrome. AppShell's topNav slot must do the same, or the
+    // nav's items sit flush against the shell's edge with zero inset.
+    render(
+      <AppShell variant="top-nav" topNav={{ items: NAV_ITEMS }}>
+        <div>page content</div>
+      </AppShell>,
+    );
+    const navbar = document.querySelector('[data-rebar-component="navbar"]');
+    expect(navbar?.parentElement).toHaveClass("rebar-app-shell-topnav");
+  });
+
   it("renders NavBar above a sidebar+content row for variant=top-nav-sidebar", () => {
     render(
       <AppShell variant="top-nav-sidebar" topNav={{ items: NAV_ITEMS }} sidebar={{ items: SIDEBAR_ITEMS }}>
@@ -107,6 +120,29 @@ describe("AppShell", () => {
     );
     const sidebar = document.querySelector('[data-rebar-component="sidebar-nav"]');
     expect(sidebar).not.toHaveAttribute("data-rebar-collapsed");
+  });
+
+  it("does not carry a stale collapsed state over when switching from tablet back to sidebar", () => {
+    // Both variants share one render branch and differ only in the `defaultCollapsed` value
+    // passed to `SidebarNav`, which reads it into its own `useState` once, on mount — switching
+    // variants without remounting would otherwise leave tablet's forced-collapsed state behind.
+    const { rerender } = render(
+      <AppShell variant="tablet" sidebar={{ items: SIDEBAR_ITEMS }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    expect(document.querySelector('[data-rebar-component="sidebar-nav"]')).toHaveAttribute(
+      "data-rebar-collapsed",
+      "true",
+    );
+    rerender(
+      <AppShell variant="sidebar" sidebar={{ items: SIDEBAR_ITEMS }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    expect(document.querySelector('[data-rebar-component="sidebar-nav"]')).not.toHaveAttribute(
+      "data-rebar-collapsed",
+    );
   });
 
   it("adds a real SidePanel alongside variant=sidebar when rightPanel is set", () => {
