@@ -5122,6 +5122,19 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   padding: 0;
 }
 .rebar-todo-item-toggle-completed { background: var(--rebar-color-success, #2e7d32); border-color: var(--rebar-color-success, #2e7d32); color: var(--rebar-color-primary-text, #ffffff); }
+.rebar-todo-item-toggle-disabled {
+  background: var(--rebar-color-bg-secondary, #f0f0f0);
+  border-color: var(--rebar-color-border, #e0e0e0);
+  color: var(--rebar-color-text-secondary, #757575);
+  cursor: not-allowed;
+}
+.rebar-todo-item-toggle-strike {
+  display: block;
+  width: 60%;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
 .rebar-todo-item-toggle:focus-visible { outline: 2px solid var(--rebar-color-border-focus, #0066cc); outline-offset: 2px; }
 .rebar-todo-item-burst { position: absolute; top: 50%; left: 50%; width: 0; height: 0; pointer-events: none; }
 .rebar-todo-item-burst-arm { position: absolute; top: 0; left: 0; width: 0; height: 0; }

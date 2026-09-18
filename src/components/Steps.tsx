@@ -55,7 +55,16 @@ export const Steps = forwardRef<HTMLOListElement, StepsProps>(function Steps(
         const status = resolveStatus(item, index, current);
         const content = (
           <>
-            <span className="rebar-steps-icon" data-rebar-part="icon" aria-hidden="true">
+            {/* "process" reuses the generic .rebar-active-border traveling-beam flag (see its own
+                doc comment in style.css) as the "this step is in focus" signal, rather than a
+                static colored ring alone -- a caller that fully owns each item's `status` (e.g.
+                only ever marking "finish" once something explicit, like a commit toggle,
+                confirms it) still gets a clear "you are here" cue on whichever step is current. */}
+            <span
+              className={clsx("rebar-steps-icon", status === "process" && "rebar-active-border")}
+              data-rebar-part="icon"
+              aria-hidden="true"
+            >
               {item.icon ?? (status === "finish" ? "✓" : status === "error" ? "✕" : index + 1)}
             </span>
             <span className="rebar-steps-content" data-rebar-part="content">

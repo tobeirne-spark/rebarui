@@ -116,6 +116,22 @@ describe("TodoItem", () => {
     expect(container.querySelector("[data-rebar-part='label']")).toBeInTheDocument();
   });
 
+  it("renders a struck-through, non-interactive toggle when disabled, ignoring completed", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    const { container } = render(
+      <TodoItem label="Task" completed={false} disabled onToggle={onToggle} toggleLabel="Mark complete" />,
+    );
+    const toggle = screen.getByRole("checkbox");
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute("aria-disabled", "true");
+    expect(container.querySelector(".rebar-todo-item-toggle-strike")).toBeInTheDocument();
+    expect(container.querySelector(".rebar-todo-item-toggle-completed")).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
   it("forwards arbitrary data-*/aria-* props to the root element", () => {
     render(
       <TodoItem
