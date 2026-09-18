@@ -28,6 +28,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "prepare": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
