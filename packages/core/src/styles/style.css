@@ -2805,6 +2805,52 @@ body {
   color: var(--rebar-color-text-primary, #212121);
 }
 
+.rebar-kanban-collapse-button {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--rebar-color-text-secondary, #757575);
+  padding: 2px var(--rebar-space-xs, 4px);
+}
+
+.rebar-kanban-collapse-button:hover {
+  color: var(--rebar-color-text-primary, #212121);
+}
+
+.rebar-kanban-collapse-button[aria-pressed="true"] {
+  color: var(--rebar-color-primary, #0066cc);
+}
+
+.rebar-kanban-collapsed-tray {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--rebar-border-width, 1px) dashed var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  padding: var(--rebar-space-sm, 8px);
+  margin-top: var(--rebar-space-xs, 4px);
+}
+
+.rebar-kanban-collapsed-tray-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rebar-space-sm, 8px);
+  color: var(--rebar-color-text-secondary, #757575);
+  cursor: default;
+}
+
+/* A card that only surfaces because it matches an active search inside an otherwise-collapsed
+   column -- faded and dashed so it still reads as "this column is hidden," not as a normal card
+   the collapse forgot to hide. Reverts the instant the search stops matching (see Kanban's own
+   visibleIds logic) or is cleared. */
+.rebar-kanban-section-cards-collapsed [data-rebar-part="card"] {
+  opacity: 0.5;
+  outline: var(--rebar-border-width, 1px) dashed var(--rebar-color-border-strong, #bdbdbd);
+  outline-offset: 2px;
+}
+
 .rebar-kanban-section {
   display: flex;
   flex-direction: column;
@@ -4127,6 +4173,41 @@ body {
 .rebar-rich-text-editor-content:empty::before {
   content: attr(data-placeholder);
   color: var(--rebar-color-text-secondary, #757575);
+}
+
+/* Many consuming apps reset for a base stylesheet (e.g. Tailwind's preflight sets every ul/ol to
+   list-style: none with zero margin/padding) -- without restoring it scoped in here, a list this
+   editor's own toolbar just created (a real <ul>/<ol><li>) renders with no visible bullet/number
+   at all, silently, in exactly those apps. Scoped to this component's own content region so it
+   doesn't leak list styling into the rest of a consumer's page. */
+.rebar-rich-text-editor-content ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.rebar-rich-text-editor-content ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.rebar-rich-text-editor-content li {
+  margin: 0.25em 0;
+}
+/* Same reset problem as the list rules above -- Tailwind's preflight sets `a { color: inherit;
+   text-decoration: inherit; }`, so a link this editor just inserted would look like plain body
+   text, with no visual sign it's clickable. */
+.rebar-rich-text-editor-content a {
+  color: var(--rebar-color-primary, #1976d2);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A pasted/dropped/uploaded image embeds at its native size otherwise -- cap it to the editor's
+   own width so one oversized screenshot can't blow out the whole layout around it. */
+.rebar-rich-text-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--rebar-radius, 4px);
 }
 
 /* PullToRefresh */
