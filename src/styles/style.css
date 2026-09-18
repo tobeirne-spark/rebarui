@@ -6048,3 +6048,56 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-app-shell--sidebar .rebar-app-shell-content {
   overflow: auto;
 }
+
+/* SkipLink — off-screen until focused, then a real, visible first-in-tab-order link. */
+.rebar-skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--rebar-space-sm, 8px);
+  z-index: 2000;
+  padding: var(--rebar-space-sm, 8px) var(--rebar-space-md, 16px);
+  background: var(--rebar-color-bg-primary, #ffffff);
+  color: var(--rebar-color-text-primary, #212121);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border-strong, #333333);
+  border-radius: var(--rebar-radius, 4px);
+  font-size: var(--rebar-font-size-sm, 14px);
+  text-decoration: none;
+}
+
+.rebar-skip-link:focus {
+  top: var(--rebar-space-sm, 8px);
+}
+
+/* WorkspaceSwitcher */
+.rebar-workspace-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rebar-space-sm, 8px);
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 var(--rebar-space-sm, 8px);
+  background: none;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--rebar-font-size-sm, 14px);
+  color: var(--rebar-color-text-primary, #212121);
+}
+
+.rebar-workspace-switcher:hover {
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}
+
+.rebar-workspace-switcher-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rebar-workspace-switcher-caret {
+  display: inline-block;
+  line-height: 1;
+  color: var(--rebar-color-text-secondary, #757575);
+}

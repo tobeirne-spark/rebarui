@@ -15,6 +15,12 @@ if (typeof document !== "undefined") {
 export { AppShell } from "./components/AppShell";
 export type { AppShellProps } from "./components/AppShell";
 
+export { SkipLink } from "./components/SkipLink";
+export type { SkipLinkProps } from "./components/SkipLink";
+
+export { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
+export type { WorkspaceSwitcherProps, WorkspaceSwitcherItem } from "./components/WorkspaceSwitcher";
+
 export { Box } from "./components/Box";
 export type { BoxProps } from "./components/Box";
 
