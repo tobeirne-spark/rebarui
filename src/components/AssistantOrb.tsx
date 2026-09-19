@@ -17,6 +17,10 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
   const animationRef = useRef<number>(0);
   const timeRef = useRef(0);
 
+  // Canvas needs extra padding for glow effect
+  const padding = 20;
+  const canvasSize = size + padding * 2;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -26,12 +30,12 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
 
     // High DPI support
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
+    canvas.width = canvasSize * dpr;
+    canvas.height = canvasSize * dpr;
     ctx.scale(dpr, dpr);
 
-    const centerX = size / 2;
-    const centerY = size / 2;
+    const centerX = canvasSize / 2;
+    const centerY = canvasSize / 2;
     const baseRadius = size * 0.3;
 
     // Parse color to RGB for canvas operations
@@ -142,7 +146,7 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
     <canvas
       ref={canvasRef}
       className={className}
-      style={{ width: size, height: size }}
+      style={{ width: canvasSize, height: canvasSize }}
       aria-hidden="true"
     />
   );

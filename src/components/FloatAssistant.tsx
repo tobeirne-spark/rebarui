@@ -205,12 +205,23 @@ export function FloatAssistant({
     e.preventDefault();
     const clientX = "touches" in e ? e.touches[0]?.clientX ?? 0 : e.clientX;
     const clientY = "touches" in e ? e.touches[0]?.clientY ?? 0 : e.clientY;
+    
+    // Get current button position from DOM if not already tracked
+    let startX = buttonPosition?.x ?? 0;
+    let startY = buttonPosition?.y ?? 0;
+    
+    if (!buttonPosition && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      startX = rect.left;
+      startY = rect.top;
+    }
+    
     setDragState({
       isDragging: true,
       startX: clientX,
       startY: clientY,
-      currentX: buttonPosition?.x ?? 0,
-      currentY: buttonPosition?.y ?? 0,
+      currentX: startX,
+      currentY: startY,
       velocityX: 0,
       velocityY: 0,
       lastMoveTime: Date.now(),
@@ -362,47 +373,66 @@ export function FloatAssistant({
     ? { left: buttonPosition.x, top: buttonPosition.y, right: "auto", bottom: "auto" }
     : positionStyles[position];
 
-  // Calculate panel position based on button location
+  // Calculate panel position - opens adjacent to orb, not opposite side
   const getPanelPosition = (): React.CSSProperties => {
+    const panelWidth = 360;
+    const panelHeight = 520;
+    const margin = 16;
+    const gap = 16;
+
+    // Get orb position
+    let orbX = 0;
+    let orbY = 0;
+    
     if (buttonPosition) {
-      const panelWidth = 360;
-      const panelHeight = 520;
-      const buttonSize = 56;
-      const gap = 16;
-      const margin = 16;
-
-      // Default: panel appears to the left of the button
-      let left = buttonPosition.x - panelWidth - gap;
-      let top = buttonPosition.y;
-
-      // If panel would go off left edge, show it to the right instead
-      if (left < margin) {
-        left = buttonPosition.x + buttonSize + gap;
+      orbX = buttonPosition.x;
+      orbY = buttonPosition.y;
+    } else {
+      // Use default position from CSS
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+      
+      if (position === "bottom-right") {
+        orbX = viewportWidth - 80;
+        orbY = viewportHeight - 80;
+      } else if (position === "bottom-left") {
+        orbX = 24;
+        orbY = viewportHeight - 80;
+      } else if (position === "top-right") {
+        orbX = viewportWidth - 80;
+        orbY = 24;
+      } else {
+        orbX = 24;
+        orbY = 24;
       }
-
-      // If panel would go off right edge, constrain it
-      if (left + panelWidth > window.innerWidth - margin) {
-        left = window.innerWidth - panelWidth - margin;
-      }
-
-      // If panel would go off bottom edge, shift it up
-      if (top + panelHeight > window.innerHeight - margin) {
-        top = window.innerHeight - panelHeight - margin;
-      }
-
-      // If panel would go off top edge, shift it down
-      if (top < margin) {
-        top = margin;
-      }
-
-      return { left, top, right: "auto", bottom: "auto", position: "fixed" };
     }
 
-    // Default positions based on position prop - use fixed positioning
-    if (position === "bottom-right") return { right: 24, left: "auto", bottom: 80, top: "auto", position: "fixed" };
-    if (position === "bottom-left") return { left: 24, right: "auto", bottom: 80, top: "auto", position: "fixed" };
-    if (position === "top-right") return { right: 24, left: "auto", top: 24, bottom: "auto", position: "fixed" };
-    return { left: 24, right: "auto", top: 24, bottom: "auto", position: "fixed" };
+    // Panel opens to the left of orb by default, or right if orb is on left side
+    const orbCenterX = orbX + 28; // orb is 56px, center is at +28
+    const orbCenterY = orbY + 28;
+    
+    let left: number | string;
+    let top: number | string;
+    let right: string | number = "auto";
+    let bottom: string | number = "auto";
+
+    // If orb is on right half, panel opens to the left
+    if (orbCenterX > (typeof window !== 'undefined' ? window.innerWidth : 1200) / 2) {
+      left = orbX - panelWidth - gap;
+      if (left < margin) left = margin;
+    } else {
+      // Orb is on left half, panel opens to the right
+      left = orbX + 56 + gap;
+    }
+
+    // Vertically center panel with orb, but keep in viewport
+    top = orbCenterY - panelHeight / 2;
+    if (top < margin) top = margin;
+    if (top + panelHeight > (typeof window !== 'undefined' ? window.innerHeight : 800) - margin) {
+      top = (typeof window !== 'undefined' ? window.innerHeight : 800) - panelHeight - margin;
+    }
+
+    return { left, top, right, bottom, position: "fixed" };
   };
 
   const panelPosition = getPanelPosition();
@@ -448,47 +478,16 @@ export function FloatAssistant({
         {isMinimized ? (
           <div className="rebar-float-assistant-minimized-dot" />
         ) : (
-          <>
-            <AssistantOrb
-              size={56}
-              color={accentColor}
-              isActive={isOpen || isRecording}
-              className="rebar-float-assistant-orb-canvas"
-            />
-            {isOpen ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rebar-float-assistant-icon">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rebar-float-assistant-icon">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-              </svg>
-            )}
-          </>
+          <AssistantOrb
+            size={56}
+            color={accentColor}
+            isActive={isOpen || isRecording}
+            className="rebar-float-assistant-orb-canvas"
+          />
         )}
       </button>
 
-      {/* Minimize button (when expanded) */}
-      {isOpen && minimizable && (
-        <button
-          type="button"
-          className="rebar-float-assistant-minimize-btn"
-          onClick={toggleMinimize}
-          aria-label="Minimize assistant"
-          title="Minimize to corner"
-          style={{
-            "--assistant-accent": accentColor,
-            pointerEvents: "auto",
-          } as React.CSSProperties}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="4 14 10 14 10 20" />
-            <polyline points="20 10 14 10 14 4" />
-            <line x1="14" y1="10" x2="21" y2="3" />
-            <line x1="3" y1="21" x2="10" y2="14" />
-          </svg>
-        </button>
-      )}
+      {/* Minimize button moved inside panel header */}
 
       {/* Expanded Panel */}
       {isOpen && !isMinimized && (
@@ -501,6 +500,7 @@ export function FloatAssistant({
             {
               "--assistant-accent": accentColor,
               ...panelPosition,
+              pointerEvents: "auto",
             } as unknown as React.CSSProperties
           }
         >
@@ -547,6 +547,26 @@ export function FloatAssistant({
                       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                     </svg>
                   )}
+                </button>
+              )}
+              {minimizable && (
+                <button
+                  type="button"
+                  className="rebar-float-assistant-minimize-btn"
+                  onClick={toggleMinimize}
+                  aria-label="Minimize assistant"
+                  title="Minimize to corner"
+                  style={{
+                    "--assistant-accent": accentColor,
+                    pointerEvents: "auto",
+                  } as React.CSSProperties}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
                 </button>
               )}
             </div>
