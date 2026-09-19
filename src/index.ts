@@ -595,6 +595,9 @@ export type {
   FloatAssistantMessage,
 } from "./components/FloatAssistant";
 
+export { AssistantOrb } from "./components/AssistantOrb";
+export type { AssistantOrbProps } from "./components/AssistantOrb";
+
 export { ErrorBlock } from "./components/ErrorBlock";
 export type { ErrorBlockProps, ErrorBlockStatus } from "./components/ErrorBlock";
 

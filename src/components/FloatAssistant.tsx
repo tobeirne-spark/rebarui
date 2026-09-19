@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { AssistantOrb } from "./AssistantOrb";
 
 export interface FloatAssistantMessage {
   id: string;
@@ -146,30 +147,48 @@ export function FloatAssistant({
     if (!dragState.isDragging && (Math.abs(dragState.velocityX) > 0.5 || Math.abs(dragState.velocityY) > 0.5)) {
       const animate = () => {
         setDragState((prev) => {
-          const friction = 0.95;
+          const friction = 0.92;
+          const bounce = 0.6;
           const newVelocityX = prev.velocityX * friction;
           const newVelocityY = prev.velocityY * friction;
-          const newX = prev.currentX + newVelocityX;
-          const newY = prev.currentY + newVelocityY;
+          let newX = prev.currentX + newVelocityX;
+          let newY = prev.currentY + newVelocityY;
 
-          // Boundary checks
+          // Boundary checks — screen edges are walls with bounce
           const maxX = window.innerWidth - 56;
           const maxY = window.innerHeight - 56;
-          const clampedX = Math.max(0, Math.min(maxX, newX));
-          const clampedY = Math.max(0, Math.min(maxY, newY));
+          
+          let finalVelocityX = newVelocityX;
+          let finalVelocityY = newVelocityY;
 
-          if (Math.abs(newVelocityX) < 0.5 && Math.abs(newVelocityY) < 0.5) {
-            setButtonPosition({ x: clampedX, y: clampedY });
-            return { ...prev, velocityX: 0, velocityY: 0, currentX: clampedX, currentY: clampedY };
+          if (newX < 0) {
+            newX = 0;
+            finalVelocityX = Math.abs(newVelocityX) * bounce;
+          } else if (newX > maxX) {
+            newX = maxX;
+            finalVelocityX = -Math.abs(newVelocityX) * bounce;
           }
 
-          setButtonPosition({ x: clampedX, y: clampedY });
+          if (newY < 0) {
+            newY = 0;
+            finalVelocityY = Math.abs(newVelocityY) * bounce;
+          } else if (newY > maxY) {
+            newY = maxY;
+            finalVelocityY = -Math.abs(newVelocityY) * bounce;
+          }
+
+          if (Math.abs(finalVelocityX) < 0.5 && Math.abs(finalVelocityY) < 0.5) {
+            setButtonPosition({ x: newX, y: newY });
+            return { ...prev, velocityX: 0, velocityY: 0, currentX: newX, currentY: newY };
+          }
+
+          setButtonPosition({ x: newX, y: newY });
           return {
             ...prev,
-            currentX: clampedX,
-            currentY: clampedY,
-            velocityX: newVelocityX,
-            velocityY: newVelocityY,
+            currentX: newX,
+            currentY: newY,
+            velocityX: finalVelocityX,
+            velocityY: finalVelocityY,
           };
         });
         animationFrameRef.current = requestAnimationFrame(animate);
@@ -343,6 +362,45 @@ export function FloatAssistant({
     ? { left: buttonPosition.x, top: buttonPosition.y, right: "auto", bottom: "auto" }
     : positionStyles[position];
 
+  // Calculate panel position based on button location
+  const getPanelPosition = () => {
+    if (buttonPosition) {
+      const panelWidth = 360;
+      const panelHeight = 520;
+      const buttonSize = 56;
+      const gap = 16;
+      
+      // Default: panel appears to the left of the button
+      let left = buttonPosition.x - panelWidth - gap;
+      let top = buttonPosition.y;
+      
+      // If panel would go off left edge, show it to the right instead
+      if (left < 16) {
+        left = buttonPosition.x + buttonSize + gap;
+      }
+      
+      // If panel would go off bottom edge, shift it up
+      if (top + panelHeight > window.innerHeight - 16) {
+        top = window.innerHeight - panelHeight - 16;
+      }
+      
+      // If panel would go off top edge, shift it down
+      if (top < 16) {
+        top = 16;
+      }
+      
+      return { left, top, right: "auto", bottom: "auto" };
+    }
+    
+    // Default positions based on position prop
+    if (position === "bottom-right") return { right: 0, left: "auto", bottom: 0, top: "auto" };
+    if (position === "bottom-left") return { left: 0, right: "auto", bottom: 0, top: "auto" };
+    if (position === "top-right") return { right: 0, left: "auto", top: 0, bottom: "auto" };
+    return { left: 0, right: "auto", top: 0, bottom: "auto" };
+  };
+
+  const panelPosition = getPanelPosition();
+
   return (
     <div
       className={clsx("rebar-float-assistant", className)}
@@ -385,12 +443,12 @@ export function FloatAssistant({
           <div className="rebar-float-assistant-minimized-dot" />
         ) : (
           <>
-            <div className="rebar-float-assistant-orb">
-              <div className="rebar-float-assistant-orb-core" />
-              <div className="rebar-float-assistant-orb-ring rebar-float-assistant-orb-ring-1" />
-              <div className="rebar-float-assistant-orb-ring rebar-float-assistant-orb-ring-2" />
-              <div className="rebar-float-assistant-orb-ring rebar-float-assistant-orb-ring-3" />
-            </div>
+            <AssistantOrb
+              size={56}
+              color={accentColor}
+              isActive={isOpen || isRecording}
+              className="rebar-float-assistant-orb-canvas"
+            />
             {isOpen ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rebar-float-assistant-icon">
                 <path d="M18 6L6 18M6 6l12 12" />
@@ -433,16 +491,7 @@ export function FloatAssistant({
           style={
             {
               "--assistant-accent": accentColor,
-              ...(buttonPosition
-                ? {
-                    right: "auto",
-                    left: buttonPosition.x + 56 + 16,
-                    bottom: "auto",
-                    top: buttonPosition.y,
-                  }
-                : position === "bottom-right" || position === "top-right"
-                ? { right: 0, left: "auto" }
-                : { left: 0, right: "auto" }),
+              ...panelPosition,
             } as unknown as React.CSSProperties
           }
         >
@@ -504,7 +553,12 @@ export function FloatAssistant({
               >
                 {msg.role === "assistant" && (
                   <div className="rebar-float-assistant-message-avatar">
-                    <div className="rebar-float-assistant-message-orb" />
+                    <AssistantOrb
+                      size={28}
+                      color={accentColor}
+                      isActive={false}
+                      className="rebar-float-assistant-message-orb-canvas"
+                    />
                   </div>
                 )}
                 <div className="rebar-float-assistant-message-content">
@@ -518,7 +572,12 @@ export function FloatAssistant({
             {isTyping && (
               <div className="rebar-float-assistant-message rebar-float-assistant-message-assistant">
                 <div className="rebar-float-assistant-message-avatar">
-                  <div className="rebar-float-assistant-message-orb" />
+                  <AssistantOrb
+                    size={28}
+                    color={accentColor}
+                    isActive={true}
+                    className="rebar-float-assistant-message-orb-canvas"
+                  />
                 </div>
                 <div className="rebar-float-assistant-message-content">
                   <div className="rebar-float-assistant-typing-indicator">

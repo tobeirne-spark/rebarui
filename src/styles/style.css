@@ -7087,3 +7087,20 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   color: var(--rebar-color-text-primary, #212121);
   transform: scale(1.1);
 }
+
+/* FloatAssistant - Canvas Orb */
+.rebar-float-assistant-orb-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.rebar-float-assistant-icon {
+  position: relative;
+  z-index: 2;
+}
+
+.rebar-float-assistant-message-orb-canvas {
+  width: 28px;
+  height: 28px;
+}
