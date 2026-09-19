@@ -7079,7 +7079,7 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   justify-content: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.15s ease;
-  z-index: 10;
+  z-index: 1600;
 }
 
 .rebar-float-assistant-minimize-btn:hover {

@@ -369,24 +369,30 @@ export function FloatAssistant({
       const panelHeight = 520;
       const buttonSize = 56;
       const gap = 16;
+      const margin = 16;
       
       // Default: panel appears to the left of the button
       let left = buttonPosition.x - panelWidth - gap;
       let top = buttonPosition.y;
       
       // If panel would go off left edge, show it to the right instead
-      if (left < 16) {
+      if (left < margin) {
         left = buttonPosition.x + buttonSize + gap;
       }
       
+      // If panel would go off right edge, constrain it
+      if (left + panelWidth > window.innerWidth - margin) {
+        left = window.innerWidth - panelWidth - margin;
+      }
+      
       // If panel would go off bottom edge, shift it up
-      if (top + panelHeight > window.innerHeight - 16) {
-        top = window.innerHeight - panelHeight - 16;
+      if (top + panelHeight > window.innerHeight - margin) {
+        top = window.innerHeight - panelHeight - margin;
       }
       
       // If panel would go off top edge, shift it down
-      if (top < 16) {
-        top = 16;
+      if (top < margin) {
+        top = margin;
       }
       
       return { left, top, right: "auto", bottom: "auto" };
