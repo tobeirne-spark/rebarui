@@ -17,6 +17,8 @@ export interface FloatAssistantVoiceOption {
   label: string;
   /** Browser SpeechSynthesis voice name to match against, if using browser TTS. */
   browserVoiceName?: string;
+  /** Qwen/Alibaba Cloud voice model ID for server-side TTS via the API endpoint. */
+  cloudVoiceId?: string;
 }
 
 export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div">, "title"> {
@@ -274,34 +276,64 @@ export function FloatAssistant({
       setInternalMode("voice");
       onModeChange?.("voice");
 
-      // Speak the greeting using Web Speech API
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(
-          "You are connected to the Open Knowledge Graph, what would you like to know?"
-        );
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.volume = 1;
+      const greetingText = "You are connected to the Open Knowledge Graph, what would you like to know?";
 
-        // Try to match the selected voice
-        if (voiceId && voices) {
-          const selectedVoice = voices.find((v) => v.id === voiceId);
-          if (selectedVoice?.browserVoiceName) {
-            const browserVoices = window.speechSynthesis.getVoices();
-            const matchedVoice = browserVoices.find(
-              (v) => v.name === selectedVoice.browserVoiceName
-            );
-            if (matchedVoice) {
-              utterance.voice = matchedVoice;
+      // Find the selected voice config
+      const selectedVoice = voiceId && voices ? voices.find((v) => v.id === voiceId) : undefined;
+
+      // If cloud voice is configured and API endpoint exists, use server-side TTS
+      if (selectedVoice?.cloudVoiceId && apiEndpoint) {
+        // Send to server for cloud TTS (Qwen/Alibaba Cloud AI)
+        fetch(apiEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiAuthToken ? { Authorization: `Bearer ${apiAuthToken}` } : {}),
+          },
+          body: JSON.stringify({
+            type: "tts",
+            text: greetingText,
+            voiceId: selectedVoice.cloudVoiceId,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.audioUrl) {
+              const audio = new Audio(data.audioUrl);
+              audio.play();
             }
-          }
-        }
-
-        window.speechSynthesis.speak(utterance);
+          })
+          .catch(() => {
+            // Fallback to browser TTS if server TTS fails
+            speakWithBrowser(greetingText, selectedVoice);
+          });
+      } else {
+        // Use browser SpeechSynthesis
+        speakWithBrowser(greetingText, selectedVoice);
       }
     }, longPressThreshold);
-  }, [onModeChange, cancelLongPressTimer, voiceId, voices]);
+  }, [onModeChange, cancelLongPressTimer, voiceId, voices, apiEndpoint, apiAuthToken]);
+
+  // Helper to speak using browser SpeechSynthesis
+  const speakWithBrowser = useCallback((text: string, voice?: FloatAssistantVoiceOption) => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      if (voice?.browserVoiceName) {
+        const browserVoices = window.speechSynthesis.getVoices();
+        const matchedVoice = browserVoices.find((v) => v.name === voice.browserVoiceName);
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
+        }
+      }
+
+      window.speechSynthesis.speak(utterance);
+    }
+  }, []);
 
   const handleOrbPointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     startLongPressTimer();
