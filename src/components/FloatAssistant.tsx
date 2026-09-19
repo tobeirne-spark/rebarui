@@ -34,16 +34,19 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   draggable?: boolean;
   /** Whether the assistant can be minimized to a small dot. */
   minimizable?: boolean;
-  /** Qwen text-to-speech API key (hashed for security). */
-  qwenTtsApiKey?: string;
-  /** Qwen speech-to-text API key (hashed for security). */
-  qwenSttApiKey?: string;
-  /** Qwen text LLM API key (hashed for security). */
-  qwenLlmApiKey?: string;
-  /** OpenKnowledge (Rebar Super) service API key. */
-  openKnowledgeApiKey?: string;
-  /** OpenKnowledge knowledge base ID to use. */
-  knowledgeBaseId?: string;
+  /**
+   * Server-side API endpoint that proxies requests to the LLM/RAG service.
+   * The app developer implements this endpoint to hold API keys securely
+   * server-side. The construct never sees real API keys.
+   *
+   * Example endpoint contract:
+   * POST /api/assistant/chat
+   * Body: { message: string, history: FloatAssistantMessage[] }
+   * Response: { reply: string }
+   */
+  apiEndpoint?: string;
+  /** Optional auth token for the API endpoint (e.g., session token). */
+  apiAuthToken?: string;
   className?: string;
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -58,60 +61,6 @@ interface DragState {
   velocityX: number;
   velocityY: number;
   lastMoveTime: number;
-}
-
-/** Simple hash function for API keys (not cryptographically secure, but obfuscates). */
-function hashApiKey(key: string): string {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    const char = key.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash).toString(16).padStart(8, "0");
-}
-
-/** Call OpenKnowledge (Rebar Super) API. */
-async function callOpenKnowledgeApi(apiKeyHash: string, knowledgeBaseId: string, query: string): Promise<string> {
-  // TODO: Implement actual OpenKnowledge API call
-  // This will connect to the Rebar Super service when available
-  const response = await fetch("https://api.rebarui.com/v1/openknowledge/query", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key-Hash": apiKeyHash,
-    },
-    body: JSON.stringify({
-      knowledgeBaseId,
-      query,
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`OpenKnowledge API error: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.response || data.answer || "I found some information for you.";
-}
-
-/** Call Qwen LLM API. */
-async function callQwenLlmApi(apiKeyHash: string, query: string): Promise<string> {
-  // TODO: Implement actual Qwen LLM API call
-  const response = await fetch("https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKeyHash}`,
-    },
-    body: JSON.stringify({
-      model: "qwen-turbo",
-      input: { prompt: query },
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Qwen LLM API error: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.output?.text || "I'm processing your request...";
 }
 
 /**
@@ -131,11 +80,8 @@ export function FloatAssistant({
   onModeChange,
   draggable = true,
   minimizable = true,
-  qwenTtsApiKey,
-  qwenSttApiKey,
-  qwenLlmApiKey,
-  openKnowledgeApiKey,
-  knowledgeBaseId,
+  apiEndpoint,
+  apiAuthToken,
   className,
   bionic,
   bionicOptions,
@@ -309,30 +255,30 @@ export function FloatAssistant({
     onSendMessage?.(userText);
     setIsTyping(true);
 
-    // If API keys are provided, make real API calls
-    if (qwenLlmApiKey || openKnowledgeApiKey) {
-      // Hash the API keys for secure transmission
-      const hashedLlmKey = qwenLlmApiKey ? hashApiKey(qwenLlmApiKey) : null;
-      const hashedOkKey = openKnowledgeApiKey ? hashApiKey(openKnowledgeApiKey) : null;
-
-      // Call the appropriate API
+    // Call the server-side proxy endpoint
+    if (apiEndpoint) {
       const callApi = async () => {
         try {
-          let response: string;
-          if (openKnowledgeApiKey && knowledgeBaseId) {
-            // OpenKnowledge (Rebar Super) API call
-            response = await callOpenKnowledgeApi(hashedOkKey!, knowledgeBaseId, userText);
-          } else if (qwenLlmApiKey) {
-            // Qwen LLM API call
-            response = await callQwenLlmApi(hashedLlmKey!, userText);
-          } else {
-            response = "I'm processing your request...";
+          const response = await fetch(apiEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(apiAuthToken ? { Authorization: `Bearer ${apiAuthToken}` } : {}),
+            },
+            body: JSON.stringify({
+              message: userText,
+              history: messages.map((m) => ({ role: m.role, content: m.content })),
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
           }
+          const data = await response.json();
           setIsTyping(false);
           const assistantMessage: FloatAssistantMessage = {
             id: `assistant-${Date.now()}`,
             role: "assistant",
-            content: response,
+            content: data.reply || data.response || data.message || "I received your message.",
             timestamp: Date.now(),
           };
           setMessages((prev) => [...prev, assistantMessage]);
@@ -349,7 +295,7 @@ export function FloatAssistant({
       };
       callApi();
     } else {
-      // Fallback simulation when no API keys are provided
+      // Fallback simulation when no API endpoint is configured
       setTimeout(() => {
         setIsTyping(false);
         const assistantMessage: FloatAssistantMessage = {
@@ -361,7 +307,7 @@ export function FloatAssistant({
         setMessages((prev) => [...prev, assistantMessage]);
       }, 1500);
     }
-  }, [inputValue, onSendMessage, qwenLlmApiKey, openKnowledgeApiKey, knowledgeBaseId]);
+  }, [inputValue, onSendMessage, apiEndpoint, apiAuthToken, messages]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
