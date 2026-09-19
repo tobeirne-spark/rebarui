@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import clsx from "clsx";
 import { EMPTY_PLACEHOLDER } from "../assets/emptyPlaceholder";
 import { GHOST_EMPTY_PLACEHOLDER } from "../assets/ghostEmptyPlaceholder";
+import { InboxOutlined } from "./icons";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
@@ -23,9 +24,12 @@ export interface EmptyProps {
    * switches to the plain vector automatically in dark mode — the illustration is a raster image
    * baked onto a white background, so it can't recolor itself for a dark surface. Set explicitly
    * to keep one icon in both themes instead: "illustration" for the sketch look everywhere,
-   * "vector" for the plain circle-with-an-X everywhere, "container" for a document/archive-box
-   * glyph (a real `currentColor` SVG, same as "vector" — adapts to either theme on its own, no
-   * raster/vector swap needed).
+   * "vector" for the plain circle-with-an-X everywhere, "container" for the real Ant
+   * Design-sourced `InboxOutlined` glyph (`currentColor`, same as "vector" — adapts to either
+   * theme on its own, no raster/vector swap needed). "container" used to be a hand-traced
+   * approximation of this exact shape before `InboxOutlined` existed in this project's own merged
+   * icon set (`/imitations/icon`) — swapped for the real, licensed path once it did, rather than
+   * keeping a second, slightly-off copy of the same glyph around.
    */
   icon?: EmptyIcon;
   /** Which raster illustration to use when `icon` shows one. Default `"ghost"`. */
@@ -82,19 +86,11 @@ export const Empty = forwardRef<HTMLDivElement, EmptyProps>(function Empty(
         </svg>
       ) : null}
       {showContainer ? (
-        <svg
+        <InboxOutlined
           className="rebar-empty-icon rebar-empty-icon-container"
           data-rebar-part="icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          focusable="false"
           style={{ display: "block" }}
-        >
-          <rect x="4" y="3" width="16" height="18" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <line x1="7.5" y1="8" x2="16.5" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="7.5" y1="11.5" x2="16.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M8 15.5a4 4 0 0 0 8 0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
+        />
       ) : null}
       {description ? (
         <span className="rebar-empty-description" data-rebar-part="description">

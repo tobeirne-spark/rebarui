@@ -411,11 +411,13 @@ export { useLongPress } from "./useLongPress";
 export type { UseLongPressOptions, LongPressHandlers } from "./useLongPress";
 
 /**
- * A small, curated icon set (RemixIcon-sourced, Apache-2.0 — see `icons.tsx`'s own doc comment),
- * exported publicly so a consumer building real content (nav items, buttons, demo data — exactly
- * what this project's own docs site does for `SidebarNav`'s reference page) has a real, on-brand
- * set to reach for instead of falling back to plain emoji glyphs, which render inconsistently
- * across platforms and read as inconsistent with every other shipped component's iconography.
+ * A small, curated icon set merged from more than one upstream library (RemixIcon, Apache-2.0;
+ * Ant Design Icons, MIT — see `icons.tsx`'s own doc comment for the merge convention), exported
+ * publicly so a consumer building real content (nav items, buttons, demo data — exactly what this
+ * project's own docs site does for `SidebarNav`'s reference page) has a real, on-brand set to
+ * reach for instead of falling back to plain emoji glyphs, which render inconsistently across
+ * platforms and read as inconsistent with every other shipped component's iconography. Browse the
+ * full current set on `/imitations/icon`.
  */
 export {
   ChevronDownIcon,
@@ -447,6 +449,8 @@ export {
   TaskIcon,
   CreditCardIcon,
   CalendarIcon,
+  EnterOutlined,
+  InboxOutlined,
 } from "./components/icons";
 export type { IconProps } from "./components/icons";
 export { useDelayedLoading } from "./useDelayedLoading";

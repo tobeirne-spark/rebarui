@@ -42,4 +42,20 @@ describe("Editable", () => {
     await user.click(button);
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
+
+  it("shows an Enter-to-save hint by default while editing", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Editable defaultValue="Project Alpha" aria-label="Project name" />);
+    await user.click(screen.getByRole("button", { name: /Project name/ }));
+    expect(container.querySelector('[data-rebar-part="enter-hint"]')).toBeInTheDocument();
+  });
+
+  it("hides the Enter-to-save hint when showEnterHint is false", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <Editable defaultValue="Project Alpha" aria-label="Project name" showEnterHint={false} />,
+    );
+    await user.click(screen.getByRole("button", { name: /Project name/ }));
+    expect(container.querySelector('[data-rebar-part="enter-hint"]')).not.toBeInTheDocument();
+  });
 });

@@ -1,42 +1,64 @@
 import type { SVGProps } from "react";
 
 /**
- * A small, curated set of icons sourced from RemixIcon (https://remixicon.com, Apache License
- * 2.0 — free for commercial use, attribution appreciated but not required) — inlined here as
- * plain React components rather than a `remixicon` npm dependency, matching this project's
- * existing embed-only-what's-needed convention (`assets/avatarPlaceholders.ts`,
- * `assets/ratioPlaceholders.ts`). Add more icons here only once a real need exists — don't
- * bulk-import the whole set ahead of demand. Exported publicly from `index.ts` (not just consumed
- * internally by components) so a consumer building real content — nav items, buttons, demo data —
- * has this set to reach for instead of falling back to plain emoji glyphs.
+ * A small, curated icon set merged from more than one upstream library — inlined here as plain
+ * React components rather than an `npm` icon-package dependency, matching this project's existing
+ * embed-only-what's-needed convention (`assets/avatarPlaceholders.ts`, `assets/ratioPlaceholders.ts`).
+ * Add more icons here only once a real need exists — don't bulk-import a whole set ahead of
+ * demand. Exported publicly from `index.ts` (not just consumed internally by components) so a
+ * consumer building real content — nav items, buttons, demo data — has this set to reach for
+ * instead of falling back to plain emoji glyphs. Browse the full, current set on
+ * `/imitations/icon` (source data: `apps/docs/src/data/iconManifest.ts`).
  *
- * Replaces the plain Unicode glyphs (▾ ▸ › ‹) several components used for disclosure/nav
- * chevrons, which read as unclear "tiny drop arrows" at small sizes — see `ref/TOM.md` 1.4.
+ * **Naming signals provenance, on purpose — no separate "source" field to keep in sync by hand:**
+ * a RemixIcon-sourced icon keeps this project's own `XIcon` suffix (`ChevronDownIcon`); an Ant
+ * Design-sourced icon keeps AntD's own exact name (`EnterOutlined`, `InboxOutlined`) so it's
+ * trivially greppable against AntD's own published icon list
+ * (https://ant-design.antgroup.com/components/icon) when merging in more. Merging a new icon from
+ * either source: paste its real path data and viewBox (don't hand-trace or approximate a shape
+ * that already exists as a real, licensed path — see the Empty component's "container" icon,
+ * which did exactly that before being swapped for the real `InboxOutlined` below), add it to
+ * `apps/docs/src/data/iconManifest.ts`'s list, done — no registry/factory changes needed for the
+ * common case of "one more icon from a source already merged in".
+ *
+ * Sources merged so far:
+ * - RemixIcon (https://remixicon.com, Apache License 2.0 — free for commercial use, attribution
+ *   appreciated but not required). Replaces the plain Unicode glyphs (▾ ▸ › ‹) several components
+ *   used for disclosure/nav chevrons, which read as unclear "tiny drop arrows" at small sizes —
+ *   see `ref/TOM.md` 1.4. All RemixIcon shapes share one 24×24 viewBox (`createIcon`'s default).
+ * - Ant Design Icons (https://ant-design.antgroup.com/components/icon, MIT License) — reached for
+ *   specifically when a real, commonly-needed glyph has no RemixIcon equivalent already merged in
+ *   (`EnterOutlined`, `InboxOutlined`). AntD's own path data ships in its own native viewBox
+ *   (e.g. `0 0 1024 1024`, not 24×24) — `createIcon`'s optional third argument carries it through
+ *   unchanged rather than normalizing coordinates, since scaling a `<svg>` to any target size
+ *   works identically regardless of its native viewBox's own unit scale.
  *
  * Checked directly against Ant Design's own published icon spec (ant.design/docs/spec/icon,
  * Part 4's "icon spec page alignment" ask) rather than assumed compliant: its two rules with real
  * teeth for a component library — icons scale proportionally with adjacent text, and match the
- * surrounding text color unless deliberately indicating state — were already both true here by
- * construction (`createIcon`'s own `size = "1em"` default and hardcoded `fill="currentColor"`),
- * confirmed by grepping every consuming component for a color/size override that would violate
- * either rule (found none). Its icon-grid/stroke-weight rules are written for AntD's own outlined-
- * icon-family construction process, not applicable to icons sourced as already-finished RemixIcon
- * paths (filled shapes, not something this project draws stroke-width for itself).
+ * surrounding text color unless deliberately indicating state — hold by construction
+ * (`createIcon`'s own `size = "1em"` default and hardcoded `fill="currentColor"`), confirmed by
+ * grepping every consuming component for a color/size override that would violate either rule
+ * (found none). Its icon-grid/stroke-weight rules are written for AntD's own outlined-icon-family
+ * *construction* process, not applicable to icons sourced as already-finished paths from either
+ * library (filled shapes either way, not something this project draws stroke-width for itself).
  */
 
 export interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number | string;
 }
 
-function createIcon(path: string, displayName: string) {
+function createIcon(path: string, displayName: string, viewBox = "0 0 24 24") {
   function Icon({ size = "1em", ...props }: IconProps) {
     return (
       <svg
-        viewBox="0 0 24 24"
+        viewBox={viewBox}
         width={size}
         height={size}
         fill="currentColor"
         aria-hidden="true"
+        focusable="false"
+        data-rebar-icon={displayName}
         xmlns="http://www.w3.org/2000/svg"
         {...props}
       >
@@ -196,4 +218,20 @@ export const CreditCardIcon = createIcon(
 export const CalendarIcon = createIcon(
   "M9 1V3H15V1H17V3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H7V1H9ZM20 11H4V19H20V11ZM7 5H4V9H20V5H17V7H15V5H9V7H7V5Z",
   "CalendarIcon",
+);
+
+// Ant Design-sourced (MIT License, https://ant-design.antgroup.com/components/icon) — real path
+// data and viewBox pulled directly from `@ant-design/icons-svg`'s own published asset for each
+// name, not hand-traced. Kept in AntD's own naming (see this file's own doc comment above on why)
+// rather than renamed into the `XIcon` convention above, which is reserved for RemixIcon shapes.
+export const EnterOutlined = createIcon(
+  "M864 170h-60c-4.4 0-8 3.6-8 8v518H310v-73c0-6.7-7.8-10.5-13-6.3l-141.9 112a8 8 0 000 12.6l141.9 112c5.3 4.2 13 .4 13-6.3v-75h498c35.3 0 64-28.7 64-64V178c0-4.4-3.6-8-8-8z",
+  "EnterOutlined",
+  "64 64 896 896",
+);
+
+export const InboxOutlined = createIcon(
+  "M885.2 446.3l-.2-.8-112.2-285.1c-5-16.1-19.9-27.2-36.8-27.2H281.2c-17 0-32.1 11.3-36.9 27.6L139.4 443l-.3.7-.2.8c-1.3 4.9-1.7 9.9-1 14.8-.1 1.6-.2 3.2-.2 4.8V830a60.9 60.9 0 0060.8 60.8h627.2c33.5 0 60.8-27.3 60.9-60.8V464.1c0-1.3 0-2.6-.1-3.7.4-4.9 0-9.6-1.3-14.1zm-295.8-43l-.3 15.7c-.8 44.9-31.8 75.1-77.1 75.1-22.1 0-41.1-7.1-54.8-20.6S436 441.2 435.6 419l-.3-15.7H229.5L309 210h399.2l81.7 193.3H589.4zm-375 76.8h157.3c24.3 57.1 76 90.8 140.4 90.8 33.7 0 65-9.4 90.3-27.2 22.2-15.6 39.5-37.4 50.7-63.6h156.5V814H214.4V480.1z",
+  "InboxOutlined",
+  "0 0 1024 1024",
 );

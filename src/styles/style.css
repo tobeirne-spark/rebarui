@@ -2524,6 +2524,32 @@ body {
   color: var(--rebar-color-text-secondary, #757575);
 }
 
+.rebar-editable-input-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.rebar-editable-input-with-hint {
+  padding-right: 32px;
+}
+
+.rebar-editable-enter-hint {
+  position: absolute;
+  top: 50%;
+  right: var(--rebar-space-sm, 8px);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  color: var(--rebar-color-text-secondary, #757575);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  border-radius: var(--rebar-radius, 4px);
+  padding: 3px;
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 1;
+}
+
 /* ColorPicker */
 .rebar-color-picker-trigger {
   /* The real, always-≥44×44px clickable footprint (heuristic #19) — the visible swatch inside

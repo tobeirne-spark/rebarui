@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import clsx from "clsx";
 import { Input } from "./Input";
+import { EnterOutlined } from "./icons";
 
 export interface EditableProps {
   value?: string;
@@ -12,6 +13,15 @@ export interface EditableProps {
   "aria-label"?: string;
   disabled?: boolean;
   className?: string;
+  /**
+   * Shows a small `EnterOutlined` glyph inside the field, right side, while editing — a visual
+   * reminder that Enter is what actually commits here (blur also commits, but a click-away isn't
+   * an obvious "save" gesture the way pressing a labeled key is). On by default since Enter-to-
+   * save is this component's own real behavior, not optional per instance; set `false` for a
+   * denser UI (a table full of these, say) where the repeated hint becomes visual noise once a
+   * user already knows the pattern.
+   */
+  showEnterHint?: boolean;
 }
 
 /**
@@ -30,6 +40,7 @@ export function Editable({
   "aria-label": ariaLabel,
   disabled,
   className,
+  showEnterHint = true,
 }: EditableProps) {
   const [internalValue, setInternalValue] = useState(defaultValue);
   const [editing, setEditing] = useState(false);
@@ -59,17 +70,25 @@ export function Editable({
   };
 
   if (editing) {
+    const hint = showEnterHint && !disabled;
     return (
-      <Input
-        className={className}
-        aria-label={ariaLabel}
-        autoFocus
-        value={current}
-        onChange={(e) => commit(e.target.value)}
-        onBlur={() => setEditing(false)}
-        onKeyDown={handleKeyDown}
-        data-rebar-part="input"
-      />
+      <span className="rebar-editable-input-wrapper" data-rebar-part="input-wrapper">
+        <Input
+          className={clsx(className, hint && "rebar-editable-input-with-hint")}
+          aria-label={ariaLabel}
+          autoFocus
+          value={current}
+          onChange={(e) => commit(e.target.value)}
+          onBlur={() => setEditing(false)}
+          onKeyDown={handleKeyDown}
+          data-rebar-part="input"
+        />
+        {hint ? (
+          <span className="rebar-editable-enter-hint" data-rebar-part="enter-hint" title="Press Enter to save">
+            <EnterOutlined />
+          </span>
+        ) : null}
+      </span>
     );
   }
 

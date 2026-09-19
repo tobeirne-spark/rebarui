@@ -206,6 +206,7 @@ From `ref/HEURISTICS.md` — condensed to one line each. Read the full file for 
 44. **A tracking beacon below the fold stays visible, or returns after manual override** — yields to deliberate scroll, resumes after idle.
 45. **A control's footprint stays bounded** however much data it holds — pinned size with contained scrolling, not growing indefinitely.
 46. **A beacon out of view gets a directional hint that reacts to motion** — the scroll that restores it eases, doesn't snap.
+47. **Don't assume familiarity with a text field's save gesture** — a lifetime of other apps' text boxes doesn't teach anyone this one's commit gesture; show it (`Editable`'s `EnterOutlined` hint), don't assume it.
 
 ## Version
 
