@@ -22,6 +22,13 @@ export interface ContainerProps extends ComponentPropsWithoutRef<"div"> {
   /** Horizontal padding, so content never touches the viewport edge on narrow screens even once
    * `maxWidth` stops constraining it. Defaults to `var(--rebar-space-xl)`. */
   padding?: string;
+  /** Top and bottom padding — unset by default, since Container's own original job is purely
+   * horizontal (centering + width constraint). Set this when Container is the outermost wrapper
+   * on a page with no other shell (`AppShell`, `SidebarNav`'s own DocsShell) already providing
+   * vertical breathing room from the surrounding header/footer chrome — the common real case
+   * being a bare, no-sidebar content page. Leave unset when nesting inside something that already
+   * pads vertically, or content sits flush against it twice. */
+  verticalPadding?: string;
 }
 
 /**
@@ -32,7 +39,16 @@ export interface ContainerProps extends ComponentPropsWithoutRef<"div"> {
  * `AppShell`/`SidebarNav` already play for navigation — see ref/TIERS.md.
  */
 export const Container = forwardRef<HTMLDivElement, ContainerProps>(function Container(
-  { as: Component = "div", className, children, maxWidth = "lg", padding = "var(--rebar-space-xl)", style, ...props },
+  {
+    as: Component = "div",
+    className,
+    children,
+    maxWidth = "lg",
+    padding = "var(--rebar-space-xl)",
+    verticalPadding,
+    style,
+    ...props
+  },
   ref,
 ) {
   const resolvedMaxWidth =
@@ -55,6 +71,8 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(function Con
         marginRight: "auto",
         paddingLeft: padding,
         paddingRight: padding,
+        paddingTop: verticalPadding,
+        paddingBottom: verticalPadding,
         boxSizing: "border-box",
         ...style,
       }}

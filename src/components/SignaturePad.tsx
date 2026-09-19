@@ -6,15 +6,65 @@ import { Input } from "./Input";
 
 /** A caller-supplied audit stamp baked into the bottom-right corner of the exported/drawn image
  * whenever a signature is captured (stroke end, upload, or typed name) — the visible "signed by /
- * at" trail real e-signature tools (DocuSign etc.) attach. `label` is entirely the caller's own
- * responsibility to compute: nothing in this component reads a real device identifier — a MAC
- * address has not been readable from browser JS in any browser for a long time, for the obvious
- * privacy reason. Pass whatever identifier your own app already has (a session id, a server-
- * issued device hash, a signer's email) as `label`. */
+ * at" trail real e-signature tools (DocuSign etc.) attach.
+ *
+ * `deviceId` is still entirely the caller's own responsibility to obtain: nothing in this
+ * component reads a real device identifier — a MAC address has not been readable from browser JS
+ * in any browser for a long time, for the obvious privacy reason, and *how* to identify "a
+ * device" varies by platform (a persisted UUID for a web app, a real hardware id on native/
+ * Electron). What SignaturePad *does* own, given `deviceId` and a secret `deviceKey`, is turning
+ * that identifier into a keyed hash instead of stamping it (or a bare hash of it) in the open —
+ * this field is baked directly into a document image every signer can see, so plain text or an
+ * unkeyed hash is effectively published: a small keyspace (a MAC address) is brute-forceable, and
+ * anyone comparing stamps across documents can correlate them without a key. With both fields
+ * set, the stamp is a real `HMAC-SHA256(deviceKey, deviceId)` (via the browser's own Web Crypto,
+ * not a toy hash) — the same device still always produces the same stamp, but nobody without
+ * `deviceKey` can reverse it back to `deviceId` or correlate it against a *different* app's
+ * stamps of the same device.
+ *
+ * **The real tradeoff, stated plainly**: this computation happens in the browser, so `deviceKey`
+ * itself is present in this page's own JS at signing time — secret from a casual viewer of the
+ * finished, published document (the actual goal this exists for), but not cryptographically
+ * secret from someone with devtools access to a live signing session who goes looking for it. If
+ * your threat model needs the key to never reach the browser at all, don't pass `deviceKey` here:
+ * compute the keyed hash on your own backend instead and pass the result as `label` (still
+ * supported, unchanged) — this component has never done its own networking and won't start now,
+ * so that path is always available alongside this one, not a fallback you lose. */
 export interface SignaturePadStamp {
+  /** Freeform text stamped alongside everything else here — a signer name, a document id,
+   * anything not already covered by `deviceId`/`deviceKey`. */
   label?: string;
-  /** Appends the moment the stamp is drawn (`Date.toLocaleString()`), alongside `label`. */
+  /** A raw device/session identifier your own app already has. Only used if `deviceKey` is also
+   * set — otherwise ignored (there's nothing safe to do with an unkeyed identifier; pass it as
+   * `label` instead if stamping it in the open is genuinely intended). */
+  deviceId?: string;
+  /** The secret that keys `deviceId` into an undecodable-without-it hash — see this type's own
+   * doc comment for what "secret" does and doesn't mean once it's in browser code. Keep it long
+   * and high-entropy (25+ random characters, not a memorable phrase); this isn't enforced (an
+   * arbitrary length minimum wouldn't actually guarantee real entropy), just strongly recommended. */
+  deviceKey?: string;
+  /** Appends the moment the stamp is drawn (`Date.toLocaleString()`), alongside the rest. */
   timestamp?: boolean;
+}
+
+/** The real Web Crypto HMAC-SHA256 — see `SignaturePadStamp`'s own doc comment for what this
+ * computation does and doesn't secure. Returns a hex digest, truncated for a compact stamp (still
+ * effectively as collision-resistant as this needs — the full 256 bits of entropy already lives
+ * in the hash, not in how much of it gets displayed). */
+async function hmacDeviceStamp(deviceKey: string, deviceId: string): Promise<string> {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(deviceKey),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(deviceId));
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 16);
 }
 
 export interface SignaturePadProps {
@@ -150,12 +200,16 @@ export function SignaturePad({
 
   // Baked into the exported image itself (not just returned alongside it) so the audit trail
   // survives however the caller stores/prints/emails the resulting PNG — see `SignaturePadStamp`.
-  const drawStamp = () => {
-    if (!stamp || (!stamp.label && !stamp.timestamp)) return;
+  // Async because a keyed device stamp needs a real (async-only) Web Crypto call before there's
+  // anything to draw.
+  const drawStamp = async () => {
+    if (!stamp || (!stamp.label && !stamp.timestamp && !(stamp.deviceId && stamp.deviceKey))) return;
     const canvas = canvasRef.current;
     const ctx = getContext();
     if (!canvas || !ctx) return;
-    const parts = [stamp.label, stamp.timestamp ? new Date().toLocaleString() : null].filter(
+    const deviceStamp =
+      stamp.deviceId && stamp.deviceKey ? await hmacDeviceStamp(stamp.deviceKey, stamp.deviceId) : null;
+    const parts = [stamp.label, deviceStamp, stamp.timestamp ? new Date().toLocaleString() : null].filter(
       (part): part is string => !!part,
     );
     if (parts.length === 0) return;
@@ -168,10 +222,10 @@ export function SignaturePad({
     ctx.restore();
   };
 
-  const emitValue = () => {
+  const emitValue = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    drawStamp();
+    await drawStamp();
     // `toDataURL` can return a falsy/invalid result in environments with no real canvas backing
     // (or on a tainted canvas) — never forward that through a prop typed as a plain `string`.
     const dataUrl = canvas.toDataURL("image/png") || "";

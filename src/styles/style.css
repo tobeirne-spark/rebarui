@@ -6448,3 +6448,28 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-image-cropper-handle[data-rebar-corner="ne"] { top: -7px; right: -7px; cursor: nesw-resize; }
 .rebar-image-cropper-handle[data-rebar-corner="sw"] { bottom: -7px; left: -7px; cursor: nesw-resize; }
 .rebar-image-cropper-handle[data-rebar-corner="se"] { bottom: -7px; right: -7px; cursor: nwse-resize; }
+
+/* NarrationButton — the small per-`doc-section` play/pause icon a `narration` field renders next
+   to its heading (see BlockRenderer.tsx). */
+.rebar-narration-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--rebar-color-primary, #0066cc);
+  cursor: pointer;
+}
+
+.rebar-narration-button:hover {
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}
+
+.rebar-narration-button[data-rebar-playing] {
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}

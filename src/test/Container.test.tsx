@@ -41,6 +41,20 @@ describe("Container", () => {
     expect(container.firstChild!.nodeName).toBe("MAIN");
   });
 
+  it("has no vertical padding by default", () => {
+    const { container } = render(<Container>content</Container>);
+    const el = container.firstChild as HTMLElement;
+    expect(el.style.paddingTop).toBe("");
+    expect(el.style.paddingBottom).toBe("");
+  });
+
+  it("applies verticalPadding to top and bottom only when explicitly set", () => {
+    const { container } = render(<Container verticalPadding="var(--rebar-space-xl)">content</Container>);
+    const el = container.firstChild as HTMLElement;
+    expect(el.style.paddingTop).toBe("var(--rebar-space-xl)");
+    expect(el.style.paddingBottom).toBe("var(--rebar-space-xl)");
+  });
+
   it("forwards arbitrary data-*/aria-* props to the root", () => {
     render(<Container data-testid="page-container" aria-label="Page content" />);
     const el = document.querySelector('[data-testid="page-container"]');

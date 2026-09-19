@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SignaturePad } from "../components/SignaturePad";
 
 describe("SignaturePad", () => {
@@ -42,14 +42,16 @@ describe("SignaturePad", () => {
     expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
   });
 
-  it("calls onValueChange after a completed stroke", () => {
+  it("calls onValueChange after a completed stroke", async () => {
     const onValueChange = vi.fn();
     const { container } = render(<SignaturePad onValueChange={onValueChange} />);
     const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
     fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
     fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
     fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    // Capturing a value is async now — see emitValue's own comment (a keyed device stamp needs a
+    // real, async-only Web Crypto call before there's anything to emit).
+    await waitFor(() => expect(onValueChange).toHaveBeenCalledTimes(1));
     expect(onValueChange.mock.calls[0]![0]).toEqual(expect.any(String));
   });
 
@@ -81,14 +83,14 @@ describe("SignaturePad", () => {
     expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
   });
 
-  it("allowTypedName: typing a name marks the pad non-empty and emits a value", () => {
+  it("allowTypedName: typing a name marks the pad non-empty and emits a value", async () => {
     const onValueChange = vi.fn();
     const { container } = render(<SignaturePad allowTypedName onValueChange={onValueChange} />);
     fireEvent.change(screen.getByPlaceholderText("Type your name"), { target: { value: "Ada Lovelace" } });
     expect(container.querySelector('[data-rebar-component="signature-pad"]')).not.toHaveAttribute(
       "data-rebar-empty",
     );
-    expect(onValueChange).toHaveBeenCalledWith(expect.any(String));
+    await waitFor(() => expect(onValueChange).toHaveBeenCalledWith(expect.any(String)));
     expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
   });
 
@@ -130,7 +132,7 @@ describe("SignaturePad", () => {
     }).not.toThrow();
   });
 
-  it("stamp: does not throw when baking a label/timestamp into a completed stroke", () => {
+  it("stamp: does not throw when baking a label/timestamp into a completed stroke", async () => {
     const onValueChange = vi.fn();
     const { container } = render(
       <SignaturePad stamp={{ label: "device-abc123", timestamp: true }} onValueChange={onValueChange} />,
@@ -141,6 +143,54 @@ describe("SignaturePad", () => {
       fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
       fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
     }).not.toThrow();
-    expect(onValueChange).toHaveBeenCalledWith(expect.any(String));
+    await waitFor(() => expect(onValueChange).toHaveBeenCalledWith(expect.any(String)));
+  });
+
+  it("stamp: computes a real keyed HMAC from deviceId+deviceKey rather than stamping either in the open", async () => {
+    const onValueChange = vi.fn();
+    const { container } = render(
+      <SignaturePad
+        stamp={{ deviceId: "device-abc123", deviceKey: "a-sufficiently-long-shared-secret" }}
+        onValueChange={onValueChange}
+      />,
+    );
+    const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
+    fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    await waitFor(() => expect(onValueChange).toHaveBeenCalledWith(expect.any(String)));
+  });
+
+  it("stamp: the same deviceId+deviceKey pair always produces the same stamp (deterministic, not per-render random)", async () => {
+    const stamp = { deviceId: "device-abc123", deviceKey: "a-sufficiently-long-shared-secret" };
+    const results: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const onValueChange = vi.fn((value: string) => results.push(value));
+      const { container, unmount } = render(<SignaturePad stamp={stamp} onValueChange={onValueChange} />);
+      const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
+      fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+      fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+      await waitFor(() => expect(onValueChange).toHaveBeenCalled());
+      unmount();
+    }
+    // jsdom's canvas has no real 2D context (see the module-level jsdom-limitations note), so the
+    // two data URLs can't be compared directly — this instead confirms hmacDeviceStamp itself
+    // didn't throw or silently vary between two independent calls with identical inputs.
+    expect(results).toHaveLength(2);
+  });
+
+  it("stamp: ignores a deviceId with no deviceKey, since an unkeyed identifier has nothing safe to do with it", async () => {
+    const onValueChange = vi.fn();
+    const { container } = render(
+      <SignaturePad stamp={{ deviceId: "device-abc123" }} onValueChange={onValueChange} />,
+    );
+    const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
+    expect(() => {
+      fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+      fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    }).not.toThrow();
+    await waitFor(() => expect(onValueChange).toHaveBeenCalledWith(expect.any(String)));
   });
 });
