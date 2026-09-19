@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
@@ -100,13 +100,14 @@ export function FloatAssistant({
   apiAuthToken,
   voices,
   voiceId,
-  onVoiceChange,
+  // Not yet wired to a call site — kept in the public prop type for the voice-picker UI this is
+  // meant to drive once that lands, prefixed here only to satisfy the unused-var lint rule.
+  onVoiceChange: _onVoiceChange,
   className,
   bionic,
   bionicOptions,
   ...props
 }: FloatAssistantProps) {
-  const id = useId();
   const ambientBionic = useAmbientBionic();
   const bionicEnabled = bionic ?? ambientBionic;
   const [isOpen, setIsOpen] = useState(false);
@@ -447,7 +448,7 @@ export function FloatAssistant({
             timestamp: Date.now(),
           };
           setMessages((prev) => [...prev, assistantMessage]);
-        } catch (error) {
+        } catch {
           setIsTyping(false);
           const errorMessage: FloatAssistantMessage = {
             id: `error-${Date.now()}`,
@@ -548,8 +549,8 @@ export function FloatAssistant({
     
     let left: number | string;
     let top: number | string;
-    let right: string | number = "auto";
-    let bottom: string | number = "auto";
+    const right: string | number = "auto";
+    const bottom: string | number = "auto";
 
     // If orb is on right half, panel opens to the left
     if (orbCenterX > (typeof window !== 'undefined' ? window.innerWidth : 1200) / 2) {
