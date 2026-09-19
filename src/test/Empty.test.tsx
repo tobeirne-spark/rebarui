@@ -36,6 +36,15 @@ describe("Empty", () => {
     expect(container.querySelector(".rebar-empty-icon-raster")).not.toBeInTheDocument();
   });
 
+  it("renders only the container glyph, forced visible, when icon='container'", () => {
+    const { container } = render(<Empty icon="container" />);
+    const containerIcon = container.querySelector(".rebar-empty-icon-container");
+    expect(containerIcon).toBeInTheDocument();
+    expect(containerIcon).toHaveStyle({ display: "block" });
+    expect(container.querySelector(".rebar-empty-icon-raster")).not.toBeInTheDocument();
+    expect(container.querySelector(".rebar-empty-icon-vector")).not.toBeInTheDocument();
+  });
+
   it("defaults to the ghost illustration", () => {
     const { container } = render(<Empty />);
     expect(container.querySelector(".rebar-empty-icon-raster")).toHaveAttribute("src", GHOST_EMPTY_PLACEHOLDER);

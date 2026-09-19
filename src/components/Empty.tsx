@@ -6,7 +6,7 @@ import { GHOST_EMPTY_PLACEHOLDER } from "../assets/ghostEmptyPlaceholder";
 import { useBionicChildren } from "../bionic";
 import type { BionicOptions } from "../bionic";
 
-export type EmptyIcon = "auto" | "illustration" | "vector";
+export type EmptyIcon = "auto" | "illustration" | "vector" | "container";
 export type EmptyIllustration = "ghost" | "bowl-and-spoon";
 
 const ILLUSTRATIONS: Record<EmptyIllustration, string> = {
@@ -23,7 +23,9 @@ export interface EmptyProps {
    * switches to the plain vector automatically in dark mode — the illustration is a raster image
    * baked onto a white background, so it can't recolor itself for a dark surface. Set explicitly
    * to keep one icon in both themes instead: "illustration" for the sketch look everywhere,
-   * "vector" for the plain circle-with-an-X everywhere.
+   * "vector" for the plain circle-with-an-X everywhere, "container" for a document/archive-box
+   * glyph (a real `currentColor` SVG, same as "vector" — adapts to either theme on its own, no
+   * raster/vector swap needed).
    */
   icon?: EmptyIcon;
   /** Which raster illustration to use when `icon` shows one. Default `"ghost"`. */
@@ -52,8 +54,9 @@ export const Empty = forwardRef<HTMLDivElement, EmptyProps>(function Empty(
   ref,
 ) {
   const descriptionContent = useBionicChildren(description, bionic, bionicOptions);
-  const showRaster = icon !== "vector";
-  const showVector = icon !== "illustration";
+  const showRaster = icon === "auto" || icon === "illustration";
+  const showVector = icon === "auto" || icon === "vector";
+  const showContainer = icon === "container";
   return (
     <div ref={ref} className={clsx("rebar-empty", className)} data-rebar-component="empty">
       {showRaster ? (
@@ -76,6 +79,21 @@ export const Empty = forwardRef<HTMLDivElement, EmptyProps>(function Empty(
         >
           <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
           <path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      ) : null}
+      {showContainer ? (
+        <svg
+          className="rebar-empty-icon rebar-empty-icon-container"
+          data-rebar-part="icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          focusable="false"
+          style={{ display: "block" }}
+        >
+          <rect x="4" y="3" width="16" height="18" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="7.5" y1="8" x2="16.5" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="7.5" y1="11.5" x2="16.5" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M8 15.5a4 4 0 0 0 8 0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       ) : null}
       {description ? (
