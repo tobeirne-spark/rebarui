@@ -1,4 +1,4 @@
-# Rebar UI — Agent Context (v0.10.0)
+# Rebar UI — Agent Context (v0.11.0)
 
 Compressed operating context for an AI agent building a UI with **Rebar UI**. The single goal: **print the page from constructs first, hand-drawn JSX only as a temporary stop-gap.** Every section below serves that goal.
 

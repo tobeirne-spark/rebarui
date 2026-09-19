@@ -197,31 +197,33 @@ export function NavIndex({
           </li>
         ))}
       </ul>
-      <ul className="rebar-nav-index-list" data-rebar-part="item-list">
-        {filtered.map((item, i) => (
-          <li
-            key={`${item.label}-${i}`}
-            className="rebar-nav-index-item-row"
-            data-rebar-part="item"
-          >
-            {renderLink({
-              href: item.href,
-              className: "rebar-nav-index-link",
-              children: renderBionicChildren(item.label, bionicEnabled, bionicOptions),
-            })}
-            {item.status ? (
-              <Tag tone={item.statusTone ?? "warning"} className="rebar-nav-index-status">
-                {item.status}
-              </Tag>
-            ) : null}
-          </li>
-        ))}
-        {showFilterUI && filtered.length === 0 ? (
-          <li className="rebar-nav-index-empty" data-rebar-part="empty">
-            No matches.
-          </li>
-        ) : null}
-      </ul>
+      <div className="rebar-nav-index-scroll" data-rebar-part="scroll">
+        <ul className="rebar-nav-index-list" data-rebar-part="item-list">
+          {filtered.map((item, i) => (
+            <li
+              key={`${item.label}-${i}`}
+              className="rebar-nav-index-item-row"
+              data-rebar-part="item"
+            >
+              {renderLink({
+                href: item.href,
+                className: "rebar-nav-index-link",
+                children: renderBionicChildren(item.label, bionicEnabled, bionicOptions),
+              })}
+              {item.status ? (
+                <Tag tone={item.statusTone ?? "warning"} className="rebar-nav-index-status">
+                  {item.status}
+                </Tag>
+              ) : null}
+            </li>
+          ))}
+          {showFilterUI && filtered.length === 0 ? (
+            <li className="rebar-nav-index-empty" data-rebar-part="empty">
+              No matches.
+            </li>
+          ) : null}
+        </ul>
+      </div>
     </nav>
   );
 }

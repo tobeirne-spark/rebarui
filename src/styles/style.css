@@ -2175,11 +2175,49 @@ body {
 }
 
 /* NavIndex */
+/* `width`/`flex-shrink` are baked in here (matching `.rebar-section-nav`'s own precedent) rather
+   than left to a wrapping `<Box>` at each call site — `position: sticky` only has room to actually
+   stick within its own containing block, and a plain `display: block` wrapper around this element
+   sized by `align-items: flex-start` auto-shrinks to this element's own height, leaving zero room
+   to stick. Being a *direct* flex item of the row instead gives it the full row height to move
+   within. Real bug, caught live: every caller (`DocsShell`, `ArchetypesShell`, `BenchmarksShell`)
+   wrapped this in exactly that Box, and the sidebar silently scrolled off with the page instead of
+   sticking, on every one of them. */
+.rebar-nav-index {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: var(--rebar-space-xl, 32px);
+  max-height: calc(100vh - var(--rebar-space-xl, 32px) * 2);
+  min-height: 0;
+  width: 200px;
+  flex-shrink: 0;
+}
+
 .rebar-nav-index-controls {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: var(--rebar-space-sm, 8px);
   margin-bottom: var(--rebar-space-md, 16px);
+}
+
+/* The overview list ("All Opinions", etc.) stays pinned above the scrolling item list — only
+   `.rebar-nav-index-scroll` below scrolls, so a long alphabetical list never pushes this out of
+   view the way scrolling the whole page/nav as one unit used to. */
+.rebar-nav-index [data-rebar-part="overview-list"] {
+  flex-shrink: 0;
+}
+
+.rebar-nav-index-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  /* Was previously a `:not(:first-of-type)` margin between the two `<ul>`s when both sat directly
+     under `<nav>` as siblings — moving the item list into this wrapper for independent scrolling
+     broke that sibling relationship, so the gap is applied here instead. */
+  margin-top: var(--rebar-space-sm, 8px);
 }
 
 .rebar-nav-index-list {
@@ -2189,10 +2227,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--rebar-space-xs, 4px);
-}
-
-.rebar-nav-index-list:not(:first-of-type) {
-  margin-top: var(--rebar-space-sm, 8px);
 }
 
 .rebar-nav-index-item-row {
