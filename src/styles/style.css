@@ -587,6 +587,33 @@ body {
   outline-offset: 2px;
 }
 
+/* A disabled radio previously looked identical to a normal unselected one — an empty circle with
+   no signal it was disabled at all, distinct from "just not the current choice." Traditional
+   platform radios mark "actively disabled" with a grey dot even when unchecked, not just a dimmed
+   border — added here via a pseudo-element specifically for the unchecked case, since Radix only
+   mounts the real `.rebar-radio-indicator` child when checked; the checked+disabled case reuses
+   that real indicator, just retinted grey instead of removed. */
+.rebar-radio[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.rebar-radio[data-disabled][data-state="unchecked"]::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-radio[data-disabled] .rebar-radio-indicator {
+  background: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-radio-label:has(.rebar-radio[data-disabled]) {
+  cursor: not-allowed;
+}
+
 /* Switch */
 .rebar-switch {
   width: 40px;
@@ -2534,11 +2561,10 @@ body {
   padding-right: 32px;
 }
 
-.rebar-editable-enter-hint {
-  position: absolute;
-  top: 50%;
-  right: var(--rebar-space-sm, 8px);
-  transform: translateY(-50%);
+/* Shared "press Enter to commit" chip — Editable positions it absolutely inside its own field
+   (`.rebar-editable-enter-hint`); TagInput flows it inline right after the text caret instead,
+   since its input sits inline among chips rather than alone in a fixed-width box. */
+.rebar-enter-hint {
   display: inline-flex;
   align-items: center;
   color: var(--rebar-color-text-secondary, #757575);
@@ -2548,6 +2574,13 @@ body {
   pointer-events: none;
   font-size: 13px;
   line-height: 1;
+}
+
+.rebar-editable-enter-hint {
+  position: absolute;
+  top: 50%;
+  right: var(--rebar-space-sm, 8px);
+  transform: translateY(-50%);
 }
 
 /* ColorPicker */

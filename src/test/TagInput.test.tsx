@@ -90,4 +90,19 @@ describe("TagInput", () => {
     await user.click(screen.getByRole("button", { name: "elsewhere" }));
     expect(screen.getByText("final")).toBeInTheDocument();
   });
+
+  it("shows an Enter-to-add hint only once there's draft text, by default", async () => {
+    const user = userEvent.setup();
+    render(<TagInput />);
+    expect(document.querySelector('[data-rebar-part="enter-hint"]')).not.toBeInTheDocument();
+    await user.type(screen.getByRole("textbox"), "wip");
+    expect(document.querySelector('[data-rebar-part="enter-hint"]')).toBeInTheDocument();
+  });
+
+  it("never shows the Enter-to-add hint when showEnterHint is false", async () => {
+    const user = userEvent.setup();
+    render(<TagInput showEnterHint={false} />);
+    await user.type(screen.getByRole("textbox"), "wip");
+    expect(document.querySelector('[data-rebar-part="enter-hint"]')).not.toBeInTheDocument();
+  });
 });

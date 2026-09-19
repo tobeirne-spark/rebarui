@@ -84,7 +84,7 @@ export function Editable({
           data-rebar-part="input"
         />
         {hint ? (
-          <span className="rebar-editable-enter-hint" data-rebar-part="enter-hint" title="Press Enter to save">
+          <span className="rebar-enter-hint rebar-editable-enter-hint" data-rebar-part="enter-hint" title="Press Enter to save">
             <EnterOutlined />
           </span>
         ) : null}

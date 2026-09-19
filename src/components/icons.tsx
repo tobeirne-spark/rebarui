@@ -1,37 +1,58 @@
-import type { SVGProps } from "react";
+import type { ComponentType } from "react";
+import { createIcon } from "./iconFactory";
+import type { IconProps } from "./iconFactory";
+import * as RemixBulkIcons from "./icons-remix";
+import * as AntdBulkIcons from "./icons-antd";
+
+export { createIcon };
+export type { IconProps, IconPathSpec } from "./iconFactory";
 
 /**
- * A small, curated icon set merged from more than one upstream library — inlined here as plain
- * React components rather than an `npm` icon-package dependency, matching this project's existing
- * embed-only-what's-needed convention (`assets/avatarPlaceholders.ts`, `assets/ratioPlaceholders.ts`).
- * Add more icons here only once a real need exists — don't bulk-import a whole set ahead of
- * demand. Exported publicly from `index.ts` (not just consumed internally by components) so a
- * consumer building real content — nav items, buttons, demo data — has this set to reach for
- * instead of falling back to plain emoji glyphs. Browse the full, current set on
- * `/imitations/icon` (source data: `apps/docs/src/data/iconManifest.ts`).
+ * Rebar's full icon set, merged from two upstream libraries and inlined as plain React components
+ * rather than an `npm` icon-package runtime dependency — a consumer only pays (in their own bundle)
+ * for the specific icons they actually import, same tree-shaking as any other named export. This
+ * file holds the original hand-picked core plus the shared `createIcon` factory and `ICON_REGISTRY`;
+ * the bulk of the set lives in `icons-remix.tsx` (1,519 icons) and `icons-antd.tsx` (285 icons),
+ * both generated from the real upstream packages (`remixicon`, `@ant-design/icons-svg`) — see
+ * `scripts/generate-icons.mjs` for the generator and how to re-run it when either upstream package
+ * updates. Exported publicly from `index.ts` so a consumer building real content — nav items,
+ * buttons, demo data — has this set to reach for instead of falling back to plain emoji glyphs.
+ * Browse and search the full set on `/imitations/icon`.
  *
  * **Naming signals provenance, on purpose — no separate "source" field to keep in sync by hand:**
  * a RemixIcon-sourced icon keeps this project's own `XIcon` suffix (`ChevronDownIcon`); an Ant
- * Design-sourced icon keeps AntD's own exact name (`EnterOutlined`, `InboxOutlined`) so it's
+ * Design-sourced icon keeps AntD's own exact name (`EnterOutlined`, `AccountBookOutlined`) so it's
  * trivially greppable against AntD's own published icon list
- * (https://ant-design.antgroup.com/components/icon) when merging in more. Merging a new icon from
- * either source: paste its real path data and viewBox (don't hand-trace or approximate a shape
- * that already exists as a real, licensed path — see the Empty component's "container" icon,
- * which did exactly that before being swapped for the real `InboxOutlined` below), add it to
- * `apps/docs/src/data/iconManifest.ts`'s list, done — no registry/factory changes needed for the
- * common case of "one more icon from a source already merged in".
+ * (https://ant-design.antgroup.com/components/icon). `ICON_REGISTRY` below still tags each one with
+ * its real source string for the catalogue page's grouping/license display, computed once here
+ * rather than re-derived from the naming convention at every call site.
  *
- * Sources merged so far:
+ * **Deduplication rule**: where the same real-world icon exists in both libraries, RemixIcon wins —
+ * the generator drops the Ant Design version rather than shipping two visually-different "search"
+ * icons side by side (the generator matched 157 Ant Design Outlined icons against an existing
+ * RemixIcon equivalent by normalized name and dropped every one of them). The two AntD icons this
+ * project reached for *before* the bulk merge (`EnterOutlined`, the return-key glyph; `InboxOutlined`,
+ * used by `Empty`'s "container" icon) are kept under their own AntD names rather than retroactively
+ * hunted for a RemixIcon substitute, since they were each added by explicit name, already shipped,
+ * and already referenced elsewhere in this codebase — the dedup rule governs new merges, not a
+ * silent rename of something already in use.
+ *
+ * Sources merged:
  * - RemixIcon (https://remixicon.com, Apache License 2.0 — free for commercial use, attribution
  *   appreciated but not required). Replaces the plain Unicode glyphs (▾ ▸ › ‹) several components
  *   used for disclosure/nav chevrons, which read as unclear "tiny drop arrows" at small sizes —
- *   see `ref/TOM.md` 1.4. All RemixIcon shapes share one 24×24 viewBox (`createIcon`'s default).
- * - Ant Design Icons (https://ant-design.antgroup.com/components/icon, MIT License) — reached for
- *   specifically when a real, commonly-needed glyph has no RemixIcon equivalent already merged in
- *   (`EnterOutlined`, `InboxOutlined`). AntD's own path data ships in its own native viewBox
- *   (e.g. `0 0 1024 1024`, not 24×24) — `createIcon`'s optional third argument carries it through
- *   unchanged rather than normalizing coordinates, since scaling a `<svg>` to any target size
- *   works identically regardless of its native viewBox's own unit scale.
+ *   see `ref/TOM.md` 1.4. Every RemixIcon shape shares one 24×24 viewBox (`createIcon`'s default);
+ *   the generator prefers each icon's "-line" style SVG, falling back to "-fill" only for the
+ *   (rare) icon that ships no line variant, matching this project's original 29 hand-picked icons.
+ * - Ant Design Icons (https://ant-design.antgroup.com/components/icon, MIT License), Outlined theme
+ *   only (never Filled/TwoTone — a solid-fill or two-color icon reads as visually inconsistent next
+ *   to every RemixIcon shape's uniform line weight). AntD's own path data ships in its own native
+ *   viewBox (e.g. `0 0 1024 1024`, not 24×24) — `createIcon`'s viewBox argument carries it through
+ *   unchanged rather than normalizing coordinates, since scaling a `<svg>` to any target size works
+ *   identically regardless of its native viewBox's own unit scale. A handful of AntD icons compose
+ *   more than one `<path>` (e.g. an icon with a separate accent mark) — `createIcon`'s path argument
+ *   accepts a single string, a `{d, fillRule?, fillOpacity?}` spec, or an array of either, covering
+ *   both sources uniformly without a second factory function.
  *
  * Checked directly against Ant Design's own published icon spec (ant.design/docs/spec/icon,
  * Part 4's "icon spec page alignment" ask) rather than assumed compliant: its two rules with real
@@ -43,32 +64,6 @@ import type { SVGProps } from "react";
  * *construction* process, not applicable to icons sourced as already-finished paths from either
  * library (filled shapes either way, not something this project draws stroke-width for itself).
  */
-
-export interface IconProps extends SVGProps<SVGSVGElement> {
-  size?: number | string;
-}
-
-function createIcon(path: string, displayName: string, viewBox = "0 0 24 24") {
-  function Icon({ size = "1em", ...props }: IconProps) {
-    return (
-      <svg
-        viewBox={viewBox}
-        width={size}
-        height={size}
-        fill="currentColor"
-        aria-hidden="true"
-        focusable="false"
-        data-rebar-icon={displayName}
-        xmlns="http://www.w3.org/2000/svg"
-        {...props}
-      >
-        <path d={path} />
-      </svg>
-    );
-  }
-  Icon.displayName = displayName;
-  return Icon;
-}
 
 export const ChevronDownIcon = createIcon(
   "M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z",
@@ -235,3 +230,66 @@ export const InboxOutlined = createIcon(
   "InboxOutlined",
   "0 0 1024 1024",
 );
+
+// ---------------------------------------------------------------------------------------------
+// ICON_REGISTRY — every icon this package ships, tagged with its real source, for the
+// `/imitations/icon` catalogue page. Built once, here, rather than hand-listed a second time in
+// `apps/docs/src/data/iconManifest.ts` — that file would otherwise need one entry per icon (1,835
+// of them) kept in sync by hand every time either bulk set regenerates. The two bulk sets are
+// pulled in via a namespace import specifically so a newly-generated icon in either file is picked
+// up automatically the next time this module loads, with no second list to remember to update.
+export type IconSource = "RemixIcon" | "Ant Design";
+
+export interface IconRegistryEntry {
+  name: string;
+  Icon: ComponentType<IconProps>;
+  source: IconSource;
+}
+
+const CURATED: IconRegistryEntry[] = [
+  { name: "ChevronDownIcon", Icon: ChevronDownIcon, source: "RemixIcon" },
+  { name: "ChevronRightIcon", Icon: ChevronRightIcon, source: "RemixIcon" },
+  { name: "ChevronLeftIcon", Icon: ChevronLeftIcon, source: "RemixIcon" },
+  { name: "MicIcon", Icon: MicIcon, source: "RemixIcon" },
+  { name: "StopCircleIcon", Icon: StopCircleIcon, source: "RemixIcon" },
+  { name: "SendPlaneIcon", Icon: SendPlaneIcon, source: "RemixIcon" },
+  { name: "CopyIcon", Icon: CopyIcon, source: "RemixIcon" },
+  { name: "DeleteIcon", Icon: DeleteIcon, source: "RemixIcon" },
+  { name: "MoveIcon", Icon: MoveIcon, source: "RemixIcon" },
+  { name: "DownloadIcon", Icon: DownloadIcon, source: "RemixIcon" },
+  { name: "MoreIcon", Icon: MoreIcon, source: "RemixIcon" },
+  { name: "LockIcon", Icon: LockIcon, source: "RemixIcon" },
+  { name: "UnlockIcon", Icon: UnlockIcon, source: "RemixIcon" },
+  { name: "SearchIcon", Icon: SearchIcon, source: "RemixIcon" },
+  { name: "ErrorWarningIcon", Icon: ErrorWarningIcon, source: "RemixIcon" },
+  { name: "WifiOffIcon", Icon: WifiOffIcon, source: "RemixIcon" },
+  { name: "TimeIcon", Icon: TimeIcon, source: "RemixIcon" },
+  { name: "CloseIcon", Icon: CloseIcon, source: "RemixIcon" },
+  { name: "HomeIcon", Icon: HomeIcon, source: "RemixIcon" },
+  { name: "FolderIcon", Icon: FolderIcon, source: "RemixIcon" },
+  { name: "SettingsIcon", Icon: SettingsIcon, source: "RemixIcon" },
+  { name: "QuestionIcon", Icon: QuestionIcon, source: "RemixIcon" },
+  { name: "DashboardIcon", Icon: DashboardIcon, source: "RemixIcon" },
+  { name: "LineChartIcon", Icon: LineChartIcon, source: "RemixIcon" },
+  { name: "ChatIcon", Icon: ChatIcon, source: "RemixIcon" },
+  { name: "TeamIcon", Icon: TeamIcon, source: "RemixIcon" },
+  { name: "TaskIcon", Icon: TaskIcon, source: "RemixIcon" },
+  { name: "CreditCardIcon", Icon: CreditCardIcon, source: "RemixIcon" },
+  { name: "CalendarIcon", Icon: CalendarIcon, source: "RemixIcon" },
+  { name: "EnterOutlined", Icon: EnterOutlined, source: "Ant Design" },
+  { name: "InboxOutlined", Icon: InboxOutlined, source: "Ant Design" },
+];
+
+export const ICON_REGISTRY: IconRegistryEntry[] = [
+  ...CURATED,
+  ...Object.entries(RemixBulkIcons).map(([name, Icon]) => ({
+    name,
+    Icon: Icon as ComponentType<IconProps>,
+    source: "RemixIcon" as const,
+  })),
+  ...Object.entries(AntdBulkIcons).map(([name, Icon]) => ({
+    name,
+    Icon: Icon as ComponentType<IconProps>,
+    source: "Ant Design" as const,
+  })),
+];

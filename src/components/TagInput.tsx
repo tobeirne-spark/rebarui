@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import type { KeyboardEvent } from "react";
 import clsx from "clsx";
 import { Tag } from "./Tag";
+import { EnterOutlined } from "./icons";
 
 export interface TagInputProps {
   values?: string[];
@@ -14,6 +15,13 @@ export interface TagInputProps {
   maxTags?: number;
   /** Skips adding a tag that already exists (case-insensitive). Default `true`. */
   allowDuplicates?: boolean;
+  /**
+   * Shows a small `EnterOutlined` glyph right after the text caret while there's draft text typed
+   * — unlike `Editable`, there's no visible button here either, so Enter (or `,`) committing the
+   * current text as a tag is otherwise entirely unsignaled (ref/HEURISTICS.md #47). On by default;
+   * set `false` once a user already knows the pattern (a dense form with several of these, say).
+   */
+  showEnterHint?: boolean;
   className?: string;
 }
 
@@ -34,6 +42,7 @@ export function TagInput({
   disabled,
   maxTags,
   allowDuplicates = false,
+  showEnterHint = true,
   className,
 }: TagInputProps) {
   const listId = useId();
@@ -99,6 +108,11 @@ export function TagInput({
           onKeyDown={handleKeyDown}
           onBlur={() => addTag(draft)}
         />
+        {showEnterHint && !disabled && draft.trim() ? (
+          <span className="rebar-enter-hint" data-rebar-part="enter-hint" title="Press Enter to add">
+            <EnterOutlined />
+          </span>
+        ) : null}
       </div>
     </div>
   );
