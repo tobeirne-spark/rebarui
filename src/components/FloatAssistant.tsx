@@ -363,46 +363,46 @@ export function FloatAssistant({
     : positionStyles[position];
 
   // Calculate panel position based on button location
-  const getPanelPosition = () => {
+  const getPanelPosition = (): React.CSSProperties => {
     if (buttonPosition) {
       const panelWidth = 360;
       const panelHeight = 520;
       const buttonSize = 56;
       const gap = 16;
       const margin = 16;
-      
+
       // Default: panel appears to the left of the button
       let left = buttonPosition.x - panelWidth - gap;
       let top = buttonPosition.y;
-      
+
       // If panel would go off left edge, show it to the right instead
       if (left < margin) {
         left = buttonPosition.x + buttonSize + gap;
       }
-      
+
       // If panel would go off right edge, constrain it
       if (left + panelWidth > window.innerWidth - margin) {
         left = window.innerWidth - panelWidth - margin;
       }
-      
+
       // If panel would go off bottom edge, shift it up
       if (top + panelHeight > window.innerHeight - margin) {
         top = window.innerHeight - panelHeight - margin;
       }
-      
+
       // If panel would go off top edge, shift it down
       if (top < margin) {
         top = margin;
       }
-      
-      return { left, top, right: "auto", bottom: "auto" };
+
+      return { left, top, right: "auto", bottom: "auto", position: "fixed" };
     }
-    
-    // Default positions based on position prop
-    if (position === "bottom-right") return { right: 0, left: "auto", bottom: 0, top: "auto" };
-    if (position === "bottom-left") return { left: 0, right: "auto", bottom: 0, top: "auto" };
-    if (position === "top-right") return { right: 0, left: "auto", top: 0, bottom: "auto" };
-    return { left: 0, right: "auto", top: 0, bottom: "auto" };
+
+    // Default positions based on position prop - use fixed positioning
+    if (position === "bottom-right") return { right: 24, left: "auto", bottom: 80, top: "auto", position: "fixed" };
+    if (position === "bottom-left") return { left: 24, right: "auto", bottom: 80, top: "auto", position: "fixed" };
+    if (position === "top-right") return { right: 24, left: "auto", top: 24, bottom: "auto", position: "fixed" };
+    return { left: 24, right: "auto", top: 24, bottom: "auto", position: "fixed" };
   };
 
   const panelPosition = getPanelPosition();
@@ -476,7 +476,10 @@ export function FloatAssistant({
           onClick={toggleMinimize}
           aria-label="Minimize assistant"
           title="Minimize to corner"
-          style={{ "--assistant-accent": accentColor } as React.CSSProperties}
+          style={{
+            "--assistant-accent": accentColor,
+            pointerEvents: "auto",
+          } as React.CSSProperties}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="4 14 10 14 10 20" />
