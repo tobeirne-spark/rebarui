@@ -580,6 +580,12 @@ export type {
   GraphExplorerAction,
 } from "./components/GraphExplorer";
 
+export { FloatAssistant } from "./components/FloatAssistant";
+export type {
+  FloatAssistantProps,
+  FloatAssistantMessage,
+} from "./components/FloatAssistant";
+
 export { ErrorBlock } from "./components/ErrorBlock";
 export type { ErrorBlockProps, ErrorBlockStatus } from "./components/ErrorBlock";
 
