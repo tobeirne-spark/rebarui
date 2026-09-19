@@ -139,8 +139,11 @@ export interface SidebarNavProps extends Omit<ComponentPropsWithoutRef<"nav">, "
   /** Where the collapse/expand toggle renders. `"inline"` (default) is a full-width button below
    * the item list, in the document flow. `"edge"` anchors a small circular button to the
    * sidebar's own right border, vertically centered — the floating-chevron pattern some dashboard
-   * sidebars use instead of an inline row. */
-  collapseTogglePlacement?: "inline" | "edge";
+   * sidebars use instead of an inline row, always visible. `"edge-hover"` is the same button in
+   * the same spot, transparent until the sidebar itself is hovered or the button has keyboard
+   * focus — the VS Code/Notion pattern of a rail that reveals its own affordance rather than
+   * showing chrome no one's about to use. */
+  collapseTogglePlacement?: "inline" | "edge" | "edge-hover";
   "aria-label"?: string;
   className?: string;
   /** Force bionic reading on/off for item labels, overriding the ambient data-rebar-bionic
@@ -467,14 +470,16 @@ export function SidebarNav({
           type="button"
           className={clsx(
             "rebar-sidebar-nav-collapse-toggle",
-            collapseTogglePlacement === "edge" && "rebar-sidebar-nav-collapse-toggle-edge",
+            (collapseTogglePlacement === "edge" || collapseTogglePlacement === "edge-hover") &&
+              "rebar-sidebar-nav-collapse-toggle-edge",
+            collapseTogglePlacement === "edge-hover" && "rebar-sidebar-nav-collapse-toggle-edge-hover",
           )}
           onClick={toggleCollapsed}
           aria-label={currentCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           data-rebar-part="collapse-toggle"
         >
           {currentCollapsed ? <ChevronRightIcon aria-hidden="true" /> : <ChevronLeftIcon aria-hidden="true" />}
-          {currentCollapsed || collapseTogglePlacement === "edge" ? null : <span>Collapse</span>}
+          {currentCollapsed || collapseTogglePlacement !== "inline" ? null : <span>Collapse</span>}
         </button>
       )}
     </nav>

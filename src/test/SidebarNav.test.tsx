@@ -261,4 +261,18 @@ describe("SidebarNav", () => {
     const { container } = render(<SidebarNav items={ITEMS} collapseTogglePlacement="edge" />);
     expect(container.querySelector(".rebar-sidebar-nav-collapse-toggle-edge")).toBeInTheDocument();
   });
+
+  it("collapseTogglePlacement=\"edge-hover\" applies both the edge and hover-reveal modifier classes", () => {
+    const { container } = render(<SidebarNav items={ITEMS} collapseTogglePlacement="edge-hover" />);
+    const toggle = container.querySelector(".rebar-sidebar-nav-collapse-toggle");
+    expect(toggle).toHaveClass("rebar-sidebar-nav-collapse-toggle-edge");
+    expect(toggle).toHaveClass("rebar-sidebar-nav-collapse-toggle-edge-hover");
+  });
+
+  it("collapseTogglePlacement=\"edge-hover\" still toggles collapse on click, despite being visually transparent until hovered", async () => {
+    const user = userEvent.setup();
+    render(<SidebarNav items={ITEMS} collapseTogglePlacement="edge-hover" />);
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(document.querySelector('[data-rebar-component="sidebar-nav"]')).toHaveAttribute("data-rebar-collapsed", "true");
+  });
 });

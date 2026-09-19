@@ -965,6 +965,12 @@ body {
   background: var(--rebar-color-bg-secondary, #f5f5f5);
   color: var(--rebar-color-text-primary, #212121);
 }
+/* Collapsed: no label renders, just the icon — without this, the icon sits at the flex row's
+   default flex-start edge instead of centered in the now icon-only-width rail. */
+.rebar-sidebar-nav[data-rebar-collapsed] .rebar-sidebar-nav-link,
+.rebar-sidebar-nav[data-rebar-collapsed] .rebar-sidebar-nav-group-toggle {
+  justify-content: center;
+}
 .rebar-sidebar-nav-link-stacked {
   flex-direction: column;
   align-items: center;
@@ -1101,6 +1107,14 @@ body {
   background: var(--rebar-color-bg-primary, #ffffff);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   z-index: 1;
+}
+.rebar-sidebar-nav-collapse-toggle-edge-hover {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.rebar-sidebar-nav:hover .rebar-sidebar-nav-collapse-toggle-edge-hover,
+.rebar-sidebar-nav-collapse-toggle-edge-hover:focus-visible {
+  opacity: 1;
 }
 
 /* Popover */
