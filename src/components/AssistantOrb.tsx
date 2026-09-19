@@ -36,6 +36,15 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
 
     // Parse color to RGB for canvas operations
     const parseColor = (colorStr: string): { r: number; g: number; b: number } => {
+      // Handle CSS variables - resolve them
+      if (colorStr.startsWith("var(")) {
+        // Extract fallback color from var(--name, fallback)
+        const match = colorStr.match(/var\([^,]+,\s*([^)]+)\)/);
+        if (match) {
+          return parseColor(match[1].trim());
+        }
+        return { r: 0, g: 102, b: 204 }; // Default fallback
+      }
       // Handle hex colors
       if (colorStr.startsWith("#")) {
         const hex = colorStr.slice(1);
