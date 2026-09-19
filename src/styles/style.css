@@ -968,7 +968,8 @@ body {
 /* Collapsed: no label renders, just the icon — without this, the icon sits at the flex row's
    default flex-start edge instead of centered in the now icon-only-width rail. */
 .rebar-sidebar-nav[data-rebar-collapsed] .rebar-sidebar-nav-link,
-.rebar-sidebar-nav[data-rebar-collapsed] .rebar-sidebar-nav-group-toggle {
+.rebar-sidebar-nav[data-rebar-collapsed] .rebar-sidebar-nav-group-toggle,
+.rebar-sidebar-nav[data-rebar-collapsed] .rebar-sidebar-nav-link-inner {
   justify-content: center;
 }
 .rebar-sidebar-nav-link-stacked {
@@ -6171,8 +6172,13 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 
 /* SkipLink — off-screen until focused, then a real, visible first-in-tab-order link. */
 .rebar-skip-link {
+  /* A percentage `top` needed a real fixed-height containing block to resolve against — inside
+     any ordinary `position: relative` wrapper with auto height (not just the page's own root),
+     `top: -100%` silently resolved to no offset at all, leaving the link sitting fully visible in
+     normal flow. `transform`'s percentages resolve against the element's OWN box instead, so this
+     always moves it exactly its own height off-screen regardless of the container. */
   position: absolute;
-  top: -100%;
+  top: 0;
   left: var(--rebar-space-sm, 8px);
   z-index: 2000;
   padding: var(--rebar-space-sm, 8px) var(--rebar-space-md, 16px);
@@ -6182,10 +6188,11 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   border-radius: var(--rebar-radius, 4px);
   font-size: var(--rebar-font-size-sm, 14px);
   text-decoration: none;
+  transform: translateY(-100%);
 }
 
 .rebar-skip-link:focus {
-  top: var(--rebar-space-sm, 8px);
+  transform: translateY(var(--rebar-space-sm, 8px));
 }
 
 /* WorkspaceSwitcher */
