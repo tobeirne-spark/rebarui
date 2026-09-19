@@ -23,4 +23,15 @@ describe("Switch", () => {
     render(<Switch aria-label="Dark mode" />);
     expect(screen.getByRole("switch")).toHaveAttribute("data-rebar-component", "switch");
   });
+
+  it("renders no thumb icon by default", () => {
+    const { container } = render(<Switch aria-label="Dark mode" />);
+    expect(container.querySelector('[data-rebar-part="thumb-icon"]')).not.toBeInTheDocument();
+  });
+
+  it("renders a caller-supplied thumb icon", () => {
+    const { container } = render(<Switch aria-label="Dark mode" thumbIcon={<span data-testid="moon" />} />);
+    expect(container.querySelector('[data-rebar-part="thumb-icon"]')).toBeInTheDocument();
+    expect(screen.getByTestId("moon")).toBeInTheDocument();
+  });
 });

@@ -73,6 +73,50 @@ describe("ThemeToggle", () => {
     expect(document.documentElement).not.toHaveAttribute("data-rebar-bionic");
   });
 
+  it("sections=['mode'] renders a direct icon-in-thumb switch with no popover trigger", async () => {
+    const user = userEvent.setup();
+    document.documentElement.removeAttribute("data-theme");
+    const { container } = render(<ThemeToggle sections={["mode"]} />);
+    expect(container.querySelector('[data-rebar-variant="mode-only"]')).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Theme" })).not.toBeInTheDocument();
+    expect(screen.getByText("Light Mode")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("switch", { name: "Dark mode" }));
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    expect(screen.getByText("Dark Mode")).toBeInTheDocument();
+  });
+
+  it("sections=['style'] renders a direct SegmentedControl with no popover trigger", async () => {
+    const user = userEvent.setup();
+    document.documentElement.removeAttribute("data-rebar-theme");
+    const { container } = render(<ThemeToggle sections={["style"]} />);
+    expect(container.querySelector('[data-rebar-variant="style-only"]')).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Theme" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "Simple" }));
+    expect(document.documentElement).toHaveAttribute("data-rebar-theme", "clean");
+  });
+
+  it("sections=['bionic'] renders a direct labeled switch with no popover trigger", async () => {
+    const user = userEvent.setup();
+    document.documentElement.removeAttribute("data-rebar-bionic");
+    const { container } = render(<ThemeToggle sections={["bionic"]} />);
+    expect(container.querySelector('[data-rebar-variant="bionic-only"]')).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Theme" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("switch", { name: "Bionic reading" }));
+    expect(document.documentElement).toHaveAttribute("data-rebar-bionic", "true");
+  });
+
+  it("sections=['style','bionic'] keeps the popover but hides Mode", async () => {
+    const user = userEvent.setup();
+    render(<ThemeToggle sections={["style", "bionic"]} />);
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    expect(screen.getByText("Style")).toBeInTheDocument();
+    expect(screen.getByText("Bionic reading")).toBeInTheDocument();
+    expect(screen.queryByText("Mode")).not.toBeInTheDocument();
+  });
+
   it("reflects whatever the host page already configured on mount, rather than assuming a default", () => {
     document.documentElement.setAttribute("data-rebar-theme", "clean");
     document.documentElement.setAttribute("data-theme", "dark");
