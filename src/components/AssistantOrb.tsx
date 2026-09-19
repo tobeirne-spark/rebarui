@@ -34,6 +34,31 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
     const centerY = size / 2;
     const baseRadius = size * 0.3;
 
+    // Parse color to RGB for canvas operations
+    const parseColor = (colorStr: string): { r: number; g: number; b: number } => {
+      // Handle hex colors
+      if (colorStr.startsWith("#")) {
+        const hex = colorStr.slice(1);
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return { r, g, b };
+      }
+      // Handle rgb/rgba
+      const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (match) {
+        return {
+          r: parseInt(match[1] ?? "0"),
+          g: parseInt(match[2] ?? "0"),
+          b: parseInt(match[3] ?? "0"),
+        };
+      }
+      // Default fallback
+      return { r: 0, g: 102, b: 204 };
+    };
+
+    const rgb = parseColor(color ?? "#0066cc");
+
     // Simplex-like noise function (simplified for performance)
     const noise = (x: number, y: number, t: number): number => {
       return Math.sin(x * 3 + t) * Math.cos(y * 3 + t * 0.7) * 0.5 +
@@ -76,7 +101,7 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
         const gradient = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.r);
         const alpha = 0.6 + Math.sin(t * 3 + i) * 0.2;
         gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-        gradient.addColorStop(0.5, color.replace(")", `, ${alpha * 0.6})`).replace("rgb", "rgba"));
+        gradient.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.6})`);
         gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 
         ctx.beginPath();
@@ -87,7 +112,7 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
 
       // Add glow effect
       const glowGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, baseRadius * 1.5);
-      glowGradient.addColorStop(0, color.replace(")", ", 0.3)").replace("rgb", "rgba"));
+      glowGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`);
       glowGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
       ctx.fillStyle = glowGradient;
       ctx.fillRect(0, 0, size, size);
