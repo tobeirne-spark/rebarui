@@ -593,6 +593,7 @@ export { FloatAssistant } from "./components/FloatAssistant";
 export type {
   FloatAssistantProps,
   FloatAssistantMessage,
+  FloatAssistantVoiceOption,
 } from "./components/FloatAssistant";
 
 export { AssistantOrb } from "./components/AssistantOrb";

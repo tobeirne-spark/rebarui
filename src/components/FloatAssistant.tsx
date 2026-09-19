@@ -12,6 +12,13 @@ export interface FloatAssistantMessage {
   timestamp: number;
 }
 
+export interface FloatAssistantVoiceOption {
+  id: string;
+  label: string;
+  /** Browser SpeechSynthesis voice name to match against, if using browser TTS. */
+  browserVoiceName?: string;
+}
+
 export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div">, "title"> {
   /** Assistant name displayed in the header. */
   name?: string;
@@ -48,6 +55,12 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   apiEndpoint?: string;
   /** Optional auth token for the API endpoint (e.g., session token). */
   apiAuthToken?: string;
+  /** Available voices for TTS. Pass a list to enable voice selection. */
+  voices?: FloatAssistantVoiceOption[];
+  /** Currently selected voice ID. */
+  voiceId?: string;
+  /** Callback when voice changes. */
+  onVoiceChange?: (voiceId: string) => void;
   className?: string;
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -83,6 +96,9 @@ export function FloatAssistant({
   minimizable = true,
   apiEndpoint,
   apiAuthToken,
+  voices,
+  voiceId,
+  onVoiceChange,
   className,
   bionic,
   bionicOptions,
@@ -104,6 +120,9 @@ export function FloatAssistant({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const animationFrameRef = useRef<number>(0);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const longPressThreshold = 500; // ms
+  const isLongPressRef = useRef(false);
 
   // Drag state
   const [dragState, setDragState] = useState<DragState>({
@@ -232,6 +251,76 @@ export function FloatAssistant({
     });
   }, [draggable, buttonPosition]);
 
+  const handleDragEnd = useCallback(() => {
+    setDragState((prev) => ({ ...prev, isDragging: false }));
+  }, []);
+
+  // Long press → speech mode (must be before handleDragMove which references cancelLongPressTimer)
+  const cancelLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = undefined;
+    }
+  }, []);
+
+  const startLongPressTimer = useCallback(() => {
+    isLongPressRef.current = false;
+    cancelLongPressTimer();
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      // Open panel, switch to voice mode, and speak greeting
+      setIsOpen(true);
+      setIsMinimized(false);
+      setInternalMode("voice");
+      onModeChange?.("voice");
+
+      // Speak the greeting using Web Speech API
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(
+          "You are connected to the Open Knowledge Graph, what would you like to know?"
+        );
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        // Try to match the selected voice
+        if (voiceId && voices) {
+          const selectedVoice = voices.find((v) => v.id === voiceId);
+          if (selectedVoice?.browserVoiceName) {
+            const browserVoices = window.speechSynthesis.getVoices();
+            const matchedVoice = browserVoices.find(
+              (v) => v.name === selectedVoice.browserVoiceName
+            );
+            if (matchedVoice) {
+              utterance.voice = matchedVoice;
+            }
+          }
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    }, longPressThreshold);
+  }, [onModeChange, cancelLongPressTimer, voiceId, voices]);
+
+  const handleOrbPointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    startLongPressTimer();
+    handleDragStart(e);
+  }, [startLongPressTimer, handleDragStart]);
+
+  const handleOrbPointerUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    cancelLongPressTimer();
+    handleDragEnd();
+
+    // If it was a long press, don't trigger click (open/close)
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+  }, [cancelLongPressTimer, handleDragEnd]);
+
   const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!dragState.isDragging) return;
     const clientX = "touches" in e ? e.touches[0]?.clientX ?? 0 : (e as MouseEvent).clientX;
@@ -242,6 +331,11 @@ export function FloatAssistant({
     const deltaY = clientY - dragState.startY;
     const velocityX = deltaTime > 0 ? (deltaX / deltaTime) * 16 : 0;
     const velocityY = deltaTime > 0 ? (deltaY / deltaTime) * 16 : 0;
+
+    // Cancel long press if user has moved significantly (it's a drag, not a long press)
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      cancelLongPressTimer();
+    }
 
     let newX = dragState.currentX + deltaX;
     let newY = dragState.currentY + deltaY;
@@ -263,11 +357,7 @@ export function FloatAssistant({
       lastMoveTime: now,
     }));
     setButtonPosition({ x: newX, y: newY });
-  }, [dragState]);
-
-  const handleDragEnd = useCallback(() => {
-    setDragState((prev) => ({ ...prev, isDragging: false }));
-  }, []);
+  }, [dragState, cancelLongPressTimer]);
 
   useEffect(() => {
     if (dragState.isDragging) {
@@ -470,15 +560,21 @@ export function FloatAssistant({
         aria-label={isOpen ? "Close assistant" : isMinimized ? "Expand assistant" : "Open assistant"}
         aria-expanded={isOpen}
         onClick={() => {
-          if (isMinimized) {
-            setIsMinimized(false);
-            setIsOpen(true);
-          } else {
-            setIsOpen(!isOpen);
+          // Only handle click if it wasn't a long press
+          if (!isLongPressRef.current) {
+            if (isMinimized) {
+              setIsMinimized(false);
+              setIsOpen(true);
+            } else {
+              setIsOpen(!isOpen);
+            }
           }
         }}
-        onMouseDown={handleDragStart}
-        onTouchStart={handleDragStart}
+        onMouseDown={handleOrbPointerDown}
+        onMouseUp={handleOrbPointerUp}
+        onMouseLeave={cancelLongPressTimer}
+        onTouchStart={handleOrbPointerDown}
+        onTouchEnd={handleOrbPointerUp}
         style={
           {
             ...buttonStyle,
