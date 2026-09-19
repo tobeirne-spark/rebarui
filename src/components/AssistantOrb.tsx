@@ -38,8 +38,8 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
     const parseColor = (colorStr: string): { r: number; g: number; b: number } => {
       // Handle CSS variables - resolve them
       if (colorStr.startsWith("var(")) {
-        // Extract fallback color from var(--name, fallback)
-        const match = colorStr.match(/var\([^,]+,\s*([^)]+)\)/);
+        // Extract first fallback color from var(--name, fallback1, fallback2, ...)
+        const match = colorStr.match(/var\([^,]+,\s*([^,)]+)/);
         if (match && match[1]) {
           return parseColor(match[1].trim());
         }
