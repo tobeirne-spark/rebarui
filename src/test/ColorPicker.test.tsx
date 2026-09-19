@@ -82,4 +82,56 @@ describe("ColorPicker", () => {
     await user.click(screen.getByRole("button", { name: /Pick a color/ }));
     expect(screen.getByLabelText("Custom color")).toBeInTheDocument();
   });
+
+  it("does not render an eyedropper button when the browser has no EyeDropper API, even with allowEyedropper", async () => {
+    const user = userEvent.setup();
+    render(<ColorPicker allowEyedropper />);
+    await user.click(screen.getByRole("button", { name: /Pick a color/ }));
+    expect(screen.queryByRole("button", { name: "Pick a color from the screen" })).not.toBeInTheDocument();
+  });
+
+  it("does not render an eyedropper button when allowEyedropper is unset, even if the browser supports it", async () => {
+    const user = userEvent.setup();
+    window.EyeDropper = class {
+      open() {
+        return Promise.resolve({ sRGBHex: "#abcdef" });
+      }
+    };
+    render(<ColorPicker />);
+    await user.click(screen.getByRole("button", { name: /Pick a color/ }));
+    expect(screen.queryByRole("button", { name: "Pick a color from the screen" })).not.toBeInTheDocument();
+    delete window.EyeDropper;
+  });
+
+  it("renders and uses the eyedropper when both allowEyedropper is set and the browser supports it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    window.EyeDropper = class {
+      open() {
+        return Promise.resolve({ sRGBHex: "#abcdef" });
+      }
+    };
+    render(<ColorPicker allowEyedropper onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: /Pick a color/ }));
+    await user.click(screen.getByRole("button", { name: "Pick a color from the screen" }));
+    expect(onChange).toHaveBeenCalledWith("#abcdef");
+    delete window.EyeDropper;
+  });
+
+  it("does not throw when the eyedropper pick is cancelled (AbortError)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    window.EyeDropper = class {
+      open() {
+        return Promise.reject(new DOMException("The user aborted a request.", "AbortError"));
+      }
+    };
+    render(<ColorPicker allowEyedropper onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: /Pick a color/ }));
+    await expect(
+      user.click(screen.getByRole("button", { name: "Pick a color from the screen" })),
+    ).resolves.not.toThrow();
+    expect(onChange).not.toHaveBeenCalled();
+    delete window.EyeDropper;
+  });
 });

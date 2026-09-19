@@ -1,6 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Popover } from "./Popover";
+
+// The EyeDropper API (Chromium-based browsers only, as of this writing) isn't in TypeScript's
+// bundled DOM lib yet — this is the minimal real shape (per the spec / MDN), not a guess: `open()`
+// resolves with the picked color as a hex string, or rejects (AbortError) if the user cancels.
+interface EyeDropperResult {
+  sRGBHex: string;
+}
+interface EyeDropperInstance {
+  open: (options?: { signal?: AbortSignal }) => Promise<EyeDropperResult>;
+}
+declare global {
+  interface Window {
+    EyeDropper?: new () => EyeDropperInstance;
+  }
+}
 
 export interface ColorPickerProps {
   value?: string;
@@ -20,6 +35,11 @@ export interface ColorPickerProps {
    * anything's actually been picked yet. The native color input is still offered in both modes for
    * anything not in the shown set. */
   mode?: "recent" | "full";
+  /** Adds an eyedropper button to the popover, using the real browser `EyeDropper` API to sample
+   * any pixel on the screen — not just this page's own DOM — as the new color. Only rendered when
+   * the browser actually supports it (Chromium-based browsers, as of this writing; Firefox/Safari
+   * do not): feature-detected at mount, never assumed. Off by default. */
+  allowEyedropper?: boolean;
   "aria-label"?: string;
   disabled?: boolean;
   className?: string;
@@ -62,12 +82,20 @@ export function ColorPicker({
   presets = DEFAULT_PRESETS,
   size = "md",
   mode = "full",
+  allowEyedropper,
   "aria-label": ariaLabel = "Pick a color",
   disabled,
   className,
 }: ColorPickerProps) {
   const [internalValue, setInternalValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
+  // Feature-detected client-side only — `window.EyeDropper` doesn't exist during SSR, and
+  // checking at render time (rather than assuming) avoids ever showing a button that throws on
+  // click in an unsupported browser.
+  const [eyedropperSupported, setEyedropperSupported] = useState(false);
+  useEffect(() => {
+    setEyedropperSupported(typeof window !== "undefined" && "EyeDropper" in window);
+  }, []);
   // Seeded from `presets` alone (not `defaultValue`) — a caller's `defaultValue` need not itself
   // be one of `presets` (it defaults to `DEFAULT_PRESETS[0]`, unrelated to a caller-supplied custom
   // `presets` array), and forcing it into the initial "recent" list would silently push out one of
@@ -83,6 +111,18 @@ export function ColorPicker({
   };
 
   const shownSwatches = mode === "recent" ? recentColors : presets;
+
+  const handleEyedropper = async () => {
+    if (!window.EyeDropper) return;
+    try {
+      const result = await new window.EyeDropper().open();
+      setColor(result.sRGBHex);
+      setOpen(false);
+    } catch {
+      // The user pressed Escape or clicked away mid-pick (AbortError) — not a real failure,
+      // nothing to recover from.
+    }
+  };
 
   return (
     <Popover
@@ -122,13 +162,34 @@ export function ColorPicker({
           />
         ))}
       </div>
-      <input
-        type="color"
-        className="rebar-color-picker-native"
-        aria-label="Custom color"
-        value={current}
-        onChange={(e) => setColor(e.target.value)}
-      />
+      <div className="rebar-color-picker-footer" data-rebar-part="footer">
+        <input
+          type="color"
+          className="rebar-color-picker-native"
+          aria-label="Custom color"
+          value={current}
+          onChange={(e) => setColor(e.target.value)}
+        />
+        {allowEyedropper && eyedropperSupported ? (
+          <button
+            type="button"
+            className="rebar-color-picker-eyedropper"
+            data-rebar-part="eyedropper"
+            aria-label="Pick a color from the screen"
+            onClick={handleEyedropper}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+              <path
+                d="M18.5 2.5a2.7 2.7 0 0 1 0 3.8l-1.9 1.9 1.1 1.1-1.4 1.4-1.1-1.1-7.6 7.6-3 1 1-3 7.6-7.6-1.1-1.1 1.4-1.4 1.1 1.1 1.9-1.9a2.7 2.7 0 0 1 3.8 0Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        ) : null}
+      </div>
     </Popover>
   );
 }

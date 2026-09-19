@@ -2532,6 +2532,35 @@ body {
   cursor: pointer;
 }
 
+.rebar-color-picker-footer {
+  display: flex;
+  gap: var(--rebar-space-xs, 4px);
+}
+
+.rebar-color-picker-footer .rebar-color-picker-native {
+  flex: 1;
+}
+
+.rebar-color-picker-eyedropper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  background: none;
+  color: var(--rebar-color-text-secondary, #757575);
+  cursor: pointer;
+}
+
+.rebar-color-picker-eyedropper:hover {
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  color: var(--rebar-color-text-primary, #212121);
+}
+
 /* Combobox */
 .rebar-combobox {
   position: relative;
