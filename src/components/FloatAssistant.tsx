@@ -177,6 +177,10 @@ export function FloatAssistant({
             finalVelocityY = -Math.abs(newVelocityY) * bounce;
           }
 
+          // Hard clamp when velocity dies
+          newX = Math.max(0, Math.min(maxX, newX));
+          newY = Math.max(0, Math.min(maxY, newY));
+
           if (Math.abs(finalVelocityX) < 0.5 && Math.abs(finalVelocityY) < 0.5) {
             setButtonPosition({ x: newX, y: newY });
             return { ...prev, velocityX: 0, velocityY: 0, currentX: newX, currentY: newY };
@@ -239,17 +243,26 @@ export function FloatAssistant({
     const velocityX = deltaTime > 0 ? (deltaX / deltaTime) * 16 : 0;
     const velocityY = deltaTime > 0 ? (deltaY / deltaTime) * 16 : 0;
 
+    let newX = dragState.currentX + deltaX;
+    let newY = dragState.currentY + deltaY;
+
+    // Clamp to viewport during drag
+    const maxX = window.innerWidth - 56;
+    const maxY = window.innerHeight - 56;
+    newX = Math.max(0, Math.min(maxX, newX));
+    newY = Math.max(0, Math.min(maxY, newY));
+
     setDragState((prev) => ({
       ...prev,
-      currentX: prev.currentX + deltaX,
-      currentY: prev.currentY + deltaY,
+      currentX: newX,
+      currentY: newY,
       startX: clientX,
       startY: clientY,
       velocityX,
       velocityY,
       lastMoveTime: now,
     }));
-    setButtonPosition({ x: dragState.currentX + deltaX, y: dragState.currentY + deltaY });
+    setButtonPosition({ x: newX, y: newY });
   }, [dragState]);
 
   const handleDragEnd = useCallback(() => {
