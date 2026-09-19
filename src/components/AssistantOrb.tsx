@@ -40,7 +40,7 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
       if (colorStr.startsWith("var(")) {
         // Extract fallback color from var(--name, fallback)
         const match = colorStr.match(/var\([^,]+,\s*([^)]+)\)/);
-        if (match) {
+        if (match && match[1]) {
           return parseColor(match[1].trim());
         }
         return { r: 0, g: 102, b: 204 }; // Default fallback
