@@ -3,7 +3,9 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
+import { AiAgentIcon } from "./icons-remix";
 
 export interface FloatAssistantMessage {
   id: string;
@@ -30,6 +32,14 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   /** Accent color for the assistant. */
   accentColor?: string;
+  /**
+   * Renders the trigger button's orb as one of the tuned WebGL personas
+   * (`packages/core/src/orb-personas/*.md`: Spark, Strato, Chorus) instead of the lightweight
+   * default 2D-canvas animation. Only the trigger button uses the orb at all — message avatars
+   * and the typing indicator use a static `AiAgentIcon` instead, since animating a full orb per
+   * chat message was distracting and wasteful compute for repeated small instances.
+   */
+  persona?: OrbPersonaId;
   /** Callback when user sends a message. */
   onSendMessage?: (message: string) => void;
   /** Callback when voice recording starts/stops. */
@@ -89,6 +99,7 @@ export function FloatAssistant({
   greeting = "Hi! How can I help you today?",
   position = "bottom-right",
   accentColor = "var(--rebar-color-primary, #0066cc)",
+  persona,
   onSendMessage,
   onVoiceRecord,
   voiceEnabled = true,
@@ -141,6 +152,12 @@ export function FloatAssistant({
   const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number } | null>(null);
 
   const mode = controlledMode ?? internalMode;
+
+  // Only the trigger button's orb reflects live interaction state — recording maps to
+  // "listening", an in-flight reply maps to "thinking", everything else is "idle". There's no
+  // "speaking" signal to derive yet (no TTS-playback state tracked here); a future voice-output
+  // feature should set it once one exists, rather than this guessing at it now.
+  const orbState: OrbInteractionState = isRecording ? "listening" : isTyping ? "thinking" : "idle";
 
   const positionStyles = {
     "bottom-right": { bottom: 24, right: 24 },
@@ -624,6 +641,8 @@ export function FloatAssistant({
             size={56}
             color={accentColor}
             isActive={isOpen || isRecording}
+            persona={persona}
+            state={orbState}
             className="rebar-float-assistant-orb-canvas"
           />
         )}
@@ -724,12 +743,7 @@ export function FloatAssistant({
               >
                 {msg.role === "assistant" && (
                   <div className="rebar-float-assistant-message-avatar">
-                    <AssistantOrb
-                      size={28}
-                      color={accentColor}
-                      isActive={false}
-                      className="rebar-float-assistant-message-orb-canvas"
-                    />
+                    <AiAgentIcon size={16} style={{ color: "#fff" }} />
                   </div>
                 )}
                 <div className="rebar-float-assistant-message-content">
@@ -743,12 +757,7 @@ export function FloatAssistant({
             {isTyping && (
               <div className="rebar-float-assistant-message rebar-float-assistant-message-assistant">
                 <div className="rebar-float-assistant-message-avatar">
-                  <AssistantOrb
-                    size={28}
-                    color={accentColor}
-                    isActive={true}
-                    className="rebar-float-assistant-message-orb-canvas"
-                  />
+                  <AiAgentIcon size={16} style={{ color: "#fff" }} />
                 </div>
                 <div className="rebar-float-assistant-message-content">
                   <div className="rebar-float-assistant-typing-indicator">

@@ -6594,7 +6594,12 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  position: relative;
+  /* The button itself (not just its `position: fixed` wrapper div, which is never given inset
+     values) is what actually carries the JS-computed bottom/right (or dragged left/top) inline
+     style — with `position: relative` here, those inset values only ever nudged the button from
+     its normal in-flow position instead of anchoring it to a viewport corner, so on any real
+     content page (not an isolated demo) the trigger appeared wherever it fell in document flow. */
+  position: fixed;
   overflow: visible;
 }
 
@@ -6607,61 +6612,9 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   transform: scale(0.95);
 }
 
-.rebar-float-assistant-icon {
-  position: relative;
-  z-index: 2;
-}
-
-/* Orb Animation */
-.rebar-float-assistant-orb {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rebar-float-assistant-orb-core {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  animation: rebar-float-assistant-pulse 2s ease-in-out infinite;
-}
-
-.rebar-float-assistant-orb-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  animation: rebar-float-assistant-ring-expand 2s ease-out infinite;
-}
-
-.rebar-float-assistant-orb-ring-1 {
-  width: 32px;
-  height: 32px;
-  animation-delay: 0s;
-}
-
-.rebar-float-assistant-orb-ring-2 {
-  width: 40px;
-  height: 40px;
-  animation-delay: 0.4s;
-}
-
-.rebar-float-assistant-orb-ring-3 {
-  width: 48px;
-  height: 48px;
-  animation-delay: 0.8s;
-}
-
 @keyframes rebar-float-assistant-pulse {
   0%, 100% { transform: scale(1); opacity: 0.9; }
   50% { transform: scale(1.1); opacity: 1; }
-}
-
-@keyframes rebar-float-assistant-ring-expand {
-  0% { transform: scale(0.8); opacity: 0.8; }
-  100% { transform: scale(1.5); opacity: 0; }
 }
 
 /* Panel */
@@ -7090,14 +7043,4 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
-}
-
-.rebar-float-assistant-button {
-  position: relative;
-  overflow: visible;
-}
-
-.rebar-float-assistant-message-orb-canvas {
-  width: 28px;
-  height: 28px;
 }

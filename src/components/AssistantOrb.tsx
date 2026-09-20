@@ -1,10 +1,108 @@
 import { useEffect, useRef } from "react";
+import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas";
+import { ORB_PERSONAS, resolveOrbPersonaState } from "../orb-personas/personas";
+import type { OrbRendererHandle } from "../orb-shader/createOrbRenderer";
 
 export interface AssistantOrbProps {
   size?: number;
   color?: string;
   isActive?: boolean;
   className?: string;
+  /**
+   * Renders one of the tuned WebGL orb personas (`packages/core/src/orb-personas/*.md`) instead
+   * of the lightweight 2D-canvas fallback below. This dynamically imports `three` — only paid for
+   * by consumers who actually set a persona — so keep this to a single, prominent instance (e.g.
+   * the trigger button), not one per chat message; each instance runs its own WebGL context and
+   * render loop.
+   */
+  persona?: OrbPersonaId;
+  /** Which of the persona's tuned interaction states to target. Ignored without `persona`. */
+  state?: OrbInteractionState;
+}
+
+/**
+ * The assistant's orb visual. Defaults to a cheap 2D-canvas metaball animation; pass `persona` to
+ * render one of the real tuned WebGL shaders instead (see `PersonaOrb` below).
+ */
+export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, className, persona, state = "idle" }: AssistantOrbProps) {
+  if (persona) {
+    return <PersonaOrb size={size} className={className} persona={persona} state={state} />;
+  }
+  return <ClassicOrb size={size} color={color} isActive={isActive} className={className} />;
+}
+
+/**
+ * The real tuned shader, loaded lazily. `createOrbRenderer` is the only module under
+ * `orb-shader/` that imports `three` — dynamically importing it here (rather than a static
+ * top-level import) keeps `three` out of the bundle for every consumer that never sets a
+ * `persona`, per this component's own doc comment.
+ */
+function PersonaOrb({
+  size,
+  className,
+  persona,
+  state,
+}: {
+  size: number;
+  className?: string;
+  persona: OrbPersonaId;
+  state: OrbInteractionState;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<OrbRendererHandle | null>(null);
+  // `state` can change while the dynamic import below is still in flight; the creation effect
+  // reads this ref (not the `state` value closed over when it started) so the very first frame
+  // reflects whatever's current by the time `three` finishes loading, not what was current when
+  // loading began.
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // Persona changes (not just state changes) need a full rebuild — different personas can use
+  // different shader variants (Spark/Strato are the hollow-shell Solid Orb, Chorus is the
+  // metaball Flow Orb), which are different compiled shader programs.
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    let cancelled = false;
+    const personaDef = ORB_PERSONAS[persona];
+
+    import("../orb-shader/createOrbRenderer")
+      .then(({ createOrbRenderer }) => {
+        if (cancelled || !canvasRef.current) return;
+        try {
+          const renderer = createOrbRenderer(
+            canvasRef.current,
+            personaDef.variant,
+            resolveOrbPersonaState(personaDef, stateRef.current),
+          );
+          renderer.setParams(resolveOrbPersonaState(personaDef, stateRef.current), { smooth: false });
+          rendererRef.current = renderer;
+        } catch {
+          // WebGL unavailable or context creation failed — this is a decorative element, not
+          // critical UI, so leave the canvas blank rather than crash the assistant.
+        }
+      })
+      .catch(() => {
+        // Dynamic import itself failed (e.g. offline on first load with no cache) — same
+        // graceful-degradation stance as a WebGL failure above.
+      });
+
+    return () => {
+      cancelled = true;
+      rendererRef.current?.dispose();
+      rendererRef.current = null;
+    };
+  }, [persona]);
+
+  // Interpolate between states with exponential smoothing, never snap — per each persona doc's
+  // own "State targets" section.
+  useEffect(() => {
+    const personaDef = ORB_PERSONAS[persona];
+    rendererRef.current?.setParams(resolveOrbPersonaState(personaDef, state), { smooth: true });
+  }, [persona, state]);
+
+  return <canvas ref={canvasRef} className={className} style={{ width: size, height: size }} aria-hidden="true" />;
 }
 
 /**
@@ -12,7 +110,7 @@ export interface AssistantOrbProps {
  * Uses metaball rendering with noise-based displacement for an organic,
  * living feel. Much more polished than CSS-only animations.
  */
-export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, className }: AssistantOrbProps) {
+function ClassicOrb({ size = 56, color = "#0066cc", isActive = false, className }: Omit<AssistantOrbProps, "persona" | "state">) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const timeRef = useRef(0);
@@ -94,7 +192,7 @@ export function AssistantOrb({ size = 56, color = "#0066cc", isActive = false, c
         const angle = (i / numBlobs) * Math.PI * 2 + t * 0.5;
         const distance = baseRadius * 0.6 * activity;
         const noiseOffset = noise(Math.cos(angle), Math.sin(angle), t) * 8;
-        
+
         blobs.push({
           x: centerX + Math.cos(angle) * (distance + noiseOffset),
           y: centerY + Math.sin(angle) * (distance + noiseOffset),

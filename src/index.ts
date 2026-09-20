@@ -599,6 +599,12 @@ export type {
 export { AssistantOrb } from "./components/AssistantOrb";
 export type { AssistantOrbProps } from "./components/AssistantOrb";
 
+// Pure data/types, zero `three` dependency (only `orb-shader/createOrbRenderer.ts` — reached via
+// AssistantOrb's own dynamic import, never through this barrel — touches `three`) — safe to
+// export from the main entry with no bundle-size cost for consumers who never render a persona.
+export { ORB_PERSONAS, ORB_PERSONA_IDS, resolveOrbPersonaState } from "./orb-personas/personas";
+export type { OrbPersona, OrbPersonaId, OrbInteractionState } from "./orb-personas/personas";
+
 export { ErrorBlock } from "./components/ErrorBlock";
 export type { ErrorBlockProps, ErrorBlockStatus } from "./components/ErrorBlock";
 
