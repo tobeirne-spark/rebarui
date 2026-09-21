@@ -6741,6 +6741,30 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   color: #ffffff;
 }
 
+.rebar-float-assistant-screenshot-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--rebar-color-border, #e0e0e0);
+  background: var(--rebar-color-bg-primary, #ffffff);
+  color: var(--rebar-color-text-secondary, #757575);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.rebar-float-assistant-screenshot-btn:hover:not(:disabled) {
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  color: var(--rebar-color-text-primary, #212121);
+}
+
+.rebar-float-assistant-screenshot-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 /* Messages */
 .rebar-float-assistant-messages {
   flex: 1;

@@ -595,6 +595,10 @@ export type {
   FloatAssistantMessage,
   FloatAssistantVoiceOption,
 } from "./components/FloatAssistant";
+export {
+  DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS,
+  DEFAULT_SCREENSHOT_ACKNOWLEDGMENT,
+} from "./components/FloatAssistant.constants";
 
 export { AssistantOrb } from "./components/AssistantOrb";
 export { VoiceInputBar } from "./components/VoiceInputBar";

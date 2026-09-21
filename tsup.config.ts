@@ -13,11 +13,11 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   // `three` (and its postprocessing subpath imports, used only by orb-shader/createOrbRenderer.ts)
-  // stay external rather than bundled: AssistantOrb's persona rendering dynamically imports that
-  // module specifically so consumers who never use `persona` never pay for `three`'s ~600KB.
-  // Bundling it into dist/index.js here would silently defeat that regardless of the dynamic
-  // import — the consuming app's own bundler needs to see the real `import("three/...")` calls to
-  // code-split them.
+  // and `html2canvas` (used only by FloatAssistant's screenshot capture) stay external rather than
+  // bundled: both are dynamically imported specifically so consumers who never use that one
+  // feature never pay for the dependency. Bundling either into dist/index.js here would silently
+  // defeat that regardless of the dynamic import — the consuming app's own bundler needs to see
+  // the real `import("...")` calls to code-split them.
   external: [
     "react",
     "react-dom",
@@ -26,6 +26,7 @@ export default defineConfig({
     "three/examples/jsm/postprocessing/RenderPass.js",
     "three/examples/jsm/postprocessing/UnrealBloomPass.js",
     "three/examples/jsm/postprocessing/OutputPass.js",
+    "html2canvas",
   ],
   publicDir: "src/styles",
   banner: {

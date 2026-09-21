@@ -7,7 +7,9 @@ import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas
 import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
 import { VoiceInputBar } from "./VoiceInputBar";
-import { AddIcon, AiAgentIcon } from "./icons-remix";
+import { Spin } from "./Spin";
+import { AddIcon, AiAgentIcon, ScreenshotIcon } from "./icons-remix";
+import { DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS, DEFAULT_SCREENSHOT_ACKNOWLEDGMENT } from "./FloatAssistant.constants";
 
 export interface FloatAssistantMessage {
   id: string;
@@ -15,19 +17,6 @@ export interface FloatAssistantMessage {
   content: string;
   timestamp: number;
 }
-
-/**
- * Spoken on long-press (voice mode activation) when `voiceGreetings` isn't supplied — deliberately
- * generic/unbranded, since this is the construct's own built-in default for real usage, not a
- * demo string. The docs site's own live demo passes its own branded set instead of relying on this.
- */
-export const DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS: string[] = [
-  "Hi there! I'm listening — what can I help you with?",
-  "Go ahead, I'm all ears.",
-  "You've got my attention. What would you like to know?",
-  "I'm ready when you are.",
-  "Listening now — ask me anything.",
-];
 
 export interface FloatAssistantVoiceOption {
   id: string;
@@ -69,13 +58,44 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
    * active persona's own label (e.g. "Strato"). Ignored when `persona` isn't set.
    */
   personaLabel?: string;
-  /** Callback when user sends a message. */
-  onSendMessage?: (message: string) => void;
+  /** Callback when user sends a message. `screenshot` (a data URL) is set when a screenshot was
+   * captured since the last message (see `screenshotEnabled`); `pageContext` is the harvested key
+   * terms from that same capture, only present when `contextAware` is also on. */
+  onSendMessage?: (message: string, screenshot?: string, pageContext?: string[]) => void;
   /** Callback when voice recording starts/stops. */
   onVoiceRecord?: (recording: boolean) => void;
   /** The "+" button inside the text-input field. Omitted entirely (no button rendered) unless a
    * handler is passed — same "no dead control" stance as `VoiceInputBar`'s own camera button. */
   onAttachmentPress?: () => void;
+  /** Shows a screenshot button in the panel header. Default true. */
+  screenshotEnabled?: boolean;
+  /**
+   * Overrides how the screenshot is actually captured. The built-in default dynamically imports
+   * `html2canvas` and renders the page's DOM into a canvas — no permission prompt, but it's an
+   * approximation: it cannot see into cross-origin `<iframe>`s at all (a Power BI/Tableau/etc.
+   * embed renders as a blank gap, not the report — a hard browser security boundary, not a bug),
+   * and canvas/WebGL content elsewhere on the page may not capture correctly either. For real
+   * pixel-perfect capture of that kind of content, provide a real screen-capture implementation
+   * here instead (e.g. via `navigator.mediaDevices.getDisplayMedia`), accepting that browsers
+   * require a native permission picker for that on every call. Must resolve to a data URL.
+   */
+  onCaptureScreenshot?: () => Promise<string>;
+  /** The assistant message shown immediately after a successful capture — not a visible
+   * attachment/thumbnail in the transcript, just an acknowledgment that sets up context for
+   * whatever the user asks next; the actual image data rides along on the *next* `onSendMessage`/
+   * `apiEndpoint` call instead. */
+  screenshotAcknowledgment?: string;
+  /**
+   * When capturing a screenshot, also procedurally harvest a bounded list of key terms from the
+   * page (title, heading text, visible button/link labels) — pure DOM reading, no LLM call, kept
+   * deliberately small specifically to be cheap in tokens once it reaches a real model. Neither
+   * the screenshot nor the harvested terms are sent to any third-party vision/AI service directly
+   * from here (this construct never embeds real API keys client-side, same stance as
+   * `apiEndpoint` above) — both just ride along on the *next* `onSendMessage`/`apiEndpoint` call,
+   * for the developer's own server-side endpoint to do whatever real image/vision analysis it
+   * wants with them. Default false.
+   */
+  contextAware?: boolean;
   /** Whether voice mode is enabled. */
   voiceEnabled?: boolean;
   /** Current interaction mode. */
@@ -139,6 +159,10 @@ export function FloatAssistant({
   onSendMessage,
   onVoiceRecord,
   onAttachmentPress,
+  screenshotEnabled = true,
+  onCaptureScreenshot,
+  screenshotAcknowledgment = DEFAULT_SCREENSHOT_ACKNOWLEDGMENT,
+  contextAware = false,
   voiceEnabled = true,
   mode: controlledMode,
   onModeChange,
@@ -168,9 +192,18 @@ export function FloatAssistant({
   const [inputValue, setInputValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  // Holds the most recently captured screenshot until the *next* message send, at which point
+  // it rides along on that call and is cleared — not rendered as a visible attachment/thumbnail
+  // itself (see `screenshotAcknowledgment`'s own doc comment).
+  const pendingScreenshotRef = useRef<string | null>(null);
+  // Same "rides along on the next send" lifecycle as pendingScreenshotRef, only populated when
+  // `contextAware` is on.
+  const pendingPageContextRef = useRef<string[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>(0);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressThreshold = 500; // ms
@@ -542,8 +575,12 @@ export function FloatAssistant({
     };
     setMessages((prev) => [...prev, userMessage]);
     const userText = inputValue.trim();
+    const screenshot = pendingScreenshotRef.current ?? undefined;
+    const pageContext = pendingPageContextRef.current ?? undefined;
+    pendingScreenshotRef.current = null;
+    pendingPageContextRef.current = null;
     setInputValue("");
-    onSendMessage?.(userText);
+    onSendMessage?.(userText, screenshot, pageContext);
     setIsTyping(true);
 
     // Call the server-side proxy endpoint
@@ -559,6 +596,8 @@ export function FloatAssistant({
             body: JSON.stringify({
               message: userText,
               history: messages.map((m) => ({ role: m.role, content: m.content })),
+              ...(screenshot ? { screenshot } : {}),
+              ...(pageContext ? { pageContext } : {}),
             }),
           });
           if (!response.ok) {
@@ -609,6 +648,73 @@ export function FloatAssistant({
     },
     [handleSend],
   );
+
+  // Purely procedural — a bounded DOM read, zero LLM calls, deliberately small (60 terms, each
+  // capped in length) specifically to stay cheap once this reaches a real model. Skips anything
+  // inside the assistant's own root, same as the screenshot capture itself.
+  const harvestPageKeyTerms = useCallback((): string[] => {
+    if (typeof document === "undefined") return [];
+    const terms = new Set<string>();
+    const add = (text: string | null | undefined) => {
+      const trimmed = text?.trim().replace(/\s+/g, " ");
+      if (trimmed && trimmed.length > 1 && trimmed.length < 80) terms.add(trimmed);
+    };
+    add(document.title);
+    document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => {
+      if (rootRef.current?.contains(el)) return;
+      add(el.textContent);
+    });
+    document.querySelectorAll("button, a[href], [role='button']").forEach((el) => {
+      if (rootRef.current?.contains(el)) return;
+      add(el.getAttribute("aria-label") || el.textContent);
+    });
+    return Array.from(terms).slice(0, 60);
+  }, []);
+
+  const captureScreenshot = useCallback(async () => {
+    if (isCapturingScreenshot) return;
+    setIsCapturingScreenshot(true);
+    try {
+      let dataUrl: string;
+      if (onCaptureScreenshot) {
+        dataUrl = await onCaptureScreenshot();
+      } else {
+        // Dynamically imported — consumers who never enable/use the screenshot button never pay
+        // for html2canvas, the same "lazy-loaded, external in the build" pattern as the orb-
+        // persona shader's own `three` dependency (see orb-shader/createOrbRenderer.ts).
+        const { default: html2canvas } = await import("html2canvas");
+        const canvas = await html2canvas(document.body, {
+          // Never capture the assistant's own button/panel — this is a screenshot of the rest of
+          // the page, not of itself.
+          ignoreElements: (el) => rootRef.current?.contains(el) ?? false,
+        });
+        dataUrl = canvas.toDataURL("image/png");
+      }
+      pendingScreenshotRef.current = dataUrl;
+      if (contextAware) {
+        pendingPageContextRef.current = harvestPageKeyTerms();
+      }
+      const ackMessage: FloatAssistantMessage = {
+        id: `screenshot-${Date.now()}`,
+        role: "assistant",
+        content: screenshotAcknowledgment,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, ackMessage]);
+    } catch {
+      // A real failure (e.g. a tainted/cross-origin canvas somewhere on the page), not a
+      // scenario to silently swallow — say so rather than falsely implying it saw the screen.
+      const errorMessage: FloatAssistantMessage = {
+        id: `screenshot-error-${Date.now()}`,
+        role: "assistant",
+        content: "Sorry, I couldn't capture the screen just now.",
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsCapturingScreenshot(false);
+    }
+  }, [isCapturingScreenshot, onCaptureScreenshot, screenshotAcknowledgment, contextAware, harvestPageKeyTerms]);
 
   const toggleRecording = useCallback(() => {
     const newRecording = !isRecording;
@@ -756,6 +862,7 @@ export function FloatAssistant({
 
   return (
     <div
+      ref={rootRef}
       className={clsx("rebar-float-assistant", className)}
       data-rebar-component="float-assistant"
       style={{ position: "fixed", zIndex: 1500, pointerEvents: "none" }}
@@ -869,6 +976,19 @@ export function FloatAssistant({
               </div>
             </div>
             <div className="rebar-float-assistant-header-actions">
+              {screenshotEnabled && (
+                <button
+                  type="button"
+                  className="rebar-float-assistant-screenshot-btn"
+                  onClick={captureScreenshot}
+                  disabled={isCapturingScreenshot}
+                  aria-label={isCapturingScreenshot ? "Capturing screenshot…" : "Capture a screenshot of the page"}
+                  title="Capture a screenshot of the page"
+                  data-rebar-part="screenshot-button"
+                >
+                  {isCapturingScreenshot ? <Spin size="sm" /> : <ScreenshotIcon size={16} />}
+                </button>
+              )}
               {voiceEnabled && (
                 <button
                   type="button"
