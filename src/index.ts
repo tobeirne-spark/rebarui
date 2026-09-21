@@ -597,6 +597,8 @@ export type {
 } from "./components/FloatAssistant";
 
 export { AssistantOrb } from "./components/AssistantOrb";
+export { VoiceInputBar } from "./components/VoiceInputBar";
+export type { VoiceInputBarProps, VoiceInputBarState } from "./components/VoiceInputBar";
 export type { AssistantOrbProps } from "./components/AssistantOrb";
 
 // Pure data/types, zero `three` dependency (only `orb-shader/createOrbRenderer.ts` — reached via

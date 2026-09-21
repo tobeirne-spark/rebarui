@@ -6,6 +6,7 @@ import type { BionicOptions } from "../bionic";
 import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas";
 import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
+import { VoiceInputBar } from "./VoiceInputBar";
 import { AiAgentIcon } from "./icons-remix";
 
 export interface FloatAssistantMessage {
@@ -919,32 +920,13 @@ export function FloatAssistant({
                 </button>
               </div>
             ) : (
-              <div className="rebar-float-assistant-voice-input">
-                <button
-                  type="button"
-                  className={clsx("rebar-float-assistant-voice-btn", isRecording && "rebar-float-assistant-voice-btn-recording")}
-                  onClick={toggleRecording}
-                  aria-label={isRecording ? "Stop recording" : "Start recording"}
-                >
-                  {isRecording ? (
-                    <div className="rebar-float-assistant-voice-waves">
-                      <span className="rebar-float-assistant-voice-wave" />
-                      <span className="rebar-float-assistant-voice-wave" />
-                      <span className="rebar-float-assistant-voice-wave" />
-                      <span className="rebar-float-assistant-voice-wave" />
-                      <span className="rebar-float-assistant-voice-wave" />
-                    </div>
-                  ) : (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
-                      <line x1="12" y1="19" x2="12" y2="23" />
-                      <line x1="8" y1="23" x2="16" y2="23" />
-                    </svg>
-                  )}
-                </button>
-                {isRecording && <div className="rebar-float-assistant-recording-label">Listening...</div>}
-              </div>
+              <VoiceInputBar
+                state={isRecording ? "listening" : isTyping ? "processing" : "idle"}
+                onMicPress={toggleRecording}
+                onKeyboardToggle={toggleMode}
+                showCamera={false}
+                seed={name}
+              />
             )}
           </div>
 
