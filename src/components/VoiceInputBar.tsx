@@ -27,6 +27,11 @@ export interface VoiceInputBarProps extends Omit<ComponentPropsWithoutRef<"div">
   showKeyboardToggle?: boolean;
   /** Show the camera button. Default true. */
   showCamera?: boolean;
+  /** Glow/waveform/mic-button color. Defaults to the library's own `--rebar-color-primary` (blue
+   * in the default theme) — same convention as `FloatAssistant`'s own `accentColor`, which is
+   * exactly what it passes down when it renders this as its voice-mode input, so the two stay in
+   * sync without the caller having to set it twice. */
+  accentColor?: string;
   /** Overrides the default per-state status line ("Listening…"/"Speaking…"/"Processing…", blank
    * while idle). */
   statusText?: string;
@@ -93,6 +98,7 @@ export function VoiceInputBar({
   onCameraPress,
   showKeyboardToggle = true,
   showCamera = true,
+  accentColor = "var(--rebar-color-primary, #0066cc)",
   statusText,
   barCount = 32,
   seed = "voice-input-bar",
@@ -108,10 +114,11 @@ export function VoiceInputBar({
 
   return (
     <div
+      {...props}
       className={clsx("rebar-voice-input-bar", className)}
       data-rebar-component="voice-input-bar"
       data-rebar-state={state}
-      {...props}
+      style={{ ...props.style, "--voice-glow": accentColor } as React.CSSProperties}
     >
       <div className="rebar-voice-input-bar-waveform" data-rebar-part="waveform" aria-hidden="true">
         {bars.map((bar, i) => (

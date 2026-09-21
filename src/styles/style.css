@@ -6663,8 +6663,10 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 }
 
 .rebar-float-assistant-avatar {
-  width: 36px;
-  height: 36px;
+  /* Matches DOCKED_BUTTON_SIZE in FloatAssistant.tsx — this is the reserved layout space the real
+     docked trigger button visually sits on top of, so the two sizes must stay in sync. */
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--assistant-accent, var(--rebar-color-primary, #0066cc));
   display: flex;
@@ -6856,6 +6858,13 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   align-items: center;
 }
 
+.rebar-float-assistant-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
 .rebar-float-assistant-input-field {
   flex: 1;
   height: 40px;
@@ -6869,8 +6878,32 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   transition: border-color 0.15s ease;
 }
 
+.rebar-float-assistant-input-field-with-attachment {
+  padding-right: 40px;
+}
+
 .rebar-float-assistant-input-field:focus {
   border-color: var(--assistant-accent, var(--rebar-color-primary, #0066cc));
+}
+
+.rebar-float-assistant-attachment-btn {
+  position: absolute;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--assistant-accent, var(--rebar-color-primary, #0066cc));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.rebar-float-assistant-attachment-btn:hover {
+  background: var(--rebar-color-bg-secondary, #f0f0f0);
 }
 
 .rebar-float-assistant-input-field::placeholder {
@@ -7033,9 +7066,9 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   z-index: 2;
 }
 
-/* VoiceInputBar */
+/* VoiceInputBar — --voice-glow is set inline by the component itself (from its `accentColor`
+   prop, defaulting to --rebar-color-primary), not defined here, so an inline style always wins. */
 .rebar-voice-input-bar {
-  --voice-glow: var(--rebar-color-voice, #ff9142);
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
@@ -7,7 +7,7 @@ import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas
 import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
 import { VoiceInputBar } from "./VoiceInputBar";
-import { AiAgentIcon } from "./icons-remix";
+import { AddIcon, AiAgentIcon } from "./icons-remix";
 
 export interface FloatAssistantMessage {
   id: string;
@@ -73,6 +73,9 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   onSendMessage?: (message: string) => void;
   /** Callback when voice recording starts/stops. */
   onVoiceRecord?: (recording: boolean) => void;
+  /** The "+" button inside the text-input field. Omitted entirely (no button rendered) unless a
+   * handler is passed — same "no dead control" stance as `VoiceInputBar`'s own camera button. */
+  onAttachmentPress?: () => void;
   /** Whether voice mode is enabled. */
   voiceEnabled?: boolean;
   /** Current interaction mode. */
@@ -135,6 +138,7 @@ export function FloatAssistant({
   personaLabel,
   onSendMessage,
   onVoiceRecord,
+  onAttachmentPress,
   voiceEnabled = true,
   mode: controlledMode,
   onModeChange,
@@ -167,7 +171,6 @@ export function FloatAssistant({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const headerAvatarRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>(0);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressThreshold = 500; // ms
@@ -195,37 +198,72 @@ export function FloatAssistant({
   const orbState: OrbInteractionState = isRecording ? "listening" : isTyping ? "thinking" : "idle";
   const activePersonaLabel = persona ? (personaLabel ?? ORB_PERSONAS[persona].label) : undefined;
 
-  // The docking orb (see the fixed-position element rendered near the end of this component)
-  // always sits at the trigger's own position/size and is transformed on top of that — never
-  // re-measured/re-positioned from scratch — so this only needs the *delta* to the header
-  // avatar's real, currently-rendered position once the panel opens, not the panel's own layout
-  // math duplicated here. Real getBoundingClientRect() measurements, not estimated coordinates,
-  // so it lands exactly on the avatar regardless of how panel positioning logic changes later.
-  const [dockTransform, setDockTransform] = useState<{ dx: number; dy: number; scale: number } | null>(null);
-  useLayoutEffect(() => {
-    if (!persona) return;
-    if (!(isOpen && !isMinimized && headerAvatarRef.current && buttonRef.current)) {
-      setDockTransform(null);
-      return;
-    }
-    const measure = () => {
-      if (!headerAvatarRef.current || !buttonRef.current) return;
-      const triggerRect = buttonRef.current.getBoundingClientRect();
-      const avatarRect = headerAvatarRef.current.getBoundingClientRect();
-      setDockTransform({
-        dx: avatarRect.left - triggerRect.left,
-        dy: avatarRect.top - triggerRect.top,
-        scale: avatarRect.width / triggerRect.width,
-      });
+  // Whether the trigger button is currently rendered "docked" into the panel's header — the whole
+  // interactive button (not a decorative copy), so grabbing it while docked drags the whole panel,
+  // exactly like grabbing a window's title bar. Deliberately not true while minimized: the
+  // minimized dot has its own separate, much simpler affordance.
+  const isDocked = Boolean(persona) && isOpen && !isMinimized;
+
+  // Docked-window dragging — deliberately a separate, simpler mechanism from the closed trigger's
+  // own drag/momentum system below (dragState/handleDragStart/handleDragMove/handleDragEnd, which
+  // bounces off screen edges with velocity on release): sharing that state would mean gating every
+  // one of those physics effects by mode instead of just leaving them untouched. A window being
+  // dragged by its title bar tracks the pointer 1:1 and simply stops when released — no bounce.
+  const [windowDragOffset, setWindowDragOffset] = useState({ x: 0, y: 0 });
+  const [isWindowDragging, setIsWindowDragging] = useState(false);
+  const windowDragStartRef = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(
+    null,
+  );
+
+  const handleWindowDragStart = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      if (!draggable) return;
+      e.preventDefault();
+      const clientX = "touches" in e ? e.touches[0]?.clientX ?? 0 : e.clientX;
+      const clientY = "touches" in e ? e.touches[0]?.clientY ?? 0 : e.clientY;
+      windowDragStartRef.current = {
+        mouseX: clientX,
+        mouseY: clientY,
+        offsetX: windowDragOffset.x,
+        offsetY: windowDragOffset.y,
+      };
+      setIsWindowDragging(true);
+    },
+    [draggable, windowDragOffset],
+  );
+
+  const handleWindowDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    const start = windowDragStartRef.current;
+    if (!start) return;
+    const clientX = "touches" in e ? e.touches[0]?.clientX ?? 0 : (e as MouseEvent).clientX;
+    const clientY = "touches" in e ? e.touches[0]?.clientY ?? 0 : (e as MouseEvent).clientY;
+    setWindowDragOffset({ x: start.offsetX + (clientX - start.mouseX), y: start.offsetY + (clientY - start.mouseY) });
+  }, []);
+
+  const handleWindowDragEnd = useCallback(() => {
+    windowDragStartRef.current = null;
+    setIsWindowDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isWindowDragging) return;
+    window.addEventListener("mousemove", handleWindowDragMove);
+    window.addEventListener("mouseup", handleWindowDragEnd);
+    window.addEventListener("touchmove", handleWindowDragMove);
+    window.addEventListener("touchend", handleWindowDragEnd);
+    return () => {
+      window.removeEventListener("mousemove", handleWindowDragMove);
+      window.removeEventListener("mouseup", handleWindowDragEnd);
+      window.removeEventListener("touchmove", handleWindowDragMove);
+      window.removeEventListener("touchend", handleWindowDragEnd);
     };
-    measure();
-    // The panel has its own ~0.25s slide-up entrance animation (rebar-float-assistant-slide-up),
-    // so the header avatar isn't at its final resting position yet on the frame the panel first
-    // mounts — measuring only once landed the docking orb visibly off-target. Re-measuring once
-    // that settles corrects it without delaying the fly animation's own start.
-    const settleTimer = setTimeout(measure, 280);
-    return () => clearTimeout(settleTimer);
-  }, [isOpen, isMinimized, persona]);
+  }, [isWindowDragging, handleWindowDragMove, handleWindowDragEnd]);
+
+  // Starts fresh each time the assistant re-opens rather than accumulating drift indefinitely —
+  // it reappears at its normal computed position next time, not wherever it was last dragged to.
+  useEffect(() => {
+    if (!isOpen) setWindowDragOffset({ x: 0, y: 0 });
+  }, [isOpen]);
 
   const positionStyles = {
     "bottom-right": { bottom: 24, right: 24 },
@@ -673,6 +711,34 @@ export function FloatAssistant({
   };
 
   const panelPosition = getPanelPosition();
+  const panelLeft = typeof panelPosition.left === "number" ? panelPosition.left : 0;
+  const panelTop = typeof panelPosition.top === "number" ? panelPosition.top : 0;
+
+  // Matches `.rebar-float-assistant-header`'s own 16px padding and the avatar being the header
+  // row's first element — a fixed constant, not a measurement, specifically so dragging (which
+  // needs to recompute this on every pointer-move frame) never depends on a live
+  // getBoundingClientRect() call.
+  const DOCKED_HEADER_OFFSET = 16;
+  const DOCKED_BUTTON_SIZE = 44;
+
+  const effectivePanelPosition: React.CSSProperties = isDocked
+    ? { ...panelPosition, left: panelLeft + windowDragOffset.x, top: panelTop + windowDragOffset.y }
+    : panelPosition;
+
+  const dockedButtonStyle: React.CSSProperties | null = isDocked
+    ? {
+        left: panelLeft + windowDragOffset.x + DOCKED_HEADER_OFFSET,
+        top: panelTop + windowDragOffset.y + DOCKED_HEADER_OFFSET,
+        right: "auto",
+        bottom: "auto",
+      }
+    : null;
+
+  const effectiveButtonSize = isDocked ? DOCKED_BUTTON_SIZE : 56;
+  // Dragging (either mode) needs the button to track the pointer with zero lag; the "fly to dock"
+  // move triggered by isOpen/isMinimized changing needs to visibly animate instead of snapping.
+  const buttonPositionTransition =
+    dragState.isDragging || isWindowDragging ? "none" : "left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
 
   return (
     <div
@@ -681,14 +747,18 @@ export function FloatAssistant({
       style={{ position: "fixed", zIndex: 1500, pointerEvents: "none" }}
       {...props}
     >
-      {/* Floating Button */}
+      {/* Floating Button — this is the whole interactive widget, not just a trigger: once docked
+          (isDocked), it's the literal same element, just repositioned/resized to sit in the panel
+          header, still fully draggable — grabbing it then drags the whole panel, like a window's
+          title bar. */}
       <button
         ref={buttonRef}
         type="button"
         className={clsx(
           "rebar-float-assistant-button",
-          dragState.isDragging && "rebar-float-assistant-button-dragging",
+          (dragState.isDragging || isWindowDragging) && "rebar-float-assistant-button-dragging",
           isMinimized && "rebar-float-assistant-button-minimized",
+          isDocked && "rebar-float-assistant-button-docked",
           theme === "dark" && "rebar-float-assistant-button-dark",
         )}
         data-rebar-part="trigger"
@@ -704,27 +774,30 @@ export function FloatAssistant({
             activateTrigger();
           }
         }}
-        onMouseDown={handleOrbPointerDown}
-        onMouseUp={handleOrbPointerUp}
+        onMouseDown={isDocked ? handleWindowDragStart : handleOrbPointerDown}
+        onMouseUp={isDocked ? handleWindowDragEnd : handleOrbPointerUp}
         onMouseLeave={cancelLongPressTimer}
-        onTouchStart={handleOrbPointerDown}
-        onTouchEnd={handleOrbPointerUp}
+        onTouchStart={isDocked ? handleWindowDragStart : handleOrbPointerDown}
+        onTouchEnd={isDocked ? handleWindowDragEnd : handleOrbPointerUp}
         style={
           {
-            ...buttonStyle,
+            ...(dockedButtonStyle ?? buttonStyle),
+            width: effectiveButtonSize,
+            height: effectiveButtonSize,
+            transition: buttonPositionTransition,
             "--assistant-accent": accentColor,
             pointerEvents: "auto",
-            cursor: draggable ? (dragState.isDragging ? "grabbing" : "grab") : "pointer",
+            // The panel is a later DOM sibling, so without this it would paint over the button
+            // (which needs to sit visibly on top of the panel's header once docked).
+            zIndex: isDocked ? 1600 : undefined,
+            cursor: draggable ? (dragState.isDragging || isWindowDragging ? "grabbing" : "grab") : "pointer",
           } as unknown as React.CSSProperties
         }
       >
         {isMinimized ? (
           <div className="rebar-float-assistant-minimized-dot" />
         ) : persona ? (
-          // The docking orb below renders in this exact spot at rest (same `buttonStyle`) and
-          // flies to the panel header when open, so this slot stays empty rather than showing a
-          // second, disconnected orb underneath it.
-          null
+          <AssistantOrb size={effectiveButtonSize} persona={persona} state={orbState} />
         ) : (
           <AssistantOrb
             size={56}
@@ -734,35 +807,6 @@ export function FloatAssistant({
           />
         )}
       </button>
-
-      {/* The persona orb itself — sits at the trigger's position/size at rest, and transforms on
-          top of that (translate+scale, computed from real measured rects above) to visually fly
-          over and dock into the panel header avatar when it opens. `pointerEvents: none` so drag/
-          click/keyboard interaction always goes to the real <button> underneath it. */}
-      {persona && !isMinimized && (
-        <div
-          aria-hidden="true"
-          style={
-            {
-              position: "fixed",
-              ...buttonStyle,
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              overflow: "hidden",
-              transformOrigin: "top left",
-              transform: dockTransform
-                ? `translate(${dockTransform.dx}px, ${dockTransform.dy}px) scale(${dockTransform.scale})`
-                : "translate(0px, 0px) scale(1)",
-              transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-              zIndex: 1600,
-              pointerEvents: "none",
-            } as unknown as React.CSSProperties
-          }
-        >
-          <AssistantOrb size={56} persona={persona} state={orbState} />
-        </div>
-      )}
 
       {/* Minimize button moved inside panel header */}
 
@@ -776,7 +820,8 @@ export function FloatAssistant({
           style={
             {
               "--assistant-accent": accentColor,
-              ...panelPosition,
+              ...effectivePanelPosition,
+              transition: isWindowDragging ? "none" : undefined,
               pointerEvents: "auto",
             } as unknown as React.CSSProperties
           }
@@ -784,9 +829,10 @@ export function FloatAssistant({
           {/* Header */}
           <div className="rebar-float-assistant-header">
             <div className="rebar-float-assistant-header-info">
-              <div className="rebar-float-assistant-avatar" data-rebar-part="header-avatar" ref={headerAvatarRef}>
-                {/* When a persona is set, the trigger's own orb flies over and docks here (see
-                    the docking orb below) instead of this static pulsing dot. */}
+              <div className="rebar-float-assistant-avatar" data-rebar-part="header-avatar">
+                {/* When a persona is set, the real trigger button itself docks here (see the
+                    button's own `isDocked` styling above) instead of this static pulsing dot —
+                    this is just the reserved layout space it visually sits on top of. */}
                 {!persona && <div className="rebar-float-assistant-avatar-orb" />}
               </div>
               <div>
@@ -896,16 +942,31 @@ export function FloatAssistant({
           <div className="rebar-float-assistant-input" data-rebar-part="input">
             {mode === "text" ? (
               <div className="rebar-float-assistant-text-input">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className="rebar-float-assistant-input-field"
-                  placeholder="Type your message..."
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  aria-label="Message input"
-                />
+                <div className="rebar-float-assistant-input-wrap">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className={clsx(
+                      "rebar-float-assistant-input-field",
+                      onAttachmentPress && "rebar-float-assistant-input-field-with-attachment",
+                    )}
+                    placeholder="Type your message..."
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    aria-label="Message input"
+                  />
+                  {onAttachmentPress && (
+                    <button
+                      type="button"
+                      className="rebar-float-assistant-attachment-btn"
+                      onClick={onAttachmentPress}
+                      aria-label="Add attachment"
+                    >
+                      <AddIcon size={18} />
+                    </button>
+                  )}
+                </div>
                 <button
                   type="button"
                   className="rebar-float-assistant-send-btn"
@@ -926,6 +987,7 @@ export function FloatAssistant({
                 onKeyboardToggle={toggleMode}
                 showCamera={false}
                 seed={name}
+                accentColor={accentColor}
               />
             )}
           </div>
