@@ -6665,8 +6665,8 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
 .rebar-float-assistant-avatar {
   /* Matches DOCKED_BUTTON_SIZE in FloatAssistant.tsx — this is the reserved layout space the real
      docked trigger button visually sits on top of, so the two sizes must stay in sync. */
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--assistant-accent, var(--rebar-color-primary, #0066cc));
   display: flex;

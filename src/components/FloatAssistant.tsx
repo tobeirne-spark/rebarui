@@ -719,7 +719,10 @@ export function FloatAssistant({
   // needs to recompute this on every pointer-move frame) never depends on a live
   // getBoundingClientRect() call.
   const DOCKED_HEADER_OFFSET = 16;
-  const DOCKED_BUTTON_SIZE = 44;
+  // Matches the closed trigger's own 56px size exactly (up from an earlier, smaller 44px/36px —
+  // feedback was that the orb kept reading as too small next to the persona showcase cards
+  // elsewhere on the page) rather than a separate, smaller "avatar" size.
+  const DOCKED_BUTTON_SIZE = 56;
 
   const effectivePanelPosition: React.CSSProperties = isDocked
     ? { ...panelPosition, left: panelLeft + windowDragOffset.x, top: panelTop + windowDragOffset.y }
