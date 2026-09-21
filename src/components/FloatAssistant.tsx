@@ -738,10 +738,21 @@ export function FloatAssistant({
     : null;
 
   const effectiveButtonSize = isDocked ? DOCKED_BUTTON_SIZE : 56;
-  // Dragging (either mode) needs the button to track the pointer with zero lag; the "fly to dock"
-  // move triggered by isOpen/isMinimized changing needs to visibly animate instead of snapping.
+  // Mirrors the momentum effect's own trigger condition above — released with enough velocity to
+  // still be bouncing/decelerating toward a stop. That loop already re-renders left/top at ~60fps
+  // directly from the physics, which is already smooth on its own; a competing CSS transition
+  // here made every one of those frequent position updates restart a fresh 0.4s transition toward
+  // a constantly-moving target, so the visual position could barely move during the flick at all
+  // — then "caught up" in one jump the next time anything else re-rendered the button (e.g. a
+  // click), since only *then* did the transition finally have a stable target to reach.
+  const isMomentumActive = !dragState.isDragging && (Math.abs(dragState.velocityX) > 0.5 || Math.abs(dragState.velocityY) > 0.5);
+  // Dragging or momentum (either mode) needs the button to track the pointer/physics with zero
+  // lag; the "fly to dock" move triggered by isOpen/isMinimized changing needs to visibly animate
+  // instead of snapping.
   const buttonPositionTransition =
-    dragState.isDragging || isWindowDragging ? "none" : "left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
+    dragState.isDragging || isWindowDragging || isMomentumActive
+      ? "none"
+      : "left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
 
   return (
     <div
