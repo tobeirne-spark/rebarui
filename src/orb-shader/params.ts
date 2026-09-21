@@ -43,6 +43,8 @@ export const SOLID_PARAMS: OrbParam[] = [
   { key: "envelopeAmount", label: "Flame envelope range (how much it pulses)", min: 0, max: 0.6, step: 0.02, default: 0.35, target: "uniform" },
   { key: "fresnelPower", label: "Fresnel power", min: 0.5, max: 5, step: 0.1, default: 2.0, target: "uniform" },
   { key: "fresnelIntensity", label: "Fresnel intensity", min: 0, max: 1.5, step: 0.05, default: 0.4, target: "uniform" },
+  { key: "hueShift", label: "Hue shift (palette phase)", min: 0, max: 1, step: 0.01, default: 0.08, target: "uniform" },
+  { key: "hueSpread", label: "Hue spread (noise-to-color range)", min: 0.02, max: 0.4, step: 0.01, default: 0.13, target: "uniform" },
   { key: "grainAmount", label: "Grain amount", min: 0, max: 0.1, step: 0.005, default: 0.03, target: "uniform" },
   { key: "bloomStrength", label: "Bloom strength", min: 0, max: 3, step: 0.05, default: 0.7, target: "bloom" },
   { key: "bloomRadius", label: "Bloom radius", min: 0, max: 1, step: 0.02, default: 0.45, target: "bloom" },

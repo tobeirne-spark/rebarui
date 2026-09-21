@@ -2,7 +2,13 @@
 
 **Orb persona** — tuned from `/dev/orb-comparison`.
 
-A softer, more atmospheric orb. Higher edge softness gives it a diffuse, cloud-like silhouette. Slower time scale and lower noise scale produce a calm, drifting motion. Stronger bloom and fresnel create a pronounced halo. The hot region is subdued — more of a warm glow than a flame.
+A softer, more atmospheric orb, in a warm autumn palette (gold -> orange -> brick red) rather than
+the indigo/magenta band the shader's own hardcoded default (and Spark) uses — `hueShift`/
+`hueSpread` steer the noise-driven color onto a different arc of the same cosine palette. Higher
+edge softness gives it a diffuse, cloud-like silhouette. Slower time scale and lower noise scale
+produce a calm, drifting motion. Bloom is present but restrained — an earlier tuning pass
+(`bloomStrength: 2.05`, `bloomThreshold: 0.3`) bloomed almost the entire orb into an overwhelming
+white-hot mass, which read as intense rather than calm; toned down here to an actual soft glow.
 
 ## Shader uniforms
 
@@ -19,10 +25,12 @@ A softer, more atmospheric orb. Higher edge softness gives it a diffuse, cloud-l
   "envelopeAmount": 0.42,
   "fresnelPower": 2,
   "fresnelIntensity": 0.3,
+  "hueShift": 0.85,
+  "hueSpread": 0.16,
   "grainAmount": 0.02,
-  "bloomStrength": 2.05,
+  "bloomStrength": 0.7,
   "bloomRadius": 0.62,
-  "bloomThreshold": 0.3
+  "bloomThreshold": 0.55
 }
 ```
 
@@ -39,11 +47,13 @@ A softer, more atmospheric orb. Higher edge softness gives it a diffuse, cloud-l
 | `envelopeSpeed` | 0.82 | Moderate warp animation speed |
 | `envelopeAmount` | 0.42 | Mild domain warp |
 | `fresnelPower` | 2 | Standard rim falloff |
-| `fresnelIntensity` | 1.5 | Strong rim — prominent halo edge |
+| `fresnelIntensity` | 0.3 | Soft rim, not a blown-out halo edge |
+| `hueShift` | 0.85 | Centers the palette on vivid orange (the cosine wheel's warm arc) |
+| `hueSpread` | 0.16 | Noise excursion stays within pale gold -> orange -> brick red, never wrapping into the indigo/cyan band |
 | `grainAmount` | 0.02 | Visible but fine grain |
-| `bloomStrength` | 2.05 | Strong bloom — big soft halo |
+| `bloomStrength` | 0.7 | Present but restrained — a soft glow, not a wash |
 | `bloomRadius` | 0.62 | Wide bloom spread |
-| `bloomThreshold` | 0.3 | Low threshold — more of the orb blooms |
+| `bloomThreshold` | 0.55 | Selective — only the genuinely bright pixels bloom |
 
 ## Character
 
@@ -58,9 +68,9 @@ For reactivity (idle → listening → speaking), scale these uniforms:
 
 | State | timeScale | hotIntensity | envelopeAmount | bloomStrength |
 |---|---|---|---|---|
-| Idle | 0.06 | 0.55 | 0.42 | 2.05 |
-| Listening | 0.15 | 0.8 | 0.6 | 2.2 |
-| Speaking | 0.2 | 1.0 | 0.5 | 2.5 |
+| Idle | 0.06 | 0.55 | 0.42 | 0.7 |
+| Listening | 0.15 | 0.8 | 0.6 | 0.85 |
+| Speaking | 0.2 | 1.0 | 0.5 | 1.0 |
 
 Interpolate between states with exponential smoothing (critically-damped spring), never snap.
 
@@ -81,12 +91,17 @@ Strato turns inward — the cloud condenses. Darkness maxes out, the hot band wi
   "envelopeAmount": 0.4,
   "fresnelPower": 4.3,
   "fresnelIntensity": 0.3,
+  "hueShift": 0.85,
+  "hueSpread": 0.16,
   "grainAmount": 0.09,
-  "bloomStrength": 1.6,
+  "bloomStrength": 0.8,
   "bloomRadius": 0.88,
   "bloomThreshold": 0.72
 }
 ```
+
+Same `hueShift`/`hueSpread` as Idle — only brightness/motion/spread shift between states, not the
+hue family, or Thinking would visually jump to a different orb entirely.
 
 | Param | Shift from Idle | Effect |
 |---|---|---|
@@ -97,11 +112,11 @@ Strato turns inward — the cloud condenses. Darkness maxes out, the hot band wi
 | `hotLow` / `hotHigh` | 0.34/0.15 → 0.03/0.4 | Hot band widens dramatically — large luminous core |
 | `hotIntensity` | 0.55 → 1.7 | Hot region brightens significantly |
 | `fresnelPower` | 2 → 4.3 | Rim thins |
-| `fresnelIntensity` | 1.5 → 0.3 | Rim nearly vanishes |
+| `fresnelIntensity` | 0.3 → 0.3 | Unchanged — rim stays soft in both states |
 | `grainAmount` | 0.02 → 0.09 | Grain becomes coarse and visible |
-| `bloomStrength` | 2.05 → 1.6 | Bloom eases slightly |
+| `bloomStrength` | 0.7 → 0.8 | Bloom swells slightly |
 | `bloomRadius` | 0.62 → 0.88 | Bloom spreads wider — soft corona |
-| `bloomThreshold` | 0.3 → 0.72 | Only the brightest pixels bloom — cleaner halo |
+| `bloomThreshold` | 0.55 → 0.72 | Only the brightest pixels bloom — cleaner halo |
 
 ## Reference
 

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
 import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas";
+import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
 import { AiAgentIcon } from "./icons-remix";
 
@@ -13,6 +14,19 @@ export interface FloatAssistantMessage {
   content: string;
   timestamp: number;
 }
+
+/**
+ * Spoken on long-press (voice mode activation) when `voiceGreetings` isn't supplied — deliberately
+ * generic/unbranded, since this is the construct's own built-in default for real usage, not a
+ * demo string. The docs site's own live demo passes its own branded set instead of relying on this.
+ */
+export const DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS: string[] = [
+  "Hi there! I'm listening — what can I help you with?",
+  "Go ahead, I'm all ears.",
+  "You've got my attention. What would you like to know?",
+  "I'm ready when you are.",
+  "Listening now — ask me anything.",
+];
 
 export interface FloatAssistantVoiceOption {
   id: string;
@@ -28,6 +42,13 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   name?: string;
   /** Initial greeting message. */
   greeting?: string;
+  /**
+   * Spoken greeting options for voice mode, activated by long-pressing the trigger. One is picked
+   * at random each time, so repeat activations don't feel robotic. Defaults to
+   * `DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS`, a generic set safe for real usage — pass your own
+   * for a branded voice.
+   */
+  voiceGreetings?: string[];
   /** Position of the floating button. Default "bottom-right". */
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   /** Accent color for the assistant. */
@@ -35,11 +56,18 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   /**
    * Renders the trigger button's orb as one of the tuned WebGL personas
    * (`packages/core/src/orb-personas/*.md`: Spark, Strato, Chorus) instead of the lightweight
-   * default 2D-canvas animation. Only the trigger button uses the orb at all — message avatars
-   * and the typing indicator use a static `AiAgentIcon` instead, since animating a full orb per
-   * chat message was distracting and wasteful compute for repeated small instances.
+   * default 2D-canvas animation. When set, the orb also flies from the trigger and docks into the
+   * panel header avatar when the panel opens, rather than the trigger and header each showing
+   * their own separate, disconnected orb. Chat message avatars and the typing indicator always use
+   * a static `AiAgentIcon` regardless — animating a full orb per chat message was distracting and
+   * wasteful compute for repeated small instances.
    */
   persona?: OrbPersonaId;
+  /**
+   * Overrides the persona name shown in the panel header (next to/above `name`). Defaults to the
+   * active persona's own label (e.g. "Strato"). Ignored when `persona` isn't set.
+   */
+  personaLabel?: string;
   /** Callback when user sends a message. */
   onSendMessage?: (message: string) => void;
   /** Callback when voice recording starts/stops. */
@@ -73,6 +101,8 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   voiceId?: string;
   /** Callback when voice changes. */
   onVoiceChange?: (voiceId: string) => void;
+  /** Visual theme — "light" (default) or "dark" (black panel background for demo/brand use). */
+  theme?: "light" | "dark";
   className?: string;
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -97,9 +127,11 @@ interface DragState {
 export function FloatAssistant({
   name = "Assistant",
   greeting = "Hi! How can I help you today?",
+  voiceGreetings,
   position = "bottom-right",
   accentColor = "var(--rebar-color-primary, #0066cc)",
   persona,
+  personaLabel,
   onSendMessage,
   onVoiceRecord,
   voiceEnabled = true,
@@ -114,6 +146,7 @@ export function FloatAssistant({
   // Not yet wired to a call site — kept in the public prop type for the voice-picker UI this is
   // meant to drive once that lands, prefixed here only to satisfy the unused-var lint rule.
   onVoiceChange: _onVoiceChange,
+  theme = "light",
   className,
   bionic,
   bionicOptions,
@@ -133,6 +166,7 @@ export function FloatAssistant({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const headerAvatarRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>(0);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressThreshold = 500; // ms
@@ -158,6 +192,39 @@ export function FloatAssistant({
   // "speaking" signal to derive yet (no TTS-playback state tracked here); a future voice-output
   // feature should set it once one exists, rather than this guessing at it now.
   const orbState: OrbInteractionState = isRecording ? "listening" : isTyping ? "thinking" : "idle";
+  const activePersonaLabel = persona ? (personaLabel ?? ORB_PERSONAS[persona].label) : undefined;
+
+  // The docking orb (see the fixed-position element rendered near the end of this component)
+  // always sits at the trigger's own position/size and is transformed on top of that — never
+  // re-measured/re-positioned from scratch — so this only needs the *delta* to the header
+  // avatar's real, currently-rendered position once the panel opens, not the panel's own layout
+  // math duplicated here. Real getBoundingClientRect() measurements, not estimated coordinates,
+  // so it lands exactly on the avatar regardless of how panel positioning logic changes later.
+  const [dockTransform, setDockTransform] = useState<{ dx: number; dy: number; scale: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!persona) return;
+    if (!(isOpen && !isMinimized && headerAvatarRef.current && buttonRef.current)) {
+      setDockTransform(null);
+      return;
+    }
+    const measure = () => {
+      if (!headerAvatarRef.current || !buttonRef.current) return;
+      const triggerRect = buttonRef.current.getBoundingClientRect();
+      const avatarRect = headerAvatarRef.current.getBoundingClientRect();
+      setDockTransform({
+        dx: avatarRect.left - triggerRect.left,
+        dy: avatarRect.top - triggerRect.top,
+        scale: avatarRect.width / triggerRect.width,
+      });
+    };
+    measure();
+    // The panel has its own ~0.25s slide-up entrance animation (rebar-float-assistant-slide-up),
+    // so the header avatar isn't at its final resting position yet on the frame the panel first
+    // mounts — measuring only once landed the docking orb visibly off-target. Re-measuring once
+    // that settles corrects it without delaying the fly animation's own start.
+    const settleTimer = setTimeout(measure, 280);
+    return () => clearTimeout(settleTimer);
+  }, [isOpen, isMinimized, persona]);
 
   const positionStyles = {
     "bottom-right": { bottom: 24, right: 24 },
@@ -294,7 +361,9 @@ export function FloatAssistant({
       setInternalMode("voice");
       onModeChange?.("voice");
 
-      const greetingText = "You are connected to the Open Knowledge Graph, what would you like to know?";
+      const greetingOptions =
+        voiceGreetings && voiceGreetings.length > 0 ? voiceGreetings : DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS;
+      const greetingText = greetingOptions[Math.floor(Math.random() * greetingOptions.length)]!;
 
       // Find the selected voice config
       const selectedVoice = voiceId && voices ? voices.find((v) => v.id === voiceId) : undefined;
@@ -330,7 +399,7 @@ export function FloatAssistant({
         speakWithBrowser(greetingText, selectedVoice);
       }
     }, longPressThreshold);
-  }, [onModeChange, cancelLongPressTimer, voiceId, voices, apiEndpoint, apiAuthToken]);
+  }, [onModeChange, cancelLongPressTimer, voiceId, voices, apiEndpoint, apiAuthToken, voiceGreetings]);
 
   // Helper to speak using browser SpeechSynthesis
   const speakWithBrowser = useCallback((text: string, voice?: FloatAssistantVoiceOption) => {
@@ -518,6 +587,20 @@ export function FloatAssistant({
     setIsMinimized((prev) => !prev);
   }, []);
 
+  // The trigger requires a genuine double-click from a mouse (single click is reserved for
+  // drag-to-move) — but a native <button> fires a plain "click" event on Enter/Space, never
+  // "dblclick", so listening for onDoubleClick alone would silently strand keyboard users with no
+  // way to open the assistant at all. This same handler is wired to both onDoubleClick and an
+  // explicit onKeyDown for Enter/Space, so keyboard activation stays single-press.
+  const activateTrigger = useCallback(() => {
+    if (isMinimized) {
+      setIsMinimized(false);
+      setIsOpen(true);
+    } else {
+      setIsOpen((prev) => !prev);
+    }
+  }, [isMinimized]);
+
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
@@ -605,19 +688,19 @@ export function FloatAssistant({
           "rebar-float-assistant-button",
           dragState.isDragging && "rebar-float-assistant-button-dragging",
           isMinimized && "rebar-float-assistant-button-minimized",
+          theme === "dark" && "rebar-float-assistant-button-dark",
         )}
         data-rebar-part="trigger"
-        aria-label={isOpen ? "Close assistant" : isMinimized ? "Expand assistant" : "Open assistant"}
+        aria-label={isOpen ? "Close assistant" : isMinimized ? "Expand assistant" : "Open assistant (double-click, or Enter)"}
         aria-expanded={isOpen}
-        onClick={() => {
-          // Only handle click if it wasn't a long press
-          if (!isLongPressRef.current) {
-            if (isMinimized) {
-              setIsMinimized(false);
-              setIsOpen(true);
-            } else {
-              setIsOpen(!isOpen);
-            }
+        onDoubleClick={() => {
+          // Only handle it if it wasn't a long press
+          if (!isLongPressRef.current) activateTrigger();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            activateTrigger();
           }
         }}
         onMouseDown={handleOrbPointerDown}
@@ -636,17 +719,49 @@ export function FloatAssistant({
       >
         {isMinimized ? (
           <div className="rebar-float-assistant-minimized-dot" />
+        ) : persona ? (
+          // The docking orb below renders in this exact spot at rest (same `buttonStyle`) and
+          // flies to the panel header when open, so this slot stays empty rather than showing a
+          // second, disconnected orb underneath it.
+          null
         ) : (
           <AssistantOrb
             size={56}
             color={accentColor}
             isActive={isOpen || isRecording}
-            persona={persona}
-            state={orbState}
             className="rebar-float-assistant-orb-canvas"
           />
         )}
       </button>
+
+      {/* The persona orb itself — sits at the trigger's position/size at rest, and transforms on
+          top of that (translate+scale, computed from real measured rects above) to visually fly
+          over and dock into the panel header avatar when it opens. `pointerEvents: none` so drag/
+          click/keyboard interaction always goes to the real <button> underneath it. */}
+      {persona && !isMinimized && (
+        <div
+          aria-hidden="true"
+          style={
+            {
+              position: "fixed",
+              ...buttonStyle,
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              overflow: "hidden",
+              transformOrigin: "top left",
+              transform: dockTransform
+                ? `translate(${dockTransform.dx}px, ${dockTransform.dy}px) scale(${dockTransform.scale})`
+                : "translate(0px, 0px) scale(1)",
+              transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+              zIndex: 1600,
+              pointerEvents: "none",
+            } as unknown as React.CSSProperties
+          }
+        >
+          <AssistantOrb size={56} persona={persona} state={orbState} />
+        </div>
+      )}
 
       {/* Minimize button moved inside panel header */}
 
@@ -668,10 +783,15 @@ export function FloatAssistant({
           {/* Header */}
           <div className="rebar-float-assistant-header">
             <div className="rebar-float-assistant-header-info">
-              <div className="rebar-float-assistant-avatar">
-                <div className="rebar-float-assistant-avatar-orb" />
+              <div className="rebar-float-assistant-avatar" data-rebar-part="header-avatar" ref={headerAvatarRef}>
+                {/* When a persona is set, the trigger's own orb flies over and docks here (see
+                    the docking orb below) instead of this static pulsing dot. */}
+                {!persona && <div className="rebar-float-assistant-avatar-orb" />}
               </div>
               <div>
+                {activePersonaLabel && (
+                  <div className="rebar-float-assistant-persona-label">{activePersonaLabel}</div>
+                )}
                 <div className="rebar-float-assistant-name">{renderBionicChildren(name, bionicEnabled, bionicOptions)}</div>
                 <div className="rebar-float-assistant-status">
                   {isTyping ? (

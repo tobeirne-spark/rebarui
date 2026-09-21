@@ -6681,6 +6681,14 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   animation: rebar-float-assistant-pulse 2s ease-in-out infinite;
 }
 
+.rebar-float-assistant-persona-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--assistant-accent, var(--rebar-color-primary, #0066cc));
+}
+
 .rebar-float-assistant-name {
   font-size: 14px;
   font-weight: 600;
@@ -7043,4 +7051,55 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
+}
+
+
+/* FloatAssistant - Dark Theme Button with Glass Lens Effect */
+.rebar-float-assistant-button-dark {
+  /* No `position` here — the base `.rebar-float-assistant-button` rule already sets `position:
+     fixed`, which the `::before`/`::after` pseudo-elements below need for `position: absolute` to
+     anchor to, but is not itself the reason it's there: `position: relative` here silently
+     re-introduced the exact bug fixed on the base rule (JS-computed bottom/right/left/top values
+     only nudging the button from its normal in-flow position instead of anchoring it to a
+     viewport corner) for any dark-themed trigger specifically — and, since drag math reads the
+     button's real on-screen position via getBoundingClientRect() while relative positioning
+     interprets left/top as offsets from that wrong in-flow position, this is what made the button
+     appear to "jump across the screen" on the first drag. `position: fixed`/`absolute`/`relative`
+     are equally valid containing blocks for absolutely-positioned children, so simply not
+     overriding the base rule's `fixed` here fixes both without losing the pseudo-elements'
+     positioning context. */
+  background: #000000 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+  overflow: hidden;
+}
+
+.rebar-float-assistant-button-dark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 40%, transparent 60%, rgba(0,0,0,0.1) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rebar-float-assistant-button-dark::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  left: 15%;
+  width: 45%;
+  height: 25%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: 2;
 }

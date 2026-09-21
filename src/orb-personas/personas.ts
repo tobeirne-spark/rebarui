@@ -47,6 +47,12 @@ const SPARK_IDLE = {
   bloomThreshold: 0.18,
 };
 
+// Autumn palette: hueShift 0.85 centers the noise-driven colorT band on vivid orange, and
+// hueSpread 0.16 keeps the full excursion (noise -1..1) within pale gold -> orange -> brick red —
+// entirely the palette's warm family, never wrapping into the indigo/blue/cyan band Spark and the
+// shader's own old hardcoded default live in. bloomStrength/bloomThreshold are also toned down
+// from the original tuning (2.05/0.3, which bloomed almost the whole orb into an overwhelming
+// white-hot mass) to something that actually reads as calm.
 const STRATO_IDLE = {
   edgeSoftness: 0.24,
   noiseScale: 1.2,
@@ -61,10 +67,12 @@ const STRATO_IDLE = {
   fresnelIntensity: 0.3,
   rimIntensity: 0,
   openingSize: 0,
+  hueShift: 0.85,
+  hueSpread: 0.16,
   grainAmount: 0.02,
-  bloomStrength: 2.05,
+  bloomStrength: 0.7,
   bloomRadius: 0.62,
-  bloomThreshold: 0.3,
+  bloomThreshold: 0.55,
 };
 
 const CHORUS_IDLE = {
@@ -120,8 +128,8 @@ export const ORB_PERSONAS: Record<OrbPersonaId, OrbPersona> = {
     variant: "solid",
     states: {
       idle: STRATO_IDLE,
-      listening: deriveState(STRATO_IDLE, { timeScale: 0.15, hotIntensity: 0.8, envelopeAmount: 0.6, bloomStrength: 2.2 }),
-      speaking: deriveState(STRATO_IDLE, { timeScale: 0.2, hotIntensity: 1.0, envelopeAmount: 0.5, bloomStrength: 2.5 }),
+      listening: deriveState(STRATO_IDLE, { timeScale: 0.15, hotIntensity: 0.8, envelopeAmount: 0.6, bloomStrength: 0.85 }),
+      speaking: deriveState(STRATO_IDLE, { timeScale: 0.2, hotIntensity: 1.0, envelopeAmount: 0.5, bloomStrength: 1.0 }),
       thinking: {
         edgeSoftness: 0.92,
         noiseScale: 3.3,
@@ -136,8 +144,12 @@ export const ORB_PERSONAS: Record<OrbPersonaId, OrbPersona> = {
         fresnelIntensity: 0.3,
         rimIntensity: 0,
         openingSize: 0,
+        // Same autumn palette as Idle — only brightness/motion/spread shift between states, not
+        // the hue family, or Thinking would visually jump to a completely different orb.
+        hueShift: 0.85,
+        hueSpread: 0.16,
         grainAmount: 0.09,
-        bloomStrength: 1.6,
+        bloomStrength: 0.8,
         bloomRadius: 0.88,
         bloomThreshold: 0.72,
       },

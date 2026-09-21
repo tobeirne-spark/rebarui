@@ -30,6 +30,16 @@ export interface CreateOrbRendererOptions {
   smoothingTau?: number;
 }
 
+// The shader's own geometry is resolution-independent (a normalized-UV sphere always fills the
+// same fraction of the frame at any resolution) — but UnrealBloomPass's mip-chain kernel sizes
+// are not: at a genuinely tiny render target (a 56px trigger button, say) the same blur kernel
+// covers a much larger fraction of the image than at a larger one, washing detail into a soft dot
+// instead of the crisp shape a bigger instance shows. Rendering at least this many pixels
+// internally regardless of the canvas's actual CSS size — and letting the browser's normal
+// image-scaling handle the visual downscale to whatever size was requested — keeps a small
+// instance's bloom/shape characteristics visually identical to a large one, just smaller.
+const MIN_RENDER_SIZE = 160;
+
 export function createOrbRenderer(
   canvas: HTMLCanvasElement,
   variantId: OrbVariantId,
@@ -40,8 +50,8 @@ export function createOrbRenderer(
   const tau = options.smoothingTau ?? 0.35;
 
   const rect = canvas.getBoundingClientRect();
-  let width = rect.width || 1;
-  let height = rect.height || 1;
+  let width = Math.max(rect.width || 1, MIN_RENDER_SIZE);
+  let height = Math.max(rect.height || 1, MIN_RENDER_SIZE);
 
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -100,8 +110,8 @@ export function createOrbRenderer(
 
   const handleResize = () => {
     const newRect = canvas.getBoundingClientRect();
-    width = newRect.width || 1;
-    height = newRect.height || 1;
+    width = Math.max(newRect.width || 1, MIN_RENDER_SIZE);
+    height = Math.max(newRect.height || 1, MIN_RENDER_SIZE);
     renderer.setSize(width, height, false);
     composer.setSize(width, height);
     (uniforms.uResolution?.value as THREE.Vector2).set(width * pixelRatio, height * pixelRatio);

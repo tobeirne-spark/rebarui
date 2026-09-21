@@ -184,6 +184,8 @@ export const SOLID_FRAGMENT_SHADER = `
   uniform float uFresnelPower;
   uniform float uFresnelIntensity;
   uniform float uGrainAmount;
+  uniform float uHueShift;
+  uniform float uHueSpread;
   varying vec2 vUv;
 
   ${GLSL_COMMON}
@@ -252,7 +254,11 @@ export const SOLID_FRAGMENT_SHADER = `
 
     float noise = warpedFbm(pObj * uNoiseScale, uTime * uTimeScale);
 
-    float colorT = noise * 0.13 + 0.08;
+    // uHueShift/uHueSpread pick where on the palette's cosine wheel this persona lives and how far
+    // the noise excursion travels around it — the wheel cycles indigo/magenta (~0.0-0.2) -> blue/
+    // cyan (~0.3-0.5) -> orange/red (~0.75-1.0), so different personas can occupy genuinely
+    // different hue families, not just different brightness/motion on the same fixed hue band.
+    float colorT = noise * uHueSpread + uHueShift;
     vec3 color = palette(colorT) * uDarkness;
 
     float envelope = snoise(pObj * 0.8 + vec3(0.0, 0.0, uTime * uEnvelopeSpeed));
