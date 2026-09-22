@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 import clsx from "clsx";
 import { renderChartEmptyState } from "../chartEmptyState";
 import { ChartValueTag, useChartMarkSelection } from "../chartMarkSelection";
@@ -13,6 +13,10 @@ export interface LineChartSeries {
   color?: string;
   values: number[];
   dashed?: boolean;
+  /** Defaults to true. Set false for a plain line with no per-point circles -- a computed
+   * reference line (a trend, a target) where every point being individually selectable/hoverable
+   * would suggest a precision the line doesn't actually have. */
+  showMarkers?: boolean;
 }
 
 export interface LineChartProps extends Omit<ComponentPropsWithoutRef<"figure">, "title"> {
@@ -38,6 +42,12 @@ export interface LineChartProps extends Omit<ComponentPropsWithoutRef<"figure">,
   /** Adds a dashed linear-regression trendline per series, computed over its own values against
    * x position — off by default. */
   trendline?: boolean;
+  /** Where the series name key renders. `"top-right"` (default) stacks it inside the plot area,
+   * which can crowd whichever series' own line peaks in that corner. `"bottom"` renders it as an
+   * ordinary HTML row below the chart instead (still colored per series) and skips the in-plot
+   * text entirely -- pairs well with `filterable`, whose own footer already names every series as
+   * a toggle button, making the in-plot list redundant. */
+  legendPosition?: "top-right" | "bottom";
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -68,6 +78,7 @@ export function LineChart({
   crossoverIndex,
   filterable,
   trendline,
+  legendPosition = "top-right",
   bionic,
   bionicOptions,
   className,
@@ -207,49 +218,53 @@ export function LineChart({
                   data-rebar-part="trendline"
                 />
               ) : null}
-              {s.values.map((v, j) => {
-                const key = `${i}:${j}`;
-                const selected = isSelected(key);
-                return (
-                  <circle
-                    key={j}
-                    cx={xScale(j)}
-                    cy={yScale(v)}
-                    r={selected ? 5.5 : 3.5}
-                    fill={color}
-                    stroke={selected ? "var(--rebar-color-bg-primary, #ffffff)" : undefined}
-                    strokeWidth={selected ? 1.5 : undefined}
-                    style={{ cursor: "pointer" }}
-                    data-rebar-part="mark"
-                    {...getMarkProps(key)}
-                  />
-                );
-              })}
+              {s.showMarkers === false
+                ? null
+                : s.values.map((v, j) => {
+                    const key = `${i}:${j}`;
+                    const selected = isSelected(key);
+                    return (
+                      <circle
+                        key={j}
+                        cx={xScale(j)}
+                        cy={yScale(v)}
+                        r={selected ? 5.5 : 3.5}
+                        fill={color}
+                        stroke={selected ? "var(--rebar-color-bg-primary, #ffffff)" : undefined}
+                        strokeWidth={selected ? 1.5 : undefined}
+                        style={{ cursor: "pointer" }}
+                        data-rebar-part="mark"
+                        {...getMarkProps(key)}
+                      />
+                    );
+                  })}
             </g>
           );
         })}
-        {(() => {
-          // Only currently-visible series get a label here (a label with no matching line would
-          // otherwise dangle) — packed tightly via a running visible-only counter, rather than
-          // leaving a gap wherever a hidden series' own original index used to sit.
-          let visibleLabelIndex = 0;
-          return series.map((s, i) => {
-            if (filterable && !isVisible(s.label)) return null;
-            const labelSlot = visibleLabelIndex++;
-            return (
-              <text
-                key={s.label}
-                x={width - marginRight}
-                y={marginTop + 12 + labelSlot * 16}
-                fontSize={11}
-                textAnchor="end"
-                fill={s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
-              >
-                {s.label}
-              </text>
-            );
-          });
-        })()}
+        {legendPosition === "top-right"
+          ? (() => {
+              // Only currently-visible series get a label here (a label with no matching line
+              // would otherwise dangle) — packed tightly via a running visible-only counter,
+              // rather than leaving a gap wherever a hidden series' own original index used to sit.
+              let visibleLabelIndex = 0;
+              return series.map((s, i) => {
+                if (filterable && !isVisible(s.label)) return null;
+                const labelSlot = visibleLabelIndex++;
+                return (
+                  <text
+                    key={s.label}
+                    x={width - marginRight}
+                    y={marginTop + 12 + labelSlot * 16}
+                    fontSize={11}
+                    textAnchor="end"
+                    fill={s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+                  >
+                    {s.label}
+                  </text>
+                );
+              });
+            })()
+          : null}
         {activeKey
           ? (() => {
               const [seriesIndexStr, pointIndexStr] = activeKey.split(":");
@@ -274,7 +289,60 @@ export function LineChart({
             })()
           : null}
       </svg>
-      {filterable ? <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} /> : null}
+      {legendPosition === "bottom" ? (
+        // Replaces ChartFilterFooter's own plain toggle buttons -- this row already names every
+        // series (colored to match its line) whether or not `filterable` is set, and doubles as
+        // the toggle control when it is, rather than showing two redundant rows.
+        <div
+          className="rebar-chart-legend"
+          data-rebar-part="legend"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "var(--rebar-space-sm, 12px)",
+            justifyContent: "center",
+            marginTop: "var(--rebar-space-xs, 4px)",
+          }}
+        >
+          {series.map((s, i) => {
+            const color = s.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+            const visible = !filterable || isVisible(s.label);
+            const itemStyle: CSSProperties = {
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              color: "var(--rebar-color-text-secondary, #757575)",
+            };
+            const content = (
+              <>
+                <span
+                  aria-hidden="true"
+                  style={{ display: "inline-block", width: 10, height: 10, borderRadius: 9999, background: color, opacity: visible ? 1 : 0.35 }}
+                />
+                <span style={{ opacity: visible ? 1 : 0.5 }}>{s.label}</span>
+              </>
+            );
+            return filterable ? (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => toggle(s.label)}
+                aria-pressed={visible}
+                style={{ ...itemStyle, background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+              >
+                {content}
+              </button>
+            ) : (
+              <span key={s.label} style={itemStyle}>
+                {content}
+              </span>
+            );
+          })}
+        </div>
+      ) : filterable ? (
+        <ChartFilterFooter labels={series.map((s) => s.label)} hidden={hidden} onToggle={toggle} />
+      ) : null}
       {title ? (
         <figcaption
           data-rebar-part="title"
