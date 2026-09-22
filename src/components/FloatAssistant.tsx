@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import clsx from "clsx";
 import { renderBionicChildren, useAmbientBionic } from "../bionic";
 import type { BionicOptions } from "../bionic";
+import { renderMarkdown } from "../markdown";
 import type { OrbInteractionState, OrbPersonaId } from "../orb-personas/personas";
 import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
@@ -127,6 +128,11 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   onVoiceChange?: (voiceId: string) => void;
   /** Visual theme — "light" (default) or "dark" (black panel background for demo/brand use). */
   theme?: "light" | "dark";
+  /** Renders assistant message content as real Markdown (headings, lists, bold/italic/code,
+   * links, fenced code blocks) via `renderMarkdown` — real LLM responses, Qwen/Claude included,
+   * default to Markdown prose, same convention `ChatThread`'s own `markdown` prop already follows.
+   * Default true; set false for a plain-text assistant that never emits Markdown syntax. */
+  markdown?: boolean;
   className?: string;
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -176,6 +182,7 @@ export function FloatAssistant({
   // meant to drive once that lands, prefixed here only to satisfy the unused-var lint rule.
   onVoiceChange: _onVoiceChange,
   theme = "light",
+  markdown = true,
   className,
   bionic,
   bionicOptions,
@@ -1049,7 +1056,9 @@ export function FloatAssistant({
                 )}
                 <div className="rebar-float-assistant-message-content">
                   <div className="rebar-float-assistant-message-text">
-                    {renderBionicChildren(msg.content, bionicEnabled, bionicOptions)}
+                    {markdown
+                      ? renderMarkdown(msg.content, { bionic: bionicEnabled, bionicOptions })
+                      : renderBionicChildren(msg.content, bionicEnabled, bionicOptions)}
                   </div>
                   <div className="rebar-float-assistant-message-time">{formatTime(msg.timestamp)}</div>
                 </div>
