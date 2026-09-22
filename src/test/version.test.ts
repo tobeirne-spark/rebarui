@@ -7,7 +7,12 @@ describe("REBAR_UI_VERSION", () => {
     expect(REBAR_UI_VERSION).toBe(packageJson.version);
   });
 
-  it("is stamped onto the document root the moment the package is imported", () => {
+  // Deferred by a `setTimeout(…, 0)` inside index.ts (not stamped synchronously at import time
+  // any more) specifically so it lands after a hydrating consumer's own initial commit, not
+  // before it -- see that file's own doc comment. A real macrotask tick, not fake timers, so this
+  // exercises the exact same deferral the browser gives it.
+  it("is stamped onto the document root shortly after the package is imported", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.documentElement.getAttribute("data-rebar-ui-version")).toBe(REBAR_UI_VERSION);
   });
 });

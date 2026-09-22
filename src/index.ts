@@ -5,11 +5,22 @@
  * package is imported (see below), so any rebar-ui-built page — this project's own docs site or a
  * consumer's real app — carries a real, inspectable record of which version built it, without the
  * consumer having to wire anything up. `RebarDevTools` reads this same attribute to display it.
+ *
+ * Deferred via `setTimeout` rather than stamped synchronously at module-evaluation time: a
+ * server-rendered consumer (Next.js App Router, any other SSR/hydration setup) evaluates this
+ * module — running the side effect below — *before* React hydrates `<html>`, so an immediate
+ * `setAttribute` here mutates the real DOM node ahead of hydration's own comparison against the
+ * server-rendered markup (which obviously never had this attribute, `document` not existing
+ * server-side) and trips a real hydration mismatch on every single page. `setTimeout(…, 0)` pushes
+ * it to a fresh macrotask, guaranteed to run after hydration's synchronous initial commit finishes
+ * — the attribute still lands moments later, just outside hydration's own comparison window.
  */
 export const REBAR_UI_VERSION = "0.12.0";
 
 if (typeof document !== "undefined") {
-  document.documentElement.setAttribute("data-rebar-ui-version", REBAR_UI_VERSION);
+  setTimeout(() => {
+    document.documentElement.setAttribute("data-rebar-ui-version", REBAR_UI_VERSION);
+  }, 0);
 }
 
 export { AppShell } from "./components/AppShell";
