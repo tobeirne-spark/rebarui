@@ -143,3 +143,32 @@ describe("FloatAssistant message copy button", () => {
     expect(within(userMessage).queryByRole("button", { name: "Copy message" })).not.toBeInTheDocument();
   });
 });
+
+describe("FloatAssistant header button tooltips", () => {
+  it("shows a real styled Tooltip (not just a native title attribute) on the screenshot and dock-toggle buttons", async () => {
+    const { container } = render(<FloatAssistant sidebarDockable />);
+    openPanel(container);
+
+    const screenshotBtn = screen.getByRole("button", { name: "Capture a screenshot of the page" });
+    expect(screenshotBtn).not.toHaveAttribute("title");
+    screenshotBtn.focus();
+    const screenshotTooltip = await screen.findByText("Capture a screenshot of the page");
+    expect(screenshotTooltip.closest('[data-rebar-component="tooltip"]')).not.toBeNull();
+
+    const dockBtn = screen.getByRole("button", { name: "Dock as sidebar" });
+    expect(dockBtn).not.toHaveAttribute("title");
+    dockBtn.focus();
+    const dockTooltip = await screen.findByText("Dock as sidebar");
+    expect(dockTooltip.closest('[data-rebar-component="tooltip"]')).not.toBeNull();
+  });
+
+  it("shows a real Tooltip on the minimize button", async () => {
+    const { container } = render(<FloatAssistant />);
+    openPanel(container);
+    const minimizeBtn = screen.getByRole("button", { name: "Minimize assistant" });
+    expect(minimizeBtn).not.toHaveAttribute("title");
+    minimizeBtn.focus();
+    const tooltip = await screen.findByText("Minimize to corner");
+    expect(tooltip.closest('[data-rebar-component="tooltip"]')).not.toBeNull();
+  });
+});

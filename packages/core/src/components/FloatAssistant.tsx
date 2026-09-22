@@ -9,6 +9,7 @@ import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
 import { VoiceInputBar } from "./VoiceInputBar";
 import { Spin } from "./Spin";
+import { Tooltip } from "./Tooltip";
 import { AddIcon, AiAgentIcon, ArrowUpIcon, CheckIcon, CodeSSlashIcon, HistoryIcon, ScreenshotIcon } from "./icons-remix";
 import { CopyIcon } from "./icons";
 import { DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS, DEFAULT_SCREENSHOT_ACKNOWLEDGMENT } from "./FloatAssistant.constants";
@@ -1112,74 +1113,78 @@ export function FloatAssistant({
             </div>
             <div className="rebar-float-assistant-header-actions">
               {screenshotEnabled && (
-                <button
-                  type="button"
-                  className="rebar-float-assistant-screenshot-btn"
-                  onClick={captureScreenshot}
-                  disabled={isCapturingScreenshot}
-                  aria-label={isCapturingScreenshot ? "Capturing screenshot…" : "Capture a screenshot of the page"}
-                  title="Capture a screenshot of the page"
-                  data-rebar-part="screenshot-button"
-                >
-                  {isCapturingScreenshot ? <Spin size="sm" /> : <ScreenshotIcon size={16} />}
-                </button>
+                <Tooltip content={isCapturingScreenshot ? "Capturing screenshot…" : "Capture a screenshot of the page"}>
+                  <button
+                    type="button"
+                    className="rebar-float-assistant-screenshot-btn"
+                    onClick={captureScreenshot}
+                    disabled={isCapturingScreenshot}
+                    aria-label={isCapturingScreenshot ? "Capturing screenshot…" : "Capture a screenshot of the page"}
+                    data-rebar-part="screenshot-button"
+                  >
+                    {isCapturingScreenshot ? <Spin size="sm" /> : <ScreenshotIcon size={16} />}
+                  </button>
+                </Tooltip>
               )}
               {voiceEnabled && (
-                <button
-                  type="button"
-                  className={clsx("rebar-float-assistant-mode-btn", mode === "voice" && "rebar-float-assistant-mode-btn-active")}
-                  onClick={toggleMode}
-                  aria-label={`Switch to ${mode === "text" ? "voice" : "text"} mode`}
-                  title={`Switch to ${mode === "text" ? "voice" : "text"} mode`}
-                >
-                  {mode === "text" ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
-                      <line x1="12" y1="19" x2="12" y2="23" />
-                      <line x1="8" y1="23" x2="16" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                    </svg>
-                  )}
-                </button>
+                <Tooltip content={`Switch to ${mode === "text" ? "voice" : "text"} mode`}>
+                  <button
+                    type="button"
+                    className={clsx("rebar-float-assistant-mode-btn", mode === "voice" && "rebar-float-assistant-mode-btn-active")}
+                    onClick={toggleMode}
+                    aria-label={`Switch to ${mode === "text" ? "voice" : "text"} mode`}
+                  >
+                    {mode === "text" ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                        <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                      </svg>
+                    )}
+                  </button>
+                </Tooltip>
               )}
               {sidebarDockable && (
-                <button
-                  type="button"
-                  className="rebar-float-assistant-mode-btn"
-                  onClick={toggleDockMode}
-                  aria-label={isSidebarDocked ? "Undock to floating panel" : "Dock as sidebar"}
-                  title={isSidebarDocked ? "Undock to floating panel" : "Dock as sidebar"}
-                  data-rebar-part="dock-toggle"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                    <line x1="15" y1="4" x2="15" y2="20" />
-                  </svg>
-                </button>
+                <Tooltip content={isSidebarDocked ? "Undock to floating panel" : "Dock as sidebar"}>
+                  <button
+                    type="button"
+                    className="rebar-float-assistant-mode-btn"
+                    onClick={toggleDockMode}
+                    aria-label={isSidebarDocked ? "Undock to floating panel" : "Dock as sidebar"}
+                    data-rebar-part="dock-toggle"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="4" width="18" height="16" rx="2" />
+                      <line x1="15" y1="4" x2="15" y2="20" />
+                    </svg>
+                  </button>
+                </Tooltip>
               )}
               {minimizable && (
-                <button
-                  type="button"
-                  className="rebar-float-assistant-minimize-btn"
-                  onClick={toggleMinimize}
-                  aria-label="Minimize assistant"
-                  title="Minimize to corner"
-                  style={{
-                    "--assistant-accent": accentColor,
-                    pointerEvents: "auto",
-                  } as React.CSSProperties}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="4 14 10 14 10 20" />
-                    <polyline points="20 10 14 10 14 4" />
-                    <line x1="14" y1="10" x2="21" y2="3" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                  </svg>
-                </button>
+                <Tooltip content="Minimize to corner">
+                  <button
+                    type="button"
+                    className="rebar-float-assistant-minimize-btn"
+                    onClick={toggleMinimize}
+                    aria-label="Minimize assistant"
+                    style={{
+                      "--assistant-accent": accentColor,
+                      pointerEvents: "auto",
+                    } as React.CSSProperties}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="4 14 10 14 10 20" />
+                      <polyline points="20 10 14 10 14 4" />
+                      <line x1="14" y1="10" x2="21" y2="3" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>
