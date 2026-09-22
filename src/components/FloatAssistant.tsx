@@ -9,7 +9,8 @@ import { ORB_PERSONAS } from "../orb-personas/personas";
 import { AssistantOrb } from "./AssistantOrb";
 import { VoiceInputBar } from "./VoiceInputBar";
 import { Spin } from "./Spin";
-import { AddIcon, AiAgentIcon, ScreenshotIcon } from "./icons-remix";
+import { AddIcon, AiAgentIcon, CheckIcon, ScreenshotIcon } from "./icons-remix";
+import { CopyIcon } from "./icons";
 import { DEFAULT_FLOAT_ASSISTANT_VOICE_GREETINGS, DEFAULT_SCREENSHOT_ACKNOWLEDGMENT } from "./FloatAssistant.constants";
 
 export interface FloatAssistantMessage {
@@ -215,6 +216,10 @@ export function FloatAssistant({
   const [isRecording, setIsRecording] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  // Which message's copy button last showed "Copied!" -- a single id, not a set, since the
+  // confirmation is momentary (2s) and copying two messages that fast is not a real scenario worth
+  // tracking independently. Same confirm-then-reset shape `CodeBlock`'s own copy button uses.
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   // Holds the most recently captured screenshot until the *next* message send, at which point
   // it rides along on that call and is cleared — not rendered as a visible attachment/thumbnail
   // itself (see `screenshotAcknowledgment`'s own doc comment).
@@ -755,6 +760,19 @@ export function FloatAssistant({
     }
   }, [isCapturingScreenshot, onCaptureScreenshot, screenshotAcknowledgment, contextAware, harvestPageKeyTerms]);
 
+  // Copies the message's own raw content (its literal text, Markdown syntax and all -- same "what
+  // you copy is what was authored" contract CodeBlock's copy button already keeps for its own
+  // `markdown` mode), not whatever DOM text the rendered Markdown happens to produce.
+  const handleCopyMessage = useCallback(async (message: FloatAssistantMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+    } catch {
+      return;
+    }
+    setCopiedMessageId(message.id);
+    setTimeout(() => setCopiedMessageId((current) => (current === message.id ? null : current)), 2000);
+  }, []);
+
   const toggleRecording = useCallback(() => {
     const newRecording = !isRecording;
     setIsRecording(newRecording);
@@ -1092,7 +1110,21 @@ export function FloatAssistant({
                       ? renderMarkdown(msg.content, { bionic: bionicEnabled, bionicOptions })
                       : renderBionicChildren(msg.content, bionicEnabled, bionicOptions)}
                   </div>
-                  <div className="rebar-float-assistant-message-time">{formatTime(msg.timestamp)}</div>
+                  <div className="rebar-float-assistant-message-footer" data-rebar-part="message-footer">
+                    <span className="rebar-float-assistant-message-time">{formatTime(msg.timestamp)}</span>
+                    {msg.role === "assistant" && (
+                      <button
+                        type="button"
+                        className="rebar-float-assistant-message-copy-btn"
+                        onClick={() => handleCopyMessage(msg)}
+                        aria-label={copiedMessageId === msg.id ? "Copied" : "Copy message"}
+                        title={copiedMessageId === msg.id ? "Copied!" : "Copy message"}
+                        aria-live="polite"
+                      >
+                        {copiedMessageId === msg.id ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

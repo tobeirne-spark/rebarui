@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { FloatAssistant } from "../components/FloatAssistant";
 
 function sendMessage(text: string) {
@@ -108,5 +108,38 @@ describe("FloatAssistant getHostContext", () => {
 
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
     expect(body).not.toHaveProperty("hostContext");
+  });
+});
+
+describe("FloatAssistant message copy button", () => {
+  beforeEach(() => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+  });
+
+  it("copies an assistant message's raw content and shows a confirmation that reverts after 2s", async () => {
+    vi.useFakeTimers();
+    const { container } = render(<FloatAssistant greeting="**Hello** there" />);
+    openPanel(container);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy message" }));
+    });
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("**Hello** there");
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByRole("button", { name: "Copy message" })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("does not show a copy button on the user's own messages", () => {
+    const { container } = render(<FloatAssistant />);
+    openPanel(container);
+    sendMessage("Hello");
+    const userMessage = container.querySelector('[data-rebar-part="message-user"]') as HTMLElement;
+    expect(within(userMessage).queryByRole("button", { name: "Copy message" })).not.toBeInTheDocument();
   });
 });

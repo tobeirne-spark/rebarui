@@ -6853,14 +6853,43 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   border-bottom-right-radius: 4px;
 }
 
-.rebar-float-assistant-message-time {
-  font-size: 11px;
-  color: var(--rebar-color-text-secondary, #757575);
+.rebar-float-assistant-message-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 0 4px;
 }
 
-.rebar-float-assistant-message-user .rebar-float-assistant-message-time {
-  text-align: right;
+.rebar-float-assistant-message-user .rebar-float-assistant-message-footer {
+  justify-content: flex-end;
+}
+
+.rebar-float-assistant-message-time {
+  font-size: 11px;
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-float-assistant-message-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--rebar-color-text-secondary, #757575);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.rebar-float-assistant-message:hover .rebar-float-assistant-message-copy-btn,
+.rebar-float-assistant-message-copy-btn:focus-visible {
+  opacity: 1;
+}
+
+.rebar-float-assistant-message-copy-btn:hover {
+  color: var(--rebar-color-primary, #0066cc);
 }
 
 /* Typing Indicator */
