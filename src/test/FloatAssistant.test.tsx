@@ -1,6 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { FloatAssistant } from "../components/FloatAssistant";
+
+function sendMessage(text: string) {
+  fireEvent.change(screen.getByLabelText("Message input"), { target: { value: text } });
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+}
 
 afterEach(cleanup);
 
@@ -69,5 +74,39 @@ describe("FloatAssistant screenshot capture resilience", () => {
     openPanel(container);
     fireEvent.click(screen.getByRole("button", { name: "Capture a screenshot of the page" }));
     expect(await screen.findByText(SCREENSHOT_ACK)).toBeInTheDocument();
+  });
+});
+
+describe("FloatAssistant getHostContext", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("is called fresh and included as hostContext on every send to apiEndpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: "ok" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const getHostContext = vi.fn().mockReturnValue("Dashboard: Forms Locked 6/1127 (1%).");
+
+    const { container } = render(<FloatAssistant apiEndpoint="/api/chat" getHostContext={getHostContext} />);
+    openPanel(container);
+    sendMessage("How are we doing?");
+    await screen.findByText("ok");
+
+    expect(getHostContext).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.hostContext).toBe("Dashboard: Forms Locked 6/1127 (1%).");
+  });
+
+  it("omits hostContext entirely when getHostContext returns nothing", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: "ok" }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { container } = render(<FloatAssistant apiEndpoint="/api/chat" getHostContext={() => undefined} />);
+    openPanel(container);
+    sendMessage("Hello");
+    await screen.findByText("ok");
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body).not.toHaveProperty("hostContext");
   });
 });

@@ -120,6 +120,20 @@ export interface FloatAssistantProps extends Omit<ComponentPropsWithoutRef<"div"
   apiEndpoint?: string;
   /** Optional auth token for the API endpoint (e.g., session token). */
   apiAuthToken?: string;
+  /**
+   * Called fresh before every send and included in the request body as `hostContext` — the host
+   * app's own way to describe *real, structured, currently-on-screen state* (the live numbers
+   * behind a chart, the active filters, which record is open) that a generic DOM scrape or a
+   * screenshot can't reliably capture (see `contextAware`/`onCaptureScreenshot`, which cover a
+   * different, opt-in-per-message case: the user explicitly asking the assistant to "look at" an
+   * arbitrary page). `apiEndpoint`'s own implementation decides how (or whether) to use it — this
+   * construct only threads it through, unmodified, the same "app developer owns the actual LLM
+   * call" stance `apiEndpoint` itself already takes. Returning `undefined`/`""` omits the field
+   * entirely for that send (e.g. a page with nothing relevant to report). Prefer a plain
+   * synchronous return for anything already in memory; async is there for state that's cheap to
+   * compute but not worth keeping constantly up to date (e.g. a light DB read).
+   */
+  getHostContext?: () => string | undefined | Promise<string | undefined>;
   /** Available voices for TTS. Pass a list to enable voice selection. */
   voices?: FloatAssistantVoiceOption[];
   /** Currently selected voice ID. */
@@ -176,6 +190,7 @@ export function FloatAssistant({
   minimizable = true,
   apiEndpoint,
   apiAuthToken,
+  getHostContext,
   voices,
   voiceId,
   // Not yet wired to a call site — kept in the public prop type for the voice-picker UI this is
@@ -594,6 +609,7 @@ export function FloatAssistant({
     if (apiEndpoint) {
       const callApi = async () => {
         try {
+          const hostContext = await getHostContext?.();
           const response = await fetch(apiEndpoint, {
             method: "POST",
             headers: {
@@ -605,6 +621,7 @@ export function FloatAssistant({
               history: messages.map((m) => ({ role: m.role, content: m.content })),
               ...(screenshot ? { screenshot } : {}),
               ...(pageContext ? { pageContext } : {}),
+              ...(hostContext ? { hostContext } : {}),
             }),
           });
           if (!response.ok) {
@@ -619,7 +636,8 @@ export function FloatAssistant({
             timestamp: Date.now(),
           };
           setMessages((prev) => [...prev, assistantMessage]);
-        } catch {
+        } catch (err) {
+          console.error("FloatAssistant: send failed", err);
           setIsTyping(false);
           const errorMessage: FloatAssistantMessage = {
             id: `error-${Date.now()}`,
@@ -644,7 +662,7 @@ export function FloatAssistant({
         setMessages((prev) => [...prev, assistantMessage]);
       }, 1500);
     }
-  }, [inputValue, onSendMessage, apiEndpoint, apiAuthToken, messages]);
+  }, [inputValue, onSendMessage, apiEndpoint, apiAuthToken, getHostContext, messages]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
