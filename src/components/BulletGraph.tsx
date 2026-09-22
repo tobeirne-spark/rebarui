@@ -66,8 +66,8 @@ export function BulletGraph({
 }: BulletGraphProps) {
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const width = 700;
-  const marginLeft = 120;
-  const marginRight = 60;
+  const marginLeft = 132;
+  const marginRight = 68;
   const marginTop = 16;
   const marginBottom = 8;
   const plotWidth = width - marginLeft - marginRight;
@@ -139,9 +139,9 @@ export function BulletGraph({
                 data-rebar-part="target"
               />
               <text
-                x={marginLeft - 12}
-                y={rowCenter + 4}
-                fontSize={12}
+                x={marginLeft - 14}
+                y={rowCenter + 5}
+                fontSize={15}
                 textAnchor="end"
                 fill="var(--rebar-color-text-primary, #212121)"
                 style={{ fontWeight: 600 }}
@@ -149,9 +149,9 @@ export function BulletGraph({
                 {m.label}
               </text>
               <text
-                x={width - marginRight + 10}
-                y={rowCenter + 4}
-                fontSize={11}
+                x={width - marginRight + 12}
+                y={rowCenter + 5}
+                fontSize={15}
                 textAnchor="start"
                 fill="var(--rebar-color-text-secondary, #757575)"
               >
