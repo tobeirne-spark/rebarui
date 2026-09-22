@@ -42,3 +42,32 @@ describe("FloatAssistant markdown rendering (on by default, same convention as C
     expect(screen.getByText("Hi there, how can I help?")).toBeInTheDocument();
   });
 });
+
+const SCREENSHOT_ACK = "Yep, I'm looking at the screen — what would you like me to analyze?";
+const SCREENSHOT_ERROR = "Sorry, I couldn't capture the screen just now.";
+
+describe("FloatAssistant screenshot capture resilience", () => {
+  it("a failed capture still acknowledges when contextAware is on -- DOM-harvested page context doesn't depend on the screenshot succeeding", async () => {
+    const { container } = render(
+      <FloatAssistant contextAware onCaptureScreenshot={() => Promise.reject(new Error("nope"))} />,
+    );
+    openPanel(container);
+    fireEvent.click(screen.getByRole("button", { name: "Capture a screenshot of the page" }));
+    expect(await screen.findByText(SCREENSHOT_ACK)).toBeInTheDocument();
+    expect(screen.queryByText(SCREENSHOT_ERROR)).not.toBeInTheDocument();
+  });
+
+  it("a failed capture with contextAware off shows the real failure, not a false acknowledgment", async () => {
+    const { container } = render(<FloatAssistant onCaptureScreenshot={() => Promise.reject(new Error("nope"))} />);
+    openPanel(container);
+    fireEvent.click(screen.getByRole("button", { name: "Capture a screenshot of the page" }));
+    expect(await screen.findByText(SCREENSHOT_ERROR)).toBeInTheDocument();
+  });
+
+  it("a successful custom onCaptureScreenshot always acknowledges", async () => {
+    const { container } = render(<FloatAssistant onCaptureScreenshot={() => Promise.resolve("data:image/png;base64,AA==")} />);
+    openPanel(container);
+    fireEvent.click(screen.getByRole("button", { name: "Capture a screenshot of the page" }));
+    expect(await screen.findByText(SCREENSHOT_ACK)).toBeInTheDocument();
+  });
+});

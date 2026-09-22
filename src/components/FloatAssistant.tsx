@@ -682,24 +682,48 @@ export function FloatAssistant({
     if (isCapturingScreenshot) return;
     setIsCapturingScreenshot(true);
     try {
-      let dataUrl: string;
-      if (onCaptureScreenshot) {
-        dataUrl = await onCaptureScreenshot();
-      } else {
-        // Dynamically imported — consumers who never enable/use the screenshot button never pay
-        // for html2canvas, the same "lazy-loaded, external in the build" pattern as the orb-
-        // persona shader's own `three` dependency (see orb-shader/createOrbRenderer.ts).
-        const { default: html2canvas } = await import("html2canvas");
-        const canvas = await html2canvas(document.body, {
-          // Never capture the assistant's own button/panel — this is a screenshot of the rest of
-          // the page, not of itself.
-          ignoreElements: (el) => rootRef.current?.contains(el) ?? false,
-        });
-        dataUrl = canvas.toDataURL("image/png");
-      }
-      pendingScreenshotRef.current = dataUrl;
+      // Harvested unconditionally, independent of whether the visual capture below succeeds --
+      // pure DOM reading, never touches html2canvas, so a page whose CSS html2canvas's parser
+      // can't handle (color-mix(), oklch(), and other CSS Color Module Level 4 syntax it predates
+      // entirely -- rebar-ui's own stylesheet included) shouldn't also lose this.
       if (contextAware) {
         pendingPageContextRef.current = harvestPageKeyTerms();
+      }
+      let screenshotOk = true;
+      try {
+        if (onCaptureScreenshot) {
+          pendingScreenshotRef.current = await onCaptureScreenshot();
+        } else {
+          // Dynamically imported — consumers who never enable/use the screenshot button never pay
+          // for html2canvas, the same "lazy-loaded, external in the build" pattern as the orb-
+          // persona shader's own `three` dependency (see orb-shader/createOrbRenderer.ts).
+          const { default: html2canvas } = await import("html2canvas");
+          const canvas = await html2canvas(document.body, {
+            // Never capture the assistant's own button/panel — this is a screenshot of the rest
+            // of the page, not of itself.
+            ignoreElements: (el) => rootRef.current?.contains(el) ?? false,
+          });
+          pendingScreenshotRef.current = canvas.toDataURL("image/png");
+        }
+      } catch (err) {
+        // Best-effort, not a scenario to let take down the whole capture -- logged for the
+        // developer (a consumer whose page trips this reliably wants to know why, not just that
+        // it happened), but the DOM-harvested context above is still real and worth keeping.
+        console.error("FloatAssistant: screenshot capture failed", err);
+        pendingScreenshotRef.current = null;
+        screenshotOk = false;
+      }
+      if (!screenshotOk && !contextAware) {
+        // Neither a screenshot nor any page context was actually captured -- say so, rather than
+        // falsely acknowledging a capture that didn't happen.
+        const errorMessage: FloatAssistantMessage = {
+          id: `screenshot-error-${Date.now()}`,
+          role: "assistant",
+          content: "Sorry, I couldn't capture the screen just now.",
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        return;
       }
       const ackMessage: FloatAssistantMessage = {
         id: `screenshot-${Date.now()}`,
@@ -708,16 +732,6 @@ export function FloatAssistant({
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, ackMessage]);
-    } catch {
-      // A real failure (e.g. a tainted/cross-origin canvas somewhere on the page), not a
-      // scenario to silently swallow — say so rather than falsely implying it saw the screen.
-      const errorMessage: FloatAssistantMessage = {
-        id: `screenshot-error-${Date.now()}`,
-        role: "assistant",
-        content: "Sorry, I couldn't capture the screen just now.",
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsCapturingScreenshot(false);
     }
