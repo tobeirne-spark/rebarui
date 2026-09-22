@@ -1981,6 +1981,12 @@ body {
 .rebar-steps-item[data-rebar-status="process"] .rebar-steps-icon {
   border-color: var(--rebar-color-primary, #0066cc);
   color: var(--rebar-color-primary, #0066cc);
+  /* A light tint of the primary color -- distinct from "finish"'s full solid fill, so the
+     currently-active step (plain number + traveling-beam ring) reads as "here", not "done".
+     Static rgba first for engines without color-mix (silently ignored, keeping this as the
+     final value there); color-mix stays theme-aware for whatever --rebar-color-primary is. */
+  background: rgba(0, 102, 204, 0.12);
+  background: color-mix(in srgb, var(--rebar-color-primary, #0066cc) 15%, var(--rebar-color-bg-primary, #ffffff));
 }
 .rebar-steps-item[data-rebar-status="finish"] .rebar-steps-icon {
   border-color: var(--rebar-color-primary, #0066cc);
