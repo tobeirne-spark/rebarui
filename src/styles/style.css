@@ -6504,8 +6504,24 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   max-width: 100%;
 }
 
+.rebar-signature-pad-typed-name-wrap {
+  position: relative;
+}
+
 .rebar-signature-pad-typed-name {
   width: 100%;
+  padding-right: 32px;
+}
+
+.rebar-signature-pad-typed-name-hint {
+  position: absolute;
+  top: 50%;
+  right: var(--rebar-space-sm, 8px);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: var(--rebar-color-text-secondary, #666666);
+  pointer-events: none;
 }
 
 .rebar-signature-pad-actions {

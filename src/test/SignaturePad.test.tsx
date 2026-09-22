@@ -83,18 +83,23 @@ describe("SignaturePad", () => {
     expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
   });
 
-  it("allowTypedName: typing a name marks the pad non-empty and emits a value", async () => {
+  it("allowTypedName: typing a name marks the pad non-empty immediately, and emits a value on blur", async () => {
     const onValueChange = vi.fn();
     const { container } = render(<SignaturePad allowTypedName onValueChange={onValueChange} />);
-    fireEvent.change(screen.getByPlaceholderText("Type your name"), { target: { value: "Ada Lovelace" } });
+    const input = screen.getByPlaceholderText("Type your name");
+    fireEvent.change(input, { target: { value: "Ada Lovelace" } });
     expect(container.querySelector('[data-rebar-component="signature-pad"]')).not.toHaveAttribute(
       "data-rebar-empty",
     );
+    // Not committed yet -- typing only paints a live preview, the same "commit at the natural end
+    // of the gesture" rule pointer drawing follows (moves paint locally, only pointerup emits).
+    expect(onValueChange).not.toHaveBeenCalled();
+    fireEvent.blur(input);
     await waitFor(() => expect(onValueChange).toHaveBeenCalledWith(expect.any(String)));
     expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
   });
 
-  it("allowTypedName: clearing the typed name back to empty resets to empty and emits \"\"", () => {
+  it("allowTypedName: clearing the typed name back to empty resets to empty, and emits \"\" on blur", () => {
     const onValueChange = vi.fn();
     const { container } = render(<SignaturePad allowTypedName onValueChange={onValueChange} />);
     const input = screen.getByPlaceholderText("Type your name");
@@ -104,7 +109,29 @@ describe("SignaturePad", () => {
       "data-rebar-empty",
       "true",
     );
+    fireEvent.blur(input);
     expect(onValueChange).toHaveBeenLastCalledWith("");
+  });
+
+  it("allowTypedName: pressing Enter commits the same way blur does", async () => {
+    const onValueChange = vi.fn();
+    render(<SignaturePad allowTypedName onValueChange={onValueChange} />);
+    const input = screen.getByPlaceholderText("Type your name") as HTMLInputElement;
+    input.focus();
+    fireEvent.change(input, { target: { value: "Ada Lovelace" } });
+    expect(onValueChange).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(onValueChange).toHaveBeenCalledWith(expect.any(String)));
+  });
+
+  it("allowTypedName: shows a save hint only once there's a name to commit", () => {
+    render(<SignaturePad allowTypedName />);
+    const input = screen.getByPlaceholderText("Type your name");
+    expect(screen.queryByTitle("Press Enter to save")).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "Ada" } });
+    expect(screen.getByTitle("Press Enter to save")).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.queryByTitle("Press Enter to save")).not.toBeInTheDocument();
   });
 
   it("Clear also resets a typed name", () => {

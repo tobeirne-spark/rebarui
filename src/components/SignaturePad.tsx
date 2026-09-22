@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
 import { Input } from "./Input";
+import { EnterOutlined } from "./icons";
 
 /** A caller-supplied audit stamp baked into the bottom-right corner of the exported/drawn image
  * whenever a signature is captured (stroke end, upload, or typed name) — the visible "signed by /
@@ -148,18 +149,26 @@ export function SignaturePad({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
-  // Initial paint, and redraw when the caller loads a genuinely new external value.
+  // Initial paint, and redraw when the caller loads a genuinely new external value. Skipped
+  // entirely when `value` is just our own emitted value echoed back through a controlled prop
+  // (the normal round-trip: draw/type/upload -> emitValue sets lastValueRef + calls
+  // onValueChange -> caller re-renders with that same value) -- the canvas already shows it, and
+  // clearing here would erase what the user just captured before this effect could redraw it.
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = getContext();
     if (!canvas || !ctx) return;
+    if (value === lastValueRef.current) return;
     clearCanvas();
-    if (value && value !== lastValueRef.current) {
+    if (value) {
       const img = new Image();
       img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       img.src = value;
       lastValueRef.current = value;
       setIsEmpty(false);
+    } else {
+      lastValueRef.current = value;
+      setIsEmpty(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run for a genuinely new value/size, not every render.
   }, [value, width, height, backgroundColor]);
@@ -214,11 +223,28 @@ export function SignaturePad({
     );
     if (parts.length === 0) return;
     ctx.save();
-    ctx.font = "10px monospace";
-    ctx.fillStyle = "rgba(33, 33, 33, 0.55)";
+    // Scaled to the pad's own height (with a floor) rather than a fixed size -- a fixed 10px was
+    // legible at the canvas's native resolution but became unreadable once the resulting image
+    // was ever displayed smaller (e.g. embedded at table-row height in an exported PDF).
+    const stampFontSize = Math.max(12, Math.round(height * 0.09));
+    ctx.font = `${stampFontSize}px monospace`;
+    ctx.fillStyle = "rgba(33, 33, 33, 0.7)";
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
-    ctx.fillText(parts.join(" · "), canvas.width - 6, canvas.height - 4);
+    const maxWidth = canvas.width - 12;
+    const fullText = parts.join(" · ");
+    if (parts.length > 1 && ctx.measureText(fullText).width > maxWidth) {
+      // Doesn't fit on one line at this size (a long role label plus a timestamp, most often) --
+      // wrap onto a second line instead of shrinking the font until an arbitrarily long label
+      // technically fits, which would defeat the point of sizing this for legibility at all.
+      const lastLine = parts[parts.length - 1] ?? "";
+      const firstLine = parts.slice(0, -1).join(" · ");
+      const lineHeight = Math.round(stampFontSize * 1.2);
+      ctx.fillText(firstLine, canvas.width - 6, canvas.height - 4 - lineHeight);
+      ctx.fillText(lastLine, canvas.width - 6, canvas.height - 4);
+    } else {
+      ctx.fillText(fullText, canvas.width - 6, canvas.height - 4);
+    }
     ctx.restore();
   };
 
@@ -248,9 +274,11 @@ export function SignaturePad({
     onValueChange?.("");
   };
 
-  const handleTypedNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const name = event.target.value;
-    setTypedName(name);
+  // Typing paints a live cursive preview on every keystroke but does *not* emit a value -- same
+  // "commit only at the natural end of the gesture" rule pointer drawing already follows (moves
+  // paint locally, only pointerup calls emitValue). For typed name, that gesture ends on blur:
+  // see handleTypedNameBlur, which is also where the stamp gets baked in, not on every keystroke.
+  const paintTypedName = (name: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     clearCanvas();
@@ -270,12 +298,30 @@ export function SignaturePad({
         ctx.restore();
       }
       setIsEmpty(false);
-      emitValue();
     } else {
       setIsEmpty(true);
+    }
+  };
+
+  const handleTypedNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const name = event.target.value;
+    setTypedName(name);
+    paintTypedName(name);
+  };
+
+  const handleTypedNameBlur = () => {
+    if (typedName.trim()) {
+      emitValue();
+    } else {
       lastValueRef.current = "";
       onValueChange?.("");
     }
+  };
+
+  // Enter commits the same way blur already does -- just blurring the field is enough to trigger
+  // the real onBlur handler above, rather than duplicating its logic here.
+  const handleTypedNameKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") event.currentTarget.blur();
   };
 
   const handleUploadClick = () => fileInputRef.current?.click();
@@ -304,17 +350,26 @@ export function SignaturePad({
   return (
     <div className={clsx("rebar-signature-pad", className)} data-rebar-component="signature-pad" data-rebar-empty={isEmpty || undefined}>
       {allowTypedName ? (
-        <Input
-          type="text"
-          size="sm"
-          value={typedName}
-          onChange={handleTypedNameChange}
-          placeholder={typedNamePlaceholder}
-          disabled={disabled}
-          aria-label={typedNamePlaceholder}
-          className="rebar-signature-pad-typed-name"
-          data-rebar-part="typed-name"
-        />
+        <div className="rebar-signature-pad-typed-name-wrap">
+          <Input
+            type="text"
+            size="sm"
+            value={typedName}
+            onChange={handleTypedNameChange}
+            onBlur={handleTypedNameBlur}
+            onKeyDown={handleTypedNameKeyDown}
+            placeholder={typedNamePlaceholder}
+            disabled={disabled}
+            aria-label={typedNamePlaceholder}
+            className="rebar-signature-pad-typed-name"
+            data-rebar-part="typed-name"
+          />
+          {typedName.trim() && !disabled ? (
+            <span className="rebar-signature-pad-typed-name-hint" aria-hidden="true" title="Press Enter to save">
+              <EnterOutlined />
+            </span>
+          ) : null}
+        </div>
       ) : null}
       <canvas
         ref={canvasRef}
