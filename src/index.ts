@@ -15,7 +15,7 @@
  * it to a fresh macrotask, guaranteed to run after hydration's synchronous initial commit finishes
  * — the attribute still lands moments later, just outside hydration's own comparison window.
  */
-export const REBAR_UI_VERSION = "0.12.0";
+export const REBAR_UI_VERSION = "0.12.1";
 
 if (typeof document !== "undefined") {
   setTimeout(() => {

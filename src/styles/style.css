@@ -7031,6 +7031,10 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
     height: calc(100vh - 120px);
     max-height: 600px;
   }
+
+  .rebar-float-assistant-panel-sidebar {
+    width: 100vw;
+  }
 }
 
 /* FloatAssistant - Drag & Minimize */
@@ -7139,6 +7143,137 @@ div.rebar-chat-message-content > *:last-child { margin-bottom: 0; }
   filter: blur(2px);
   pointer-events: none;
   z-index: 2;
+}
+
+/* FloatAssistant - Sidebar dock layout. Shares every base .rebar-float-assistant-panel rule
+   (background, border, header/messages/input structure) — this modifier only overrides geometry
+   and swaps the entrance animation for one that flies in from the edge it's docked to, instead of
+   sliding up from below. Reached via the panel header's dock-toggle button, not a drag gesture. */
+.rebar-float-assistant-panel-sidebar {
+  border-radius: 0;
+  border-right: none;
+  border-top: none;
+  border-bottom: none;
+  animation: rebar-float-assistant-sidebar-dock-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes rebar-float-assistant-sidebar-dock-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* No separate .rebar-float-assistant-dock-toggle-btn rule — the dock-toggle button in the JSX
+   reuses .rebar-float-assistant-mode-btn's class directly (same ghost icon-button look as its
+   header-row neighbors), rather than a duplicate near-identical rule. */
+
+/* FloatAssistant - Sidebar input toolbar (Claude-Code-style: rounded input, icon row below). */
+.rebar-float-assistant-sidebar-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--rebar-color-border, #e0e0e0);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: var(--rebar-color-bg-primary, #ffffff);
+}
+
+.rebar-float-assistant-sidebar-input-field {
+  resize: none;
+  border: none;
+  outline: none;
+  min-height: 40px;
+  max-height: 160px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--rebar-color-text-primary, #212121);
+  background: transparent;
+}
+
+.rebar-float-assistant-sidebar-input-field::placeholder {
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-float-assistant-sidebar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rebar-float-assistant-sidebar-toolbar-left,
+.rebar-float-assistant-sidebar-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rebar-float-assistant-sidebar-toolbar-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--rebar-color-text-secondary, #757575);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rebar-float-assistant-sidebar-toolbar-btn:hover {
+  background: var(--rebar-color-bg-secondary, #f0f0f0);
+  color: var(--rebar-color-text-primary, #212121);
+}
+
+.rebar-float-assistant-model-pill {
+  border: 1px solid var(--rebar-color-border, #e0e0e0);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rebar-color-text-secondary, #757575);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+  cursor: default;
+  white-space: nowrap;
+}
+
+button.rebar-float-assistant-model-pill {
+  cursor: pointer;
+}
+
+button.rebar-float-assistant-model-pill:hover {
+  background: var(--rebar-color-bg-primary, #ffffff);
+}
+
+.rebar-float-assistant-sidebar-submit-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--assistant-accent, var(--rebar-color-primary, #0066cc));
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.rebar-float-assistant-sidebar-submit-btn:hover:not(:disabled) {
+  background: var(--rebar-color-primary-hover, #0052a3);
+  transform: scale(1.05);
+}
+
+.rebar-float-assistant-sidebar-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* VoiceInputBar — --voice-glow is set inline by the component itself (from its `accentColor`
