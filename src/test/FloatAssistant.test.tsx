@@ -172,3 +172,20 @@ describe("FloatAssistant header button tooltips", () => {
     expect(tooltip.closest('[data-rebar-component="tooltip"]')).not.toBeNull();
   });
 });
+
+describe("FloatAssistant sidebar dock button positioning", () => {
+  it("positions the docked trigger with a fixed right offset, not a left computed from window.innerWidth", () => {
+    const { container } = render(<FloatAssistant sidebarDockable sidebarWidth={380} />);
+    openPanel(container);
+    fireEvent.click(screen.getByRole("button", { name: "Dock as sidebar" }));
+
+    const trigger = container.querySelector('[data-rebar-part="trigger"]') as HTMLElement;
+    // 380 (sidebarWidth) - 16 (header offset) - 56 (docked button size) = 308 -- a fixed constant
+    // relative to the sidebar's own right edge, not a `left` derived from window.innerWidth (which
+    // includes the scrollbar's width and would disagree with the panel's own `right: 0` anchoring
+    // on any page tall enough to scroll, landing the button short of the header avatar it's meant
+    // to sit on top of).
+    expect(trigger.style.right).toBe("308px");
+    expect(trigger.style.left).toBe("auto");
+  });
+});

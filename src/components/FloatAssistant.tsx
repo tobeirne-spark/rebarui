@@ -958,14 +958,18 @@ export function FloatAssistant({
       }
     : null;
 
-  // The sidebar's header slot, unlike the floating panel's, never moves — no windowDragOffset
-  // involved, computed straight off the viewport width and sidebarWidth.
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+  // The sidebar's header slot, unlike the floating panel's, never moves and is anchored the same
+  // way the sidebar panel itself is (`panelStyle` below: `right: 0`) — right-edge-relative, not a
+  // `left` computed from `window.innerWidth`. That measurement includes the scrollbar's own width,
+  // while the panel's CSS `right: 0` positions against the (scrollbar-excluded) CSS viewport, so on
+  // any page tall enough to scroll the two would disagree by the scrollbar's width and the button
+  // would land short of the avatar's actual on-screen spot. A `right` offset needs no viewport
+  // width at all — both the panel and the button are relative to the same edge.
   const sidebarDockedButtonStyle: React.CSSProperties | null = isSidebarDocked
     ? {
-        left: viewportWidth - sidebarWidth + DOCKED_HEADER_OFFSET,
+        left: "auto",
+        right: sidebarWidth - DOCKED_HEADER_OFFSET - DOCKED_BUTTON_SIZE,
         top: DOCKED_HEADER_OFFSET,
-        right: "auto",
         bottom: "auto",
       }
     : null;
