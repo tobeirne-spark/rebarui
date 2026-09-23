@@ -82,6 +82,12 @@ export interface KanbanProps {
    * column/section limit enforces is always the true, unfiltered count, so a filter never makes
    * a full column look like it has room. */
   search?: string;
+  /** An additional visibility predicate, composed with `search` (a card must pass both) — for a
+   * caller-defined filter (e.g. "only this tag", "only this assignee") that doesn't fit a single
+   * substring. Same visibility-only guarantee as `search`: never touches the real per-section
+   * cardIds a drag/reorder's own `onChange` reads from, so filtering never drops a card from its
+   * column data just because it's hidden. */
+  filterCard?: (card: KanbanCard) => boolean;
   /** "sticky" renders each card as a postit — procedurally varied rotation/shadow, a
    * caller-or-auto-assigned color, and (by default, see `stickyDefaultLimit`) a hard 3-per-column
    * cap — the same board underneath, not a separate component. Clicking a sticky (not dragging it)
@@ -231,6 +237,7 @@ export function Kanban({
   cards,
   onChange,
   search = "",
+  filterCard,
   cardVariant = "default",
   stickyDefaultLimit = STICKY_CAP_DEFAULT,
   renderCard,
@@ -537,17 +544,18 @@ export function Kanban({
             {column.sections.map((section) => {
               const collapsed = Boolean(collapsedColumns[column.id]);
               const sectionLimit = effectiveLimit(section.limit, sticky, stickyDefaultLimit);
-              const searchActive = search.trim().length > 0;
+              const filterActive = search.trim().length > 0 || filterCard !== undefined;
               const matchingIds = sortCardIds(section.cardIds, cards, sortOrder).filter((id) => {
                 const card = cards[id];
-                return card ? matchesSearch(card, search) : false;
+                if (!card) return false;
+                return matchesSearch(card, search) && (!filterCard || filterCard(card));
               });
-              // A collapsed column stays empty except for its tray -- unless a search is actually
-              // narrowing the board down, in which case whichever of its own cards match surface
-              // as "ghost" cards (styled via .rebar-kanban-section-cards-collapsed below) so a
-              // search doesn't silently look like it missed something that's just hidden. Clearing
-              // the search, or narrowing it to no longer match, goes straight back to tray-only.
-              const visibleIds = collapsed ? (searchActive ? matchingIds : []) : matchingIds;
+              // A collapsed column stays empty except for its tray -- unless a search or filterCard
+              // is actually narrowing the board down, in which case whichever of its own cards match
+              // surface as "ghost" cards (styled via .rebar-kanban-section-cards-collapsed below) so
+              // a filter doesn't silently look like it missed something that's just hidden. Clearing
+              // it, or narrowing it to no longer match, goes straight back to tray-only.
+              const visibleIds = collapsed ? (filterActive ? matchingIds : []) : matchingIds;
               return (
                 <div key={section.id} className="rebar-kanban-section" data-rebar-part="section">
                   {section.label && !collapsed ? (
