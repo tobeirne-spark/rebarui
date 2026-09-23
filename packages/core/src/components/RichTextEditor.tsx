@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
-import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, CSSProperties, DragEvent, MouseEvent } from "react";
+import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, DragEvent, MouseEvent } from "react";
+import type { ComponentType } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
+import { BoldOutlined, ItalicOutlined, LinkOutlined, OrderedListOutlined, PictureOutlined, UnderlineOutlined, UnorderedListOutlined } from "./icons-antd";
+import type { IconProps } from "./iconFactory";
 
 export interface RichTextEditorProps
   extends Omit<ComponentPropsWithoutRef<"div">, "value" | "defaultValue" | "onChange"> {
@@ -19,12 +22,12 @@ export interface RichTextEditorProps
   maxImageBytes?: number;
 }
 
-const COMMANDS: { command: string; label: string; glyph: string; glyphStyle?: CSSProperties }[] = [
-  { command: "bold", label: "Bold", glyph: "B", glyphStyle: { fontWeight: 700 } },
-  { command: "italic", label: "Italic", glyph: "I", glyphStyle: { fontStyle: "italic" } },
-  { command: "underline", label: "Underline", glyph: "U", glyphStyle: { textDecoration: "underline" } },
-  { command: "insertUnorderedList", label: "Bulleted list", glyph: "•" },
-  { command: "insertOrderedList", label: "Numbered list", glyph: "1." },
+const COMMANDS: { command: string; label: string; Icon: ComponentType<IconProps> }[] = [
+  { command: "bold", label: "Bold", Icon: BoldOutlined },
+  { command: "italic", label: "Italic", Icon: ItalicOutlined },
+  { command: "underline", label: "Underline", Icon: UnderlineOutlined },
+  { command: "insertUnorderedList", label: "Bulleted list", Icon: UnorderedListOutlined },
+  { command: "insertOrderedList", label: "Numbered list", Icon: OrderedListOutlined },
 ];
 
 /**
@@ -183,7 +186,7 @@ export function RichTextEditor({
   return (
     <div className={clsx("rebar-rich-text-editor", className)} data-rebar-component="rich-text-editor" {...props}>
       <div className="rebar-rich-text-editor-toolbar" data-rebar-part="toolbar" role="toolbar" aria-label="Formatting">
-        {COMMANDS.map(({ command, label, glyph, glyphStyle }) => (
+        {COMMANDS.map(({ command, label, Icon }) => (
           <Button
             key={command}
             type="button"
@@ -201,7 +204,7 @@ export function RichTextEditor({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => runCommand(command)}
           >
-            <span style={glyphStyle}>{glyph}</span>
+            <Icon size={16} />
           </Button>
         ))}
         <Button
@@ -213,7 +216,7 @@ export function RichTextEditor({
           onMouseDown={(e) => e.preventDefault()}
           onClick={insertLink}
         >
-          🔗
+          <LinkOutlined size={16} />
         </Button>
         <Button
           type="button"
@@ -224,7 +227,7 @@ export function RichTextEditor({
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => fileInputRef.current?.click()}
         >
-          🖼
+          <PictureOutlined size={16} />
         </Button>
         <input
           ref={fileInputRef}
