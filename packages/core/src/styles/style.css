@@ -737,8 +737,10 @@ body {
   padding: var(--rebar-space-xs, 4px) var(--rebar-space-sm, 8px);
   border-radius: 4px;
   font-size: var(--rebar-font-size-xs, 12px);
-  /* See .rebar-select-content above: above Dialog's content (1001), below Toast (2000). */
-  z-index: 1100;
+  /* Above Dialog's content (1001) and FloatAssistant's own panel (1500) -- a Tooltip attached to
+     a control inside the FloatAssistant panel (its header icon buttons) must render in front of
+     that panel, not behind it. Below Toast (2000), which always needs to sit above everything. */
+  z-index: 1600;
 }
 
 .rebar-tooltip-arrow {
