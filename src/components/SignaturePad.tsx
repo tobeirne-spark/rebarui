@@ -100,6 +100,11 @@ export interface SignaturePadProps {
    * bring-your-own-polish convention rather than a core component silently pulling in an
    * external font file. */
   typedNameFont?: string;
+  /** Fires on every keystroke in the typed-name field with its current raw text — the name itself
+   * only ever exists as pixels baked into the canvas otherwise (`onValueChange` only ever returns
+   * the rendered PNG), so a caller that needs the plain string too (to store it separately, gate
+   * on it being non-blank, or show it as real text elsewhere) has no other way to read it. */
+  onTypedNameChange?: (name: string) => void;
   /** Bakes a small audit stamp into the signature image on every capture — see
    * `SignaturePadStamp`. Omit for no stamp (default). */
   stamp?: SignaturePadStamp;
@@ -127,6 +132,7 @@ export function SignaturePad({
   allowTypedName,
   typedNamePlaceholder = "Type your name",
   typedNameFont = "'Brush Script MT', 'Segoe Script', cursive",
+  onTypedNameChange,
   stamp,
   "aria-label": ariaLabel = "Signature",
   className,
@@ -270,6 +276,7 @@ export function SignaturePad({
     clearCanvas();
     setIsEmpty(true);
     setTypedName("");
+    onTypedNameChange?.("");
     lastValueRef.current = "";
     onValueChange?.("");
   };
@@ -307,6 +314,7 @@ export function SignaturePad({
     const name = event.target.value;
     setTypedName(name);
     paintTypedName(name);
+    onTypedNameChange?.(name);
   };
 
   const handleTypedNameBlur = () => {

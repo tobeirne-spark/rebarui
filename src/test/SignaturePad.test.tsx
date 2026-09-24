@@ -142,6 +142,23 @@ describe("SignaturePad", () => {
     expect(input.value).toBe("");
   });
 
+  it("allowTypedName: onTypedNameChange fires the raw text on every keystroke, not just on commit", () => {
+    const onTypedNameChange = vi.fn();
+    render(<SignaturePad allowTypedName onTypedNameChange={onTypedNameChange} />);
+    const input = screen.getByPlaceholderText("Type your name");
+    fireEvent.change(input, { target: { value: "Ada Lovelace" } });
+    expect(onTypedNameChange).toHaveBeenLastCalledWith("Ada Lovelace");
+  });
+
+  it("allowTypedName: Clear also fires onTypedNameChange with an empty string", () => {
+    const onTypedNameChange = vi.fn();
+    render(<SignaturePad allowTypedName onTypedNameChange={onTypedNameChange} />);
+    const input = screen.getByPlaceholderText("Type your name");
+    fireEvent.change(input, { target: { value: "Ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(onTypedNameChange).toHaveBeenLastCalledWith("");
+  });
+
   it("allowUpload: renders an Upload button and a hidden file input", () => {
     const { container } = render(<SignaturePad allowUpload />);
     expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
