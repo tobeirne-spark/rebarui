@@ -83,6 +83,11 @@ describe("SignaturePad", () => {
     expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
   });
 
+  it("defaultTypedName seeds the typed-name field's initial text (it's otherwise uncontrolled and always blank)", () => {
+    render(<SignaturePad allowTypedName defaultTypedName="Ada Lovelace" />);
+    expect(screen.getByPlaceholderText("Type your name")).toHaveValue("Ada Lovelace");
+  });
+
   it("markDisabled: blocks drawing and disables Upload/Clear, but leaves the typed-name input enabled", () => {
     const onValueChange = vi.fn();
     const { container } = render(

@@ -100,6 +100,12 @@ export interface SignaturePadProps {
    * user types, instead of (or in addition to) drawing — the "type your signature" affordance
    * most e-signature flows offer alongside drawing. Off by default. */
   allowTypedName?: boolean;
+  /** Seeds the typed-name field's initial text (e.g. restoring a name saved earlier via
+   * `onTypedNameChange`) — the field is otherwise uncontrolled and always starts blank on mount
+   * regardless of what a caller has stored, which lets its own state silently drift out of sync
+   * with a real, non-blank saved name (nothing on screen shows one exists). Only read once, on
+   * mount, like a native `defaultValue` -- doesn't fight the user's own typing afterward. */
+  defaultTypedName?: string;
   typedNamePlaceholder?: string;
   /** Font used to render a typed name (see `allowTypedName`) — a generic system cursive stack by
    * default, deliberately not a bundled web font: matches this library's headless-first,
@@ -137,6 +143,7 @@ export function SignaturePad({
   allowUpload,
   uploadLabel = "Upload",
   allowTypedName,
+  defaultTypedName = "",
   typedNamePlaceholder = "Type your name",
   typedNameFont = "'Brush Script MT', 'Segoe Script', cursive",
   onTypedNameChange,
@@ -150,7 +157,7 @@ export function SignaturePad({
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastValueRef = useRef<string | undefined>(undefined);
   const [isEmpty, setIsEmpty] = useState(true);
-  const [typedName, setTypedName] = useState("");
+  const [typedName, setTypedName] = useState(defaultTypedName);
   const markIsDisabled = disabled || markDisabled;
 
   const getContext = () => canvasRef.current?.getContext("2d") ?? null;
