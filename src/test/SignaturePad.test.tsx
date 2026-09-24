@@ -88,6 +88,13 @@ describe("SignaturePad", () => {
     expect(screen.getByPlaceholderText("Type your name")).toHaveValue("Ada Lovelace");
   });
 
+  it("actionsEnd renders extra content in the same row as Clear/Upload, after them", () => {
+    render(<SignaturePad allowUpload actionsEnd={<label>Freehand</label>} />);
+    const actions = screen.getByRole("button", { name: "Clear" }).closest('[data-rebar-part="actions"]')!;
+    const children = Array.from(actions.children).map((el) => el.textContent);
+    expect(children.indexOf("Freehand")).toBeGreaterThan(children.indexOf("Upload"));
+  });
+
   it("markDisabled: blocks drawing and disables Upload/Clear, but leaves the typed-name input enabled", () => {
     const onValueChange = vi.fn();
     const { container } = render(

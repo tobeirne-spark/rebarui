@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import clsx from "clsx";
 import { Button } from "./Button";
 import { Input } from "./Input";
@@ -120,6 +120,11 @@ export interface SignaturePadProps {
   /** Bakes a small audit stamp into the signature image on every capture — see
    * `SignaturePadStamp`. Omit for no stamp (default). */
   stamp?: SignaturePadStamp;
+  /** Extra content rendered in the same row as Clear/Upload, after them — a related toggle or
+   * control a caller wants visually grouped with this pad's own actions rather than placed
+   * elsewhere and left to line up by coincidence. Renders regardless of `disabled`/`markDisabled`;
+   * a caller passing an interactive control is responsible for its own disabled state. */
+  actionsEnd?: ReactNode;
   "aria-label"?: string;
   className?: string;
 }
@@ -148,6 +153,7 @@ export function SignaturePad({
   typedNameFont = "'Brush Script MT', 'Segoe Script', cursive",
   onTypedNameChange,
   stamp,
+  actionsEnd,
   "aria-label": ariaLabel = "Signature",
   className,
 }: SignaturePadProps) {
@@ -444,6 +450,7 @@ export function SignaturePad({
             />
           </>
         ) : null}
+        {actionsEnd}
       </div>
     </div>
   );
