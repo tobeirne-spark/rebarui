@@ -84,11 +84,12 @@ export interface SignaturePadProps {
   penColor?: string;
   backgroundColor?: string;
   disabled?: boolean;
-  /** Disables just the mark itself -- drawing, Upload, and Clear -- while leaving the typed-name
-   * input (see `allowTypedName`) enabled, unlike `disabled` which disables everything. For a
-   * caller that requires a name before a mark can be captured at all (typing one first is what
-   * lifts this), rather than only checking for one after the fact. Has no effect while `disabled`
-   * is also true (that already covers everything this does and more). */
+  /** Disables just *capturing a new mark* -- drawing and Upload -- while leaving the typed-name
+   * input (see `allowTypedName`) and Clear enabled, unlike `disabled` which disables everything
+   * including those. Clear stays available on purpose: removing a mark that's already there
+   * should always be possible regardless of whether capturing a new one is currently blocked. For
+   * a caller that only wants drawing/uploading gated on some condition of its own (e.g. a name
+   * already being present) rather than everything `disabled` covers. */
   markDisabled?: boolean;
   clearLabel?: string;
   /** Shows an "Upload" button that lets the user pick an existing signature image (any raster
@@ -422,7 +423,10 @@ export function SignaturePad({
           className="rebar-signature-pad-clear"
           data-rebar-part="clear"
           onClick={handleClear}
-          disabled={markIsDisabled || isEmpty}
+          // Deliberately not markIsDisabled -- Clear removes a mark that's already there, which
+          // should always be possible regardless of whether *capturing a new one* is currently
+          // blocked (only `disabled`, the form-locked case, should also lock Clear).
+          disabled={disabled || isEmpty}
         >
           {clearLabel}
         </Button>

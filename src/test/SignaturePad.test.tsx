@@ -95,7 +95,7 @@ describe("SignaturePad", () => {
     expect(children.indexOf("Freehand")).toBeGreaterThan(children.indexOf("Upload"));
   });
 
-  it("markDisabled: blocks drawing and disables Upload/Clear, but leaves the typed-name input enabled", () => {
+  it("markDisabled: blocks drawing and disables Upload, but leaves the typed-name input enabled", () => {
     const onValueChange = vi.fn();
     const { container } = render(
       <SignaturePad allowTypedName allowUpload markDisabled onValueChange={onValueChange} />,
@@ -103,7 +103,6 @@ describe("SignaturePad", () => {
     const input = screen.getByPlaceholderText("Type your name") as HTMLInputElement;
     expect(input).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
 
     const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
     fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
@@ -114,6 +113,19 @@ describe("SignaturePad", () => {
       "true",
     );
     expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it("markDisabled does not disable Clear -- removing an existing mark stays possible", async () => {
+    const onValueChange = vi.fn();
+    const { container, rerender } = render(<SignaturePad onValueChange={onValueChange} />);
+    const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
+    fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    await waitFor(() => expect(onValueChange).toHaveBeenCalled());
+
+    rerender(<SignaturePad markDisabled onValueChange={onValueChange} />);
+    expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
   });
 
   it("markDisabled: typing a name still works normally (only the mark itself is blocked)", () => {
