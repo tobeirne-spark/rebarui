@@ -84,6 +84,12 @@ export interface SignaturePadProps {
   penColor?: string;
   backgroundColor?: string;
   disabled?: boolean;
+  /** Disables just the mark itself -- drawing, Upload, and Clear -- while leaving the typed-name
+   * input (see `allowTypedName`) enabled, unlike `disabled` which disables everything. For a
+   * caller that requires a name before a mark can be captured at all (typing one first is what
+   * lifts this), rather than only checking for one after the fact. Has no effect while `disabled`
+   * is also true (that already covers everything this does and more). */
+  markDisabled?: boolean;
   clearLabel?: string;
   /** Shows an "Upload" button that lets the user pick an existing signature image (any raster
    * format a plain `<input type="file" accept="image/*">` accepts) instead of drawing one — drawn
@@ -126,6 +132,7 @@ export function SignaturePad({
   penColor = "#212121",
   backgroundColor = "#ffffff",
   disabled,
+  markDisabled,
   clearLabel = "Clear",
   allowUpload,
   uploadLabel = "Upload",
@@ -144,6 +151,7 @@ export function SignaturePad({
   const lastValueRef = useRef<string | undefined>(undefined);
   const [isEmpty, setIsEmpty] = useState(true);
   const [typedName, setTypedName] = useState("");
+  const markIsDisabled = disabled || markDisabled;
 
   const getContext = () => canvasRef.current?.getContext("2d") ?? null;
 
@@ -185,14 +193,14 @@ export function SignaturePad({
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (disabled) return;
+    if (markIsDisabled) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     drawingRef.current = true;
     lastPointRef.current = pointFromEvent(event);
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current || disabled) return;
+    if (!drawingRef.current || markIsDisabled) return;
     const point = pointFromEvent(event);
     const last = lastPointRef.current;
     const ctx = getContext();
@@ -387,7 +395,7 @@ export function SignaturePad({
         aria-label={ariaLabel}
         className="rebar-signature-pad-canvas"
         data-rebar-part="canvas"
-        style={{ touchAction: "none", cursor: disabled ? "not-allowed" : "crosshair" }}
+        style={{ touchAction: "none", cursor: markIsDisabled ? "not-allowed" : "crosshair" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -401,7 +409,7 @@ export function SignaturePad({
           className="rebar-signature-pad-clear"
           data-rebar-part="clear"
           onClick={handleClear}
-          disabled={disabled || isEmpty}
+          disabled={markIsDisabled || isEmpty}
         >
           {clearLabel}
         </Button>
@@ -414,7 +422,7 @@ export function SignaturePad({
               className="rebar-signature-pad-upload"
               data-rebar-part="upload"
               onClick={handleUploadClick}
-              disabled={disabled}
+              disabled={markIsDisabled}
             >
               {uploadLabel}
             </Button>
@@ -423,7 +431,7 @@ export function SignaturePad({
               type="file"
               accept="image/*"
               onChange={handleUploadChange}
-              disabled={disabled}
+              disabled={markIsDisabled}
               className="rebar-visually-hidden"
               aria-label={uploadLabel}
             />

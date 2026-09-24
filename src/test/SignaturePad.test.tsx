@@ -83,6 +83,40 @@ describe("SignaturePad", () => {
     expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
   });
 
+  it("markDisabled: blocks drawing and disables Upload/Clear, but leaves the typed-name input enabled", () => {
+    const onValueChange = vi.fn();
+    const { container } = render(
+      <SignaturePad allowTypedName allowUpload markDisabled onValueChange={onValueChange} />,
+    );
+    const input = screen.getByPlaceholderText("Type your name") as HTMLInputElement;
+    expect(input).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
+
+    const canvas = container.querySelector('[data-rebar-part="canvas"]') as HTMLElement;
+    fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    expect(container.querySelector('[data-rebar-component="signature-pad"]')).toHaveAttribute(
+      "data-rebar-empty",
+      "true",
+    );
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it("markDisabled: typing a name still works normally (only the mark itself is blocked)", () => {
+    const onTypedNameChange = vi.fn();
+    render(<SignaturePad allowTypedName markDisabled onTypedNameChange={onTypedNameChange} />);
+    const input = screen.getByPlaceholderText("Type your name");
+    fireEvent.change(input, { target: { value: "Ada" } });
+    expect(onTypedNameChange).toHaveBeenLastCalledWith("Ada");
+  });
+
+  it("disabled (not just markDisabled) still disables the typed-name input too", () => {
+    render(<SignaturePad allowTypedName disabled />);
+    expect(screen.getByPlaceholderText("Type your name")).toBeDisabled();
+  });
+
   it("allowTypedName: typing a name marks the pad non-empty immediately, and emits a value on blur", async () => {
     const onValueChange = vi.fn();
     const { container } = render(<SignaturePad allowTypedName onValueChange={onValueChange} />);
