@@ -3227,7 +3227,13 @@ body {
 .rebar-active-border::before {
   content: "";
   position: absolute;
-  inset: -2px;
+  /* Inset 0, not a negative value -- several hosts of this flag (.rebar-card, .rebar-sticky) have
+     their own `overflow: hidden` (e.g. to clip Card's `cover` image to its border-radius), which
+     silently clipped away 100% of this ring when it protruded outside the host's own box: it
+     never showed at all, not just partially, since the whole ring sat outside the box. Sitting
+     flush with the box instead means the ring never needs to render past the host's own edge, so
+     it survives any host's overflow clipping regardless of why that host clips. */
+  inset: 0;
   border-radius: inherit;
   padding: 2px;
   background: conic-gradient(
