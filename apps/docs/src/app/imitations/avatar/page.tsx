@@ -4,7 +4,10 @@ import componentProps from "@/generated/component-props.json";
 import { LivePreview } from "@/components/LivePreview";
 import { NextBlockRenderer } from "@/components/NextBlockRenderer";
 
-const PORTRAIT_COUNT = 30;
+// Must match `AVATAR_PLACEHOLDERS.length` in packages/core/src/assets/avatarPlaceholders.ts —
+// not imported directly since that array is deliberately internal (kept out of the public
+// rebar-ui export surface so docgen doesn't pick it up as a component).
+const PORTRAIT_COUNT = 96;
 
 const CODE_AND_PROPS_BLOCKS: Construct[] = [
   {
