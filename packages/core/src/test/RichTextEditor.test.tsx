@@ -99,6 +99,49 @@ describe("RichTextEditor", () => {
     expect(content.style.minHeight).toBe("300px");
   });
 
+  describe("auto-linkify URLs on blur", () => {
+    it("wraps a bare URL typed as plain text in a real anchor once the editor loses focus", () => {
+      const onValueChange = vi.fn();
+      const { container } = render(<RichTextEditor onValueChange={onValueChange} />);
+      const content = container.querySelector('[data-rebar-part="content"]') as HTMLElement;
+      content.textContent = "Check out https://example.com for more";
+      fireEvent.blur(content);
+      const link = content.querySelector("a");
+      expect(link).toHaveAttribute("href", "https://example.com");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      expect(content.textContent).toBe("Check out https://example.com for more");
+      expect(onValueChange).toHaveBeenCalledWith(content.innerHTML);
+    });
+
+    it("does not touch a URL already inside a real link", () => {
+      render(<RichTextEditor value='<a href="https://example.com">https://example.com</a>' />);
+      const content = screen.getByRole("textbox");
+      const beforeHtml = content.innerHTML;
+      fireEvent.blur(content);
+      expect(content.innerHTML).toBe(beforeHtml);
+      expect(content.querySelectorAll("a")).toHaveLength(1);
+    });
+
+    it("trims trailing sentence punctuation off the linkified URL", () => {
+      const { container } = render(<RichTextEditor />);
+      const content = container.querySelector('[data-rebar-part="content"]') as HTMLElement;
+      content.textContent = "See https://example.com/path.";
+      fireEvent.blur(content);
+      const link = content.querySelector("a")!;
+      expect(link).toHaveAttribute("href", "https://example.com/path");
+      expect(content.textContent?.endsWith(".")).toBe(true);
+    });
+
+    it("leaves plain text with no URL untouched", () => {
+      const { container } = render(<RichTextEditor />);
+      const content = container.querySelector('[data-rebar-part="content"]') as HTMLElement;
+      content.textContent = "Nothing to link here";
+      fireEvent.blur(content);
+      expect(content.querySelector("a")).not.toBeInTheDocument();
+    });
+  });
+
   describe("image insertion", () => {
     it("inserts an image picked via the toolbar's file input as a base64 data URL", async () => {
       const { container } = render(<RichTextEditor />);
