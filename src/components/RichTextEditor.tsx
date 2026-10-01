@@ -65,6 +65,59 @@ const COMMANDS: { command: string; label: string; Icon: ComponentType<IconProps>
  */
 const DEFAULT_MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
+const URL_PATTERN = /https?:\/\/[^\s<]+/g;
+
+// Auto-linkifies bare URLs in plain text (typed or pasted) into real `<a>` elements -- walks the
+// live DOM rather than the HTML string so it never disturbs text already inside a link, and is
+// called only on blur (see handleBlur below), not on every keystroke/onInput: rewriting the DOM
+// mid-typing would reset the caret on every input event, which would make typing itself unusable.
+// Blur is a safe commit point either way -- focus is already leaving the editor, so resetting
+// selection state there costs nothing a user would notice.
+function linkifyPlainTextUrls(root: HTMLElement): void {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      // Text already inside a real <a> is already a link -- never double-wrap it.
+      return (node as Text).parentElement?.closest("a") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const textNodes: Text[] = [];
+  let current: Node | null;
+  while ((current = walker.nextNode())) textNodes.push(current as Text);
+
+  for (const textNode of textNodes) {
+    const text = textNode.textContent ?? "";
+    URL_PATTERN.lastIndex = 0;
+    if (!URL_PATTERN.test(text)) continue;
+    URL_PATTERN.lastIndex = 0;
+
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = URL_PATTERN.exec(text))) {
+      let url = match[0];
+      let end = match.index + url.length;
+      // Trailing punctuation (the period ending a sentence, a closing paren/quote) almost never
+      // belongs to the URL itself -- trimmed off and left as plain text after the link instead.
+      const trailing = url.match(/[.,;:!?)\]'"]+$/)?.[0] ?? "";
+      if (trailing) {
+        url = url.slice(0, url.length - trailing.length);
+        end -= trailing.length;
+      }
+      if (!url) continue;
+      if (match.index > lastIndex) fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.textContent = url;
+      fragment.appendChild(anchor);
+      lastIndex = end;
+    }
+    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    textNode.replaceWith(fragment);
+  }
+}
+
 export function RichTextEditor({
   value,
   defaultValue = "",
@@ -98,6 +151,14 @@ export function RichTextEditor({
     const el = editorRef.current;
     if (!el) return;
     onValueChange?.(el.innerHTML);
+  };
+
+  // Auto-linkifies on the way out, not on every keystroke -- see linkifyPlainTextUrls's own
+  // comment for why blur is the right (and only safe) point to do this.
+  const handleBlur = () => {
+    const el = editorRef.current;
+    if (el) linkifyPlainTextUrls(el);
+    emitChange();
   };
 
   const runCommand = (command: string) => {
@@ -249,7 +310,7 @@ export function RichTextEditor({
         data-placeholder={placeholder}
         style={{ minHeight }}
         onInput={emitChange}
-        onBlur={emitChange}
+        onBlur={handleBlur}
         onClick={handleContentClick}
         onPaste={handlePaste}
         onDrop={handleDrop}
