@@ -128,6 +128,14 @@ describe("GanttChart", () => {
     expect(firstTick?.textContent).toBe("Dec 1");
   });
 
+  it("bolds a row's own label when labelBold is set, leaving the rest at the default weight", () => {
+    const boldFirst = tasks.map((t, i) => (i === 0 ? { ...t, labelBold: true } : t));
+    const { container } = render(<GanttChart tasks={boldFirst} title="Launch plan" />);
+    const labels = container.querySelectorAll('text[data-rebar-part="row-label"]');
+    expect(labels[0]?.getAttribute('font-weight')).toBe('700');
+    expect(labels[1]?.getAttribute('font-weight')).toBe('400');
+  });
+
   it("reserves enough right margin that the last date tick's label doesn't run off the chart", () => {
     const { container } = render(<GanttChart tasks={tasks} title="Launch plan" width={640} />);
     const tickLabels = container.querySelectorAll('text[data-rebar-part="tick-label"]');
