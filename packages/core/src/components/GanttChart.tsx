@@ -16,6 +16,11 @@ export interface GanttChartTask {
    * silently skipped rather than throwing — a caller mid-edit of a task list may reference a task
    * that's been renamed or removed. */
   dependsOn?: string[];
+  /** Renders this row's own label in bold — e.g. a caller grouping rows under a shared heading
+   * (one row per group carrying that heading's own text, the rest just their own name) can bold
+   * only the heading row, the same way a nested list's own top-level item reads differently from
+   * the plain rows under it. */
+  labelBold?: boolean;
 }
 
 export interface GanttChartProps extends Omit<ComponentPropsWithoutRef<"figure">, "title"> {
@@ -200,6 +205,7 @@ export function GanttChart({
                 x={marginLeft - 8}
                 y={rowMidY + 4}
                 fontSize={12}
+                fontWeight={task.labelBold ? 700 : 400}
                 textAnchor="end"
                 fill="var(--rebar-color-text-primary, #212121)"
               >
