@@ -128,6 +128,17 @@ describe("GanttChart", () => {
     expect(firstTick?.textContent).toBe("Dec 1");
   });
 
+  it("reserves enough right margin that the last date tick's label doesn't run off the chart", () => {
+    const { container } = render(<GanttChart tasks={tasks} title="Launch plan" width={640} />);
+    const tickLabels = container.querySelectorAll('text[data-rebar-part="tick-label"]');
+    const lastTick = tickLabels[tickLabels.length - 1];
+    // The rightmost tick sits at width - marginRight; text-anchor="middle" means its own label
+    // extends roughly half its width further right from there, so this needs real margin, not
+    // just a few px -- regression coverage for a label ("Dec 20"-shaped) that was previously
+    // clipped by the SVG's own viewBox at the old, too-small default.
+    expect(Number(lastTick?.getAttribute('x'))).toBeLessThanOrEqual(640 - 28);
+  });
+
   it("widens the plot's own left margin (and narrows the bar area) when labelWidth is set", () => {
     const { container: defaultMargin } = render(<GanttChart tasks={tasks} title="Default" />);
     const { container: wideMargin } = render(<GanttChart tasks={tasks} title="Wide" labelWidth={220} />);
