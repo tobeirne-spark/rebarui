@@ -28,6 +28,11 @@ export interface GanttChartProps extends Omit<ComponentPropsWithoutRef<"figure">
   ariaLabel?: string;
   rowHeight?: number;
   width?: number;
+  /** Width in px reserved on the left for each task's own row label (text-anchor="end", ending 8px
+   * before the plot area) -- a caller whose labels are routinely longer than the default budget
+   * allows (e.g. "<parent>: <task>"-style labels) can reserve more room rather than truncating
+   * them down to something short enough to fit a fixed margin. */
+  labelWidth?: number;
   /** Formats an axis tick's `Date` for display. Defaults to a fixed "Mon D" format computed from
    * UTC fields (not `toLocaleDateString`/`Intl`) so the same `Date` renders identical text
    * regardless of the server's or a viewer's own locale/timezone — a locale- or timezone-dependent
@@ -75,6 +80,7 @@ export function GanttChart({
   ariaLabel,
   rowHeight = 32,
   width = 640,
+  labelWidth = 140,
   dateFormat = defaultDateFormat,
   currentDate,
   domainStart,
@@ -85,7 +91,7 @@ export function GanttChart({
   ...props
 }: GanttChartProps) {
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
-  const marginLeft = 140;
+  const marginLeft = labelWidth;
   const marginRight = 16;
   // A real, hit-directly overlap: the "Today" label sits at the same height as the regular date
   // tick labels, and the two collide illegibly whenever "today" lands at (or near) an axis tick —

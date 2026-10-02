@@ -128,6 +128,14 @@ describe("GanttChart", () => {
     expect(firstTick?.textContent).toBe("Dec 1");
   });
 
+  it("widens the plot's own left margin (and narrows the bar area) when labelWidth is set", () => {
+    const { container: defaultMargin } = render(<GanttChart tasks={tasks} title="Default" />);
+    const { container: wideMargin } = render(<GanttChart tasks={tasks} title="Wide" labelWidth={220} />);
+    const defaultBar = defaultMargin.querySelector('rect[data-rebar-part="bar"][data-task-id="design"]');
+    const wideBar = wideMargin.querySelector('rect[data-rebar-part="bar"][data-task-id="design"]');
+    expect(Number(wideBar?.getAttribute("x"))).toBeGreaterThan(Number(defaultBar?.getAttribute("x")));
+  });
+
   it("positions a same-dated task's bar identically whether or not sibling tasks share the render", () => {
     const widerDomain = { domainStart: new Date("2025-12-01T00:00:00Z"), domainEnd: new Date("2026-03-01T00:00:00Z") };
     const { container: full } = render(<GanttChart tasks={tasks} title="Full" {...widerDomain} />);
