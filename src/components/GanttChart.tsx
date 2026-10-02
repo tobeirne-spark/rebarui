@@ -42,6 +42,14 @@ export interface GanttChartProps extends Omit<ComponentPropsWithoutRef<"figure">
    * historical snapshot of `tasks` per reporting date) for "scrub to any past reporting date's
    * values" — this prop only draws where *today* falls on whichever snapshot is currently shown. */
   currentDate?: Date;
+  /** Overrides the computed date domain (earliest `start`/latest `end` across `tasks`) with an
+   * explicit range. For rendering one logical chart as several paginated instances — e.g. one per
+   * PDF page, each a disjoint subset of the full task list because there are too many rows for one
+   * page — that must all share the same pixels-per-day scale; left to its own devices, each
+   * instance would compute a different, incomparable domain from just its own subset of `tasks`.
+   * Both must be supplied together to take effect. */
+  domainStart?: Date;
+  domainEnd?: Date;
   /** Force bionic reading on/off for the title, overriding the ambient data-rebar-bionic setting. */
   bionic?: boolean;
   bionicOptions?: BionicOptions;
@@ -69,6 +77,8 @@ export function GanttChart({
   width = 640,
   dateFormat = defaultDateFormat,
   currentDate,
+  domainStart,
+  domainEnd,
   bionic,
   bionicOptions,
   className,
@@ -101,9 +111,10 @@ export function GanttChart({
       </figure>
     );
   }
+  const hasDomainOverride = domainStart !== undefined && domainEnd !== undefined;
   const times = tasks.flatMap((t) => [t.start.getTime(), t.end.getTime()]);
-  const rawMin = times.length ? Math.min(...times) : 0;
-  const rawMax = times.length ? Math.max(...times) : 0;
+  const rawMin = hasDomainOverride ? domainStart.getTime() : times.length ? Math.min(...times) : 0;
+  const rawMax = hasDomainOverride ? domainEnd.getTime() : times.length ? Math.max(...times) : 0;
   const rawRange = rawMax - rawMin;
   // A single instant (one task, or every task sharing the same start/end) has no real range to
   // scale against — fall back to a symmetric one-day window so the axis still renders sensibly

@@ -109,4 +109,32 @@ describe("GanttChart", () => {
     const { container } = render(<GanttChart tasks={tasks} title="Launch plan" />);
     expect(container.querySelector('[data-rebar-part="current-date-marker"]')).not.toBeInTheDocument();
   });
+
+  // Pagination (e.g. one PDF page per row-chunk of a long task list) renders each chunk as its own
+  // GanttChart instance with only a subset of `tasks` -- domainStart/domainEnd let every instance
+  // share one pixels-per-day scale instead of each computing a different, narrower domain from just
+  // its own subset.
+  it("uses an explicit domainStart/domainEnd instead of the computed min/max across tasks", () => {
+    const { container } = render(
+      <GanttChart
+        tasks={tasks}
+        title="Launch plan"
+        domainStart={new Date("2025-12-01T00:00:00Z")}
+        domainEnd={new Date("2026-03-01T00:00:00Z")}
+      />,
+    );
+    // The first axis tick is the domain's own start, not the earliest task's start (2026-01-01).
+    const firstTick = container.querySelector('text[data-rebar-part="tick-label"]');
+    expect(firstTick?.textContent).toBe("Dec 1");
+  });
+
+  it("positions a same-dated task's bar identically whether or not sibling tasks share the render", () => {
+    const widerDomain = { domainStart: new Date("2025-12-01T00:00:00Z"), domainEnd: new Date("2026-03-01T00:00:00Z") };
+    const { container: full } = render(<GanttChart tasks={tasks} title="Full" {...widerDomain} />);
+    const { container: solo } = render(<GanttChart tasks={tasks.slice(0, 1)} title="Solo" {...widerDomain} />);
+    const fullBar = full.querySelector('rect[data-rebar-part="bar"][data-task-id="design"]');
+    const soloBar = solo.querySelector('rect[data-rebar-part="bar"][data-task-id="design"]');
+    expect(soloBar?.getAttribute("x")).toBe(fullBar?.getAttribute("x"));
+    expect(soloBar?.getAttribute("width")).toBe(fullBar?.getAttribute("width"));
+  });
 });
