@@ -92,7 +92,13 @@ export function GanttChart({
 }: GanttChartProps) {
   const titleContent = useBionicChildren(title, bionic, bionicOptions);
   const marginLeft = labelWidth;
-  const marginRight = 16;
+  // The rightmost date tick sits exactly at the plot's own right edge (x = marginLeft + plotWidth)
+  // with text-anchor="middle", so roughly half its own label width extends past that point -- at
+  // the 11px tick-label font, a "Mon DD"-shaped label (e.g. "Dec 20") is wide enough that 16px
+  // wasn't enough room, and the SVG's own viewBox silently clipped the overflow rather than
+  // wrapping or shrinking it (the same class of clipping the row labels' own marginLeft already
+  // guards against, just on the other edge).
+  const marginRight = 32;
   // A real, hit-directly overlap: the "Today" label sits at the same height as the regular date
   // tick labels, and the two collide illegibly whenever "today" lands at (or near) an axis tick —
   // exactly what happens whenever `currentDate` is the same date a caller's own tick generation
