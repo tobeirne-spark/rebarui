@@ -136,6 +136,8 @@ export const CONSTRUCT_TIER = {
     BubbleChart: "opinion",
     Calendar: "opinion",
     CalendarHeatmap: "opinion",
+    SchematicHeatmap: "opinion", // real hover/focus + pinned-selection state (controlled via selectedId/onSelect, or uncontrolled) that changes the readout and every region outline.
+    HeatmapPainter: "opinion", // real internal state machines: tool (paint/frame), camera, in-flight drag, painted-cell draft, frame selection, space-to-pan.
     Cascader: "opinion",
     Collapsible: "opinion",
     ColorPicker: "opinion",

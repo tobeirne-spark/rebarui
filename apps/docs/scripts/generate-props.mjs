@@ -202,6 +202,8 @@ const COMPONENT_FILES = [
   "SlashCommandMenu.tsx",
   "VoiceComposer.tsx",
   "VoiceInputBar.tsx",
+  "SchematicHeatmap.tsx",
+  "HeatmapPainter.tsx",
   "AiChatInput.tsx",
   "ShapeGallery.tsx",
   "FileManager.tsx",

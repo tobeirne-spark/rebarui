@@ -113,6 +113,8 @@ export const HAS_FULL_PAGE: Record<string, string> = {
   Histogram: "/opinions/histogram",
   RibbonChart: "/opinions/ribbon-chart",
   CalendarHeatmap: "/opinions/calendar-heatmap",
+  SchematicHeatmap: "/opinions/schematic-heatmap",
+  HeatmapPainter: "/opinions/heatmap-painter",
   BulletGraph: "/synthetics/bullet-graph",
   PackedBubbleChart: "/opinions/packed-bubble-chart",
   UMAPPlot: "/opinions/umap-plot",
