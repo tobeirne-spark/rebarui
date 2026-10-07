@@ -7390,3 +7390,226 @@ button.rebar-float-assistant-model-pill:hover {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--voice-glow) 45%, transparent), 0 0 16px 2px color-mix(in srgb, var(--voice-glow) 55%, transparent); }
   50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--voice-glow) 0%, transparent), 0 0 28px 8px color-mix(in srgb, var(--voice-glow) 75%, transparent); }
 }
+
+/* ---- SchematicHeatmap ------------------------------------------------------------------------- */
+.rebar-schematic-heatmap {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-xs, 4px);
+}
+
+.rebar-schematic-heatmap-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--rebar-color-bg-primary, #ffffff);
+  border-radius: var(--rebar-radius, 4px);
+}
+
+.rebar-schematic-heatmap-canvas [data-rebar-part="region"] {
+  cursor: pointer;
+  transition: opacity 120ms;
+}
+
+.rebar-schematic-heatmap-canvas [data-rebar-part="region"]:hover {
+  opacity: 0.85;
+}
+
+.rebar-schematic-heatmap-canvas [data-rebar-part="region"]:focus-visible {
+  outline: 2px solid var(--rebar-color-border-focus, #0066cc);
+  outline-offset: 1px;
+}
+
+.rebar-schematic-heatmap-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rebar-space-sm, 8px);
+  min-height: 22px;
+  font-size: var(--rebar-font-size-xs, 12px);
+}
+
+.rebar-schematic-heatmap-hint,
+.rebar-schematic-heatmap-legend-text {
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-schematic-heatmap-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rebar-space-xs, 4px);
+}
+
+.rebar-schematic-heatmap-ramp {
+  display: inline-flex;
+  overflow: hidden;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius-sm, 3px);
+}
+
+.rebar-schematic-heatmap-ramp > span {
+  width: 14px;
+  height: 12px;
+}
+
+.rebar-schematic-heatmap-nodata-swatch {
+  width: 14px;
+  height: 12px;
+  margin-left: var(--rebar-space-sm, 8px);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--rebar-color-bg-tertiary, #e0e0e0) 0 3px,
+    var(--rebar-color-bg-primary, #ffffff) 3px 6px
+  );
+}
+
+/* ---- HeatmapPainter ---------------------------------------------------------------------------- */
+.rebar-heatmap-painter {
+  display: flex;
+  gap: var(--rebar-space-md, 16px);
+  min-height: 360px;
+}
+
+.rebar-heatmap-painter-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--rebar-color-bg-primary, #ffffff);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+}
+
+.rebar-heatmap-painter-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  touch-action: none;
+}
+
+.rebar-heatmap-painter-canvas:focus-visible {
+  outline: 2px solid var(--rebar-color-border-focus, #0066cc);
+  outline-offset: -2px;
+}
+
+.rebar-heatmap-painter-float {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--rebar-space-xs, 4px);
+  padding: var(--rebar-space-xs, 4px);
+  background: var(--rebar-color-bg-primary, #ffffff);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  box-shadow: var(--rebar-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.rebar-heatmap-painter-tools {
+  top: var(--rebar-space-sm, 8px);
+  left: var(--rebar-space-sm, 8px);
+}
+
+.rebar-heatmap-painter-zoom {
+  bottom: var(--rebar-space-sm, 8px);
+  left: var(--rebar-space-sm, 8px);
+}
+
+.rebar-heatmap-painter-zoom-readout {
+  min-width: 3em;
+  text-align: center;
+  font-size: var(--rebar-font-size-xs, 12px);
+  font-variant-numeric: tabular-nums;
+}
+
+.rebar-heatmap-painter-panel {
+  display: flex;
+  flex: 0 0 18rem;
+  flex-direction: column;
+  gap: var(--rebar-space-sm, 8px);
+  min-height: 0;
+  overflow: auto;
+  font-size: var(--rebar-font-size-sm, 14px);
+}
+
+.rebar-heatmap-painter-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-sm, 8px);
+  padding: var(--rebar-space-sm, 8px);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+}
+
+.rebar-heatmap-painter-section > summary {
+  cursor: pointer;
+  font-weight: var(--rebar-font-weight-semibold, 600);
+}
+
+.rebar-heatmap-painter-section small,
+.rebar-heatmap-painter-row small {
+  color: var(--rebar-color-text-secondary, #757575);
+  font-size: var(--rebar-font-size-xs, 12px);
+}
+
+.rebar-heatmap-painter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rebar-space-xs, 4px);
+}
+
+.rebar-heatmap-painter-row[data-rebar-state="selected"] {
+  outline: 2px solid var(--rebar-color-warning, #ed6c02);
+  outline-offset: 1px;
+}
+
+.rebar-heatmap-painter-brush {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-xs, 4px);
+  padding-bottom: var(--rebar-space-sm, 8px);
+  border-bottom: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+
+.rebar-heatmap-painter-field,
+.rebar-heatmap-painter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rebar-space-xs, 4px);
+  font-size: var(--rebar-font-size-xs, 12px);
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-heatmap-painter-field input[type="number"] {
+  width: 5.5rem;
+}
+
+.rebar-heatmap-painter-notice {
+  margin: 0;
+  min-height: 1.25em;
+  font-size: var(--rebar-font-size-xs, 12px);
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-heatmap-painter-notice[data-rebar-state="warn"] {
+  color: var(--rebar-color-danger, #d32f2f);
+}
+
+.rebar-heatmap-painter-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.rebar-heatmap-painter-region-id {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

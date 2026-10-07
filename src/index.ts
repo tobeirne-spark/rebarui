@@ -683,3 +683,44 @@ export type { FileManagerProps, FileManagerNode } from "./components/FileManager
 
 export { LayersPanel } from "./components/LayersPanel";
 export type { LayersPanelProps, LayerNode, LayerDropPosition } from "./components/LayersPanel";
+
+export { SchematicHeatmap } from "./components/SchematicHeatmap";
+export type { SchematicHeatmapProps, SchematicHeatmapLabels } from "./components/SchematicHeatmap";
+export { HeatmapPainter } from "./components/HeatmapPainter";
+export type { HeatmapPainterProps, HeatmapPainterTool, HeatmapPainterCellFormContext } from "./components/HeatmapPainter";
+export {
+  cellsToRects,
+  rectsToCells,
+  outlinePath,
+  regionBounds,
+  contentBounds,
+  framesOf,
+  brushesOf,
+  brushesInFrame,
+  regionsInFrame,
+  defaultVisibleBrushes,
+  shareOf,
+  defaultColorScale,
+  labelLayout,
+  fitCamera,
+  zoomCameraAt,
+  scrollCamera,
+  dragCamera,
+  screenToWorld,
+  worldToScreen,
+  hitHandle,
+  resizeBounds,
+  moveBounds,
+  frameAt,
+} from "./components/heatmapGeometry";
+export type {
+  HeatmapBounds,
+  HeatmapBrush,
+  HeatmapRegion,
+  HeatmapFrame,
+  HeatmapBackground,
+  HeatmapLayout,
+  HeatmapValue,
+  HeatmapCamera,
+  HeatmapHandle,
+} from "./components/heatmapGeometry";
