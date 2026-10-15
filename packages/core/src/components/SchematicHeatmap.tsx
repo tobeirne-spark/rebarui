@@ -31,6 +31,18 @@ const DEFAULT_LABELS: SchematicHeatmapLabels = {
   hint: "Hover or focus a region for its numbers; click to pin it.",
 };
 
+/** What `onSelect` is told besides the id. */
+export interface SchematicHeatmapSelectInfo {
+  /** Shift/Ctrl/Cmd was held — the host should add or remove this region rather than replace the selection. */
+  additive: boolean;
+}
+
+/** One band of a banded legend: the swatch colour and what it means. */
+export interface SchematicHeatmapLegendBand {
+  label: string;
+  color: string;
+}
+
 export interface SchematicHeatmapProps extends Omit<ComponentPropsWithoutRef<"figure">, "title" | "onSelect"> {
   /** The shapes to draw. Rects are in the same canvas units as `crop`. */
   regions: HeatmapRegion[];
@@ -49,8 +61,13 @@ export interface SchematicHeatmapProps extends Omit<ComponentPropsWithoutRef<"fi
   selectedId?: string | null;
   /** Uncontrolled initial selection. */
   defaultSelectedId?: string | null;
-  /** Called with the region id when a region is pinned, or `null` when it is un-pinned. */
-  onSelect?: (id: string | null) => void;
+  /** Controlled MULTI-selection. When given it wins over `selectedId`, and the plot stops toggling
+   * by itself: a press calls `onSelect(id, { additive })` and the host decides the next set
+   * (`additive` = a modifier key was held). Escape calls `onSelect(null, { additive: false })`. */
+  selectedIds?: string[];
+  /** Called with the region id when a region is pinned, or `null` when it is un-pinned. `info` is only
+   * passed in multi mode (`selectedIds`). */
+  onSelect?: (id: string | null, info?: SchematicHeatmapSelectInfo) => void;
   /** The chart's accessible name — required, because the chart is its own landmark. */
   ariaLabel: string;
   /** Maps a 0..1 share to a CSS colour. Defaults to an 8-step ramp of `--rebar-color-primary`. */
@@ -59,6 +76,9 @@ export interface SchematicHeatmapProps extends Omit<ComponentPropsWithoutRef<"fi
   labels?: Partial<SchematicHeatmapLabels>;
   /** Overrides the readout/tooltip text for a region. `share` is null when there is no data. */
   formatValue?: (info: { region: HeatmapRegion; share: number | null; value: HeatmapValue | undefined }) => string;
+  /** Replaces the 0..1 ramp in the legend with discrete labelled swatches (a banded scale). Pair it
+   * with a `colorScale` that returns the same colours. */
+  legendBands?: SchematicHeatmapLegendBand[];
   /** Hide the legend + readout strip. */
   hideLegend?: boolean;
   /** Extra content rendered at the end of the legend strip (e.g. a metric switcher). */
@@ -93,11 +113,13 @@ export function SchematicHeatmap({
   background,
   selectedId,
   defaultSelectedId = null,
+  selectedIds,
   onSelect,
   ariaLabel,
   colorScale = defaultColorScale,
   labels,
   formatValue,
+  legendBands,
   hideLegend = false,
   legendExtra,
   className,
@@ -107,8 +129,10 @@ export function SchematicHeatmap({
   const [internalSelected, setInternalSelected] = useState<string | null>(defaultSelectedId);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const patternId = `rebar-schematic-hatch-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const multi = selectedIds !== undefined;
   const controlled = selectedId !== undefined;
-  const currentSelected = controlled ? selectedId : internalSelected;
+  const currentSelected = multi ? (selectedIds[selectedIds.length - 1] ?? null) : controlled ? selectedId : internalSelected;
+  const isPinned = (id: string) => (multi ? selectedIds.includes(id) : currentSelected === id);
 
   const brushMap: Record<string, HeatmapBrush> = Array.isArray(brushes)
     ? Object.fromEntries(brushes.map((b) => [b.id, b]))
@@ -124,11 +148,14 @@ export function SchematicHeatmap({
   // single row reads at a normal size.
   const fontSize = Math.max(9, Math.round(w / 150));
 
-  const select = (id: string | null) => {
-    if (!controlled) setInternalSelected(id);
-    onSelect?.(id);
+  const select = (id: string | null, additive = false) => {
+    if (!controlled && !multi) setInternalSelected(id);
+    // Single-selection callers keep the one-argument call they always had; only multi mode reports modifiers.
+    if (multi) onSelect?.(id, { additive });
+    else onSelect?.(id);
   };
-  const toggle = (id: string) => select(currentSelected === id ? null : id);
+  // In multi mode the host owns the toggling (it knows whether a press adds, removes or replaces).
+  const toggle = (id: string, additive = false) => (multi ? select(id, additive) : select(currentSelected === id ? null : id));
 
   const describe = (region: HeatmapRegion): string => {
     const value = values[region.id];
@@ -137,13 +164,14 @@ export function SchematicHeatmap({
   };
 
   const readoutRegion = regions.find((r) => r.id === (hoverId ?? currentSelected)) ?? null;
-  const rootState = hoverId ? "hovering" : currentSelected ? "selected" : "idle";
+  const anySelected = multi ? selectedIds.length > 0 : currentSelected !== null;
+  const rootState = hoverId ? "hovering" : anySelected ? "selected" : "idle";
 
   const onRegionKeyDown = (e: KeyboardEvent, id: string) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      toggle(id);
-    } else if (e.key === "Escape" && currentSelected) {
+      toggle(id, e.shiftKey || e.ctrlKey || e.metaKey);
+    } else if (e.key === "Escape" && anySelected) {
       select(null);
     }
   };
@@ -183,7 +211,7 @@ export function SchematicHeatmap({
           const value = values[region.id];
           const share = shareOf(value);
           const fill = share === null ? `url(#${patternId})` : colorScale(share);
-          const isSelected = currentSelected === region.id;
+          const isSelected = isPinned(region.id);
           const isHovered = hoverId === region.id;
           const bounds = regionBounds({ regions: [region] });
           const outline = outlinePath(region.rects);
@@ -208,7 +236,7 @@ export function SchematicHeatmap({
               onPointerEnter={() => setHoverId(region.id)}
               onFocus={() => setHoverId(region.id)}
               onBlur={() => setHoverId((cur) => (cur === region.id ? null : cur))}
-              onClick={() => toggle(region.id)}
+              onClick={(e) => toggle(region.id, e.shiftKey || e.ctrlKey || e.metaKey)}
               onKeyDown={(e) => onRegionKeyDown(e, region.id)}
             >
               <title>{describe(region)}</title>
@@ -255,13 +283,24 @@ export function SchematicHeatmap({
             {readoutRegion ? <strong>{describe(readoutRegion)}</strong> : <span className="rebar-schematic-heatmap-hint">{text.hint}</span>}
           </span>
           <span data-rebar-part="legend" className="rebar-schematic-heatmap-legend" aria-hidden="true">
-            <span className="rebar-schematic-heatmap-legend-text">{text.low}</span>
-            <span className="rebar-schematic-heatmap-ramp">
-              {legendSteps.map((color, i) => (
-                <span key={i} style={{ background: color }} />
-              ))}
-            </span>
-            <span className="rebar-schematic-heatmap-legend-text">{text.high}</span>
+            {legendBands ? (
+              legendBands.map((band) => (
+                <span key={band.label} className="rebar-schematic-heatmap-band" data-rebar-part="legend-band">
+                  <span className="rebar-schematic-heatmap-band-swatch" style={{ background: band.color }} />
+                  <span className="rebar-schematic-heatmap-legend-text">{band.label}</span>
+                </span>
+              ))
+            ) : (
+              <>
+                <span className="rebar-schematic-heatmap-legend-text">{text.low}</span>
+                <span className="rebar-schematic-heatmap-ramp">
+                  {legendSteps.map((color, i) => (
+                    <span key={i} style={{ background: color }} />
+                  ))}
+                </span>
+                <span className="rebar-schematic-heatmap-legend-text">{text.high}</span>
+              </>
+            )}
             <span className="rebar-schematic-heatmap-nodata-swatch" />
             <span className="rebar-schematic-heatmap-legend-text">{text.noData}</span>
           </span>

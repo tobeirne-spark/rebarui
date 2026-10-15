@@ -685,7 +685,46 @@ export { LayersPanel } from "./components/LayersPanel";
 export type { LayersPanelProps, LayerNode, LayerDropPosition } from "./components/LayersPanel";
 
 export { SchematicHeatmap } from "./components/SchematicHeatmap";
-export type { SchematicHeatmapProps, SchematicHeatmapLabels } from "./components/SchematicHeatmap";
+export type { SchematicHeatmapProps, SchematicHeatmapLabels, SchematicHeatmapSelectInfo, SchematicHeatmapLegendBand } from "./components/SchematicHeatmap";
+export { HeatmapViewer } from "./components/HeatmapViewer";
+export type { HeatmapViewerProps, HeatmapViewerNarrativeContext } from "./components/HeatmapViewer";
+export { createStubHeatmapSource } from "./components/heatmapViewerStub";
+export type { StubHeatmapSourceOptions } from "./components/heatmapViewerStub";
+export {
+  sumCells,
+  metricValue,
+  shadeValue,
+  shadeRegions,
+  brushGroupOf,
+  brushGroupsOf,
+  defaultVisibleBrushesIn,
+  frameFor,
+  chipBrushes,
+  shadeOptionsOf,
+  bandIndexFor,
+  bandColorFor,
+  groupMilestones,
+  DEFAULT_BANDED_SCALE,
+} from "./components/heatmapViewerModel";
+export type {
+  HeatmapMetricKind,
+  HeatmapViewerMetric,
+  HeatmapMetricCell,
+  HeatmapMetricValue,
+  HeatmapMetricsPlacement,
+  HeatmapMetricsPanelItem,
+  HeatmapMetricsPanelConfig,
+  HeatmapViewerFilter,
+  HeatmapScaleBand,
+  HeatmapScaleConfig,
+  HeatmapViewerDef,
+  HeatmapViewerSummary,
+  HeatmapMilestone,
+  HeatmapFilterOption,
+  HeatmapViewerSnapshot,
+  HeatmapViewerQuery,
+  HeatmapViewerSource,
+} from "./components/heatmapViewerModel";
 export { HeatmapPainter } from "./components/HeatmapPainter";
 export type { HeatmapPainterProps, HeatmapPainterTool, HeatmapPainterCellFormContext } from "./components/HeatmapPainter";
 export {
