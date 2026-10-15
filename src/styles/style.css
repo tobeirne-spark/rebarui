@@ -7466,6 +7466,320 @@ button.rebar-float-assistant-model-pill:hover {
   );
 }
 
+.rebar-schematic-heatmap-band {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rebar-schematic-heatmap-band-swatch {
+  width: 14px;
+  height: 12px;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius-sm, 3px);
+}
+
+/* ---- HeatmapViewer ----------------------------------------------------------------------------- */
+.rebar-heatmap-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-md, 12px);
+  padding: var(--rebar-space-md, 12px) var(--rebar-space-lg, 16px);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  background: var(--rebar-color-bg-primary, #ffffff);
+  color: var(--rebar-color-text-primary, #212121);
+}
+
+.rebar-heatmap-viewer-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  overflow: auto;
+  border-radius: 0;
+}
+
+.rebar-heatmap-viewer-head,
+.rebar-heatmap-viewer-title,
+.rebar-heatmap-viewer-controls,
+.rebar-heatmap-viewer-brushes,
+.rebar-heatmap-viewer-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rebar-space-sm, 8px);
+}
+
+.rebar-heatmap-viewer-head {
+  justify-content: space-between;
+}
+
+.rebar-heatmap-viewer-filters {
+  align-items: flex-end;
+  gap: var(--rebar-space-md, 12px);
+}
+
+.rebar-heatmap-viewer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 11rem;
+}
+
+.rebar-heatmap-viewer-field-inline {
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.rebar-heatmap-viewer-field-label {
+  font-size: var(--rebar-font-size-xs, 12px);
+  font-weight: 600;
+}
+
+.rebar-heatmap-viewer-subtle {
+  font-size: var(--rebar-font-size-xs, 12px);
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-heatmap-viewer-message {
+  margin: 0;
+  padding: var(--rebar-space-lg, 16px) 0;
+  text-align: center;
+  color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-heatmap-viewer-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--rebar-font-size-xs, 12px);
+  color: var(--rebar-color-primary, #0066cc);
+  cursor: pointer;
+}
+
+.rebar-heatmap-viewer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: 999px;
+  background: var(--rebar-color-bg-primary, #ffffff);
+  color: var(--rebar-color-text-secondary, #757575);
+  font: inherit;
+  font-size: var(--rebar-font-size-sm, 13px);
+  cursor: pointer;
+}
+
+.rebar-heatmap-viewer-chip[aria-pressed="true"] {
+  border-color: var(--rebar-color-primary, #0066cc);
+  color: var(--rebar-color-text-primary, #212121);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}
+
+.rebar-heatmap-viewer-chip:focus-visible,
+.rebar-heatmap-viewer-link:focus-visible,
+.rebar-heatmap-viewer-row:focus-visible,
+.rebar-heatmap-viewer-milestone:focus-visible {
+  outline: 2px solid var(--rebar-color-border-focus, #0066cc);
+  outline-offset: 1px;
+}
+
+.rebar-heatmap-viewer-chip-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.rebar-heatmap-viewer-wayback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-xs, 4px);
+}
+
+.rebar-heatmap-viewer-milestones {
+  position: relative;
+  height: 20px;
+  margin-top: 4px;
+}
+
+.rebar-heatmap-viewer-milestone {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+
+.rebar-heatmap-viewer-milestone-mark {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--rebar-color-warning, #f57c00);
+  background: color-mix(in srgb, var(--rebar-color-warning, #f57c00) 35%, var(--rebar-color-bg-primary, #ffffff));
+  transform: rotate(45deg);
+}
+
+.rebar-heatmap-viewer-milestone-count {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--rebar-color-warning, #f57c00);
+  color: #ffffff;
+  font-size: 9px;
+  line-height: 12px;
+}
+
+.rebar-heatmap-viewer-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-md, 12px);
+}
+
+.rebar-heatmap-viewer-layout[data-placement="left"],
+.rebar-heatmap-viewer-layout[data-placement="right"] {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.rebar-heatmap-viewer-plot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.rebar-heatmap-viewer-side-row {
+  flex: none;
+  width: 18rem;
+}
+
+.rebar-heatmap-viewer-popover {
+  position: absolute;
+  z-index: 10;
+  width: 18rem;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+
+.rebar-heatmap-viewer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-sm, 8px);
+  min-width: 15rem;
+  padding: var(--rebar-space-md, 12px) var(--rebar-space-lg, 16px);
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-radius: var(--rebar-radius, 4px);
+  background: var(--rebar-color-bg-secondary, #f5f5f5);
+}
+
+.rebar-heatmap-viewer-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--rebar-space-md, 12px);
+}
+
+.rebar-heatmap-viewer-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rebar-space-sm, 8px);
+}
+
+.rebar-heatmap-viewer-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-xs, 4px);
+  min-width: 12rem;
+}
+
+.rebar-heatmap-viewer-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rebar-space-sm, 8px);
+  font-size: var(--rebar-font-size-sm, 13px);
+}
+
+.rebar-heatmap-viewer-rows[data-layout="grid"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+
+.rebar-heatmap-viewer-heading {
+  grid-column: 1 / -1;
+  margin-top: var(--rebar-space-xs, 4px);
+  font-weight: 600;
+}
+
+.rebar-heatmap-viewer-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--rebar-space-md, 12px);
+  padding: 8px 12px;
+  border: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+  border-left: 4px solid var(--rebar-color-border-strong, #bdbdbd);
+  border-radius: var(--rebar-radius, 4px);
+  background: var(--rebar-color-bg-primary, #ffffff);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.rebar-heatmap-viewer-row {
+  cursor: pointer;
+  border-left-color: var(--rebar-color-text-secondary, #757575);
+}
+
+.rebar-heatmap-viewer-row[data-shading="true"] {
+  border-left-color: var(--rebar-color-primary, #0066cc);
+  background: color-mix(in srgb, var(--rebar-color-primary, #0066cc) 8%, var(--rebar-color-bg-primary, #ffffff));
+}
+
+.rebar-heatmap-viewer-row-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rebar-heatmap-viewer-row-value {
+  flex: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rebar-heatmap-viewer-bar {
+  display: block;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 3px;
+  background: var(--rebar-color-bg-tertiary, #e0e0e0);
+  overflow: hidden;
+}
+
+.rebar-heatmap-viewer-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--rebar-color-primary, #0066cc);
+}
+
+.rebar-heatmap-viewer-narrative {
+  margin: 0 calc(-1 * var(--rebar-space-lg, 16px)) calc(-1 * var(--rebar-space-md, 12px));
+  padding: var(--rebar-space-md, 12px) var(--rebar-space-lg, 16px);
+  border-top: var(--rebar-border-width, 1px) solid var(--rebar-color-border, #e0e0e0);
+}
+
 /* ---- HeatmapPainter ---------------------------------------------------------------------------- */
 .rebar-heatmap-painter {
   display: flex;

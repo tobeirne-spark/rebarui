@@ -24,6 +24,10 @@ export interface HeatmapBrush {
   /** Whether a host should show this brush's regions until the viewer toggles it. Default true.
    * Read by `defaultVisibleBrushes`; neither component hides anything by itself. */
   defaultVisible?: boolean;
+  /** An optional group ("Asset", "Cable") a host can offer as a first-level picker, so that
+   * brushes that must not be overlaid are shown one group at a time. Read by `HeatmapViewer`;
+   * `SchematicHeatmap` and `HeatmapPainter` ignore it. */
+  group?: string;
 }
 
 /** One shaded/paintable region: an id plus one or more rectangles, drawn as a single shape. */
